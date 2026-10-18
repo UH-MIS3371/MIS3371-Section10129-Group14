@@ -44,9 +44,60 @@ const tradeTests = [
         price: 200,
         cash: 5000,
         sharesOwned: 10
-    }
+    },
+
+{
+    symbol: "AAPL",
+    tradeType: "Sell",
+    quantity: 5,
+    price: 200,
+    cash: 5000,
+    sharesOwned: 10
+},
+
+{
+    symbol: "AAPL",
+    tradeType: "Buy",
+    quantity: 5,
+    price: 200,
+    cash: 1000,
+    sharesOwned: 10
+},
+
+{
+    symbol: "AAPL",
+    tradeType: "Sell",
+    quantity: 10,
+    price: 200,
+    cash: 5000,
+    sharesOwned: 10
+}
+
+
 ];
 
 for (const trade of tradeTests) {
     console.log(processTrade(trade));
 }
+
+
+console.log("\n--- EXPECTED VS ACTUAL TEST RESULTS ---");
+
+const expectedResults = [
+    "ACCEPTED",
+    "REJECTED",
+    "REJECTED",
+    "ACCEPTED",
+    "ACCEPTED",
+    "ACCEPTED"
+];
+
+tradeTests.forEach((trade, index) => {
+    const actual = processTrade(trade).status;
+    const expected = expectedResults[index];
+    const result = actual === expected ? "PASS" : "FAIL";
+
+    console.log(
+        `Test ${index + 1}: Expected = ${expected}, Actual = ${actual}, Result = ${result}`
+    );
+});
