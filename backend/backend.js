@@ -8,19 +8,19 @@ const processExpenses = (expense) => {
 }
 
 const processTrade = (trade) => {
-    // BR-3: Quantity must be a positive whole number
-    if (!Number.isInteger(trade.quantity) || trade.quantity <= 0) {
-        return {
-            status: "REJECTED",
-            reason: "Quantity must be a positive whole number."
-        };
-    }
-
     // BR-1: Trade type must be Buy or Sell
     if (trade.tradeType !== "Buy" && trade.tradeType !== "Sell") {
         return {
             status: "REJECTED",
             reason: "Trade type must be Buy or Sell."
+        };
+    }
+
+    // BR-3: Quantity must be a positive whole number
+    if (!Number.isInteger(trade.quantity) || trade.quantity <= 0) {
+        return {
+            status: "REJECTED",
+            reason: "Quantity must be a positive whole number."
         };
     }
 
