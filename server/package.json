@@ -1,1 +1,13 @@
-
+{
+  "name": "marketstreet-server",
+  "version": "1.0.0",
+  "description": "Local API for MarketStreet",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test-api.js"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}

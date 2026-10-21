@@ -39,3 +39,47 @@ The purpose of this project is to demonstrate the complete processing of a stock
 - Benjamin Nguyen
 - Shayaan M. Dawra
 - Agah Duzenli
+
+## Week 9 — Local API Setup (Session 1)
+
+### Overview
+MarketStreet uses a local Express server to process
+stock trade requests through the existing Week 8
+backend business logic.
+
+### How to Run the Server Locally
+
+1. Install Node.js.
+2. Open the project in VS Code.
+3. Open a terminal in the main project folder.
+4. Run these commands:
+
+    cd server
+    npm install
+    npm start
+
+The server runs at http://localhost:3000
+
+### API Endpoint
+POST /api/trades
+
+The endpoint receives JSON transaction data and
+calls processTrade() from backend/backend.js.
+
+### Endpoint Test Results
+
+**Valid Trade Test**
+- Buy 2 shares at $10 with $100 available.
+- HTTP 200 OK
+- Status: ACCEPTED
+
+**Invalid Trade Test**
+- Buy 0.5 shares (fractional quantity).
+- HTTP 400 Bad Request
+- Status: REJECTED
+- Reason: Quantity must be a positive whole number.
+
+### Notes
+- Uses the existing Week 8 business rules.
+- Returns structured JSON responses.
+- Runs locally without AWS or a database.
