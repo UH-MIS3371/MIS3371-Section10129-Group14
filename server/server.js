@@ -1,5 +1,6 @@
 
 const express = require("express");
+const path = require("path");
 const { processTrade } = require("../backend/backend");
 
 const app = express();
@@ -7,6 +8,8 @@ const PORT = 3000;
 
 // Allow the server to receive JSON
 app.use(express.json());
+// Serve the existing MarketStreet frontend
+app.use(express.static(path.join(__dirname, "../frontend")));
 
 // POST endpoint for MarketStreet trades
 app.post("/api/trades", (req, res) => {

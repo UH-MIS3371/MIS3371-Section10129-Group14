@@ -270,29 +270,70 @@ function renderTrade() {
     }
     update();
   });
-  form.addEventListener("change", update);
+  form.addEventListener("submit", async (event) => {
+  event.preventDefault();
 
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const message = quantityError();
-    if (message) {
-      // Still a Draft: show the error next to the field, send nothing
-      error.textContent = message;
-      error.hidden = false;
-      quantityInput.setAttribute("aria-invalid", "true");
-      quantityInput.focus();
+  const message = quantityError();
+  const serverMessage = document.getElementById("server-message");
+
+  serverMessage.textContent = "";
+
+  if (message) {
+    error.textContent = message;
+    error.hidden = false;
+    quantityInput.setAttribute("aria-invalid", "true");
+    quantityInput.focus();
+    return;
+  }
+
+  // Prepare the stock trade for the local backend
+  const state = loadState();
+
+  const trade = {
+    symbol: symbol,
+    tradeType: tradeType(),
+    quantity: Number(quantityInput.value),
+    orderType: "Market",
+    price: stock.price,
+    cash: state.cash / 100,
+    sharesOwned: state.holdings[symbol] || 0
+  };
+
+  submit.disabled = true;
+
+  try {
+    // Send the trade to our Express server
+    const response = await fetch("/api/trades", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(trade)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.status !== "ACCEPTED") {
+      serverMessage.textContent =
+        "Trade rejected: " + (result.reason || result.message || "Validation failed.");
+      serverMessage.className = "error";
       return;
     }
-    const record = submitOrder({
-      symbol: symbol,
-      tradeType: tradeType(),
-      quantity: Number(quantityInput.value),
-      orderType: "Market",
-    });
-    location.href = "result.html?id=" + encodeURIComponent(record.transactionId);
-  });
 
-  update();
+    serverMessage.textContent =
+      "Trade validated by backend. Not executed or saved yet.";
+    serverMessage.className = "up";
+
+  } catch (error) {
+    serverMessage.textContent =
+      "Cannot reach the local backend. Check that the server is running.";
+    serverMessage.className = "error";
+
+  } finally {
+    submit.disabled = false;
+  }
+});
+update();
 }
 
 function renderResult() {

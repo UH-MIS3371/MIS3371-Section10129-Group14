@@ -83,3 +83,57 @@ calls processTrade() from backend/backend.js.
 - Uses the existing Week 8 business rules.
 - Returns structured JSON responses.
 - Runs locally without AWS or a database.
+
+## Week 9 — Frontend and Backend Integration (Session 2)
+
+### Overview
+MarketStreet's existing trading interface is now connected to the local Express server using JavaScript fetch().
+
+Users can submit Buy and Sell orders through the browser, and the server processes requests using the existing Week 8 processTrade() business function.
+
+### Frontend Integration
+- Preserved the existing MarketStreet interface and styling.
+- Added an asynchronous form submission handler using fetch().
+- Sends stock trade information as JSON to POST /api/trades.
+- Displays backend acceptance and rejection messages.
+- Handles connection errors when the server is unavailable.
+- Prevents invalid share quantities from being submitted.
+
+### Running the Connected Application
+1. Open the project in VS Code.
+2. Open the terminal.
+3. Navigate to the server folder:
+
+   cd server
+
+4. Start the local server:
+
+   npm start
+
+5. Open the trading interface:
+
+   http://localhost:3000/trade.html?symbol=AAPL
+
+### Integration Testing
+Six integration tests were completed, covering:
+- Valid Buy orders
+- Insufficient shares
+- Server connection failures
+- Selling exactly the shares owned
+- Insufficient cash
+- Buying the maximum affordable shares
+
+All six tests passed.
+
+[View Week 9 Test Results and Network Evidence](Testing/Week-9-Integration-Tests.md)
+
+### Current Limitations
+Week 9 uses a local Express server without AWS or database integration. Backend responses validate trade requests but do not execute or persist transactions.
+
+### Session 2 Contribution
+Sophia Musetti:
+- Connected the existing trading form to the local backend.
+- Implemented asynchronous JSON requests and response handling.
+- Added accepted, rejected, and connection-error feedback.
+- Conducted six integration tests.
+- Documented expected versus actual results and Network evidence.
