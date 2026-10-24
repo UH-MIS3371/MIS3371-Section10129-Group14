@@ -44,6 +44,41 @@ Chrome Developer Tools confirmed requests to POST /api/trades using fetch().
 ### Connection Error
 ![Connection Error](Week-9-Evidence/connection-error.jpeg)
 
+## Automated API Testing
+
+Automated HTTP integration tests were implemented in
+server/test-api.js to verify the local Express endpoint
+independently of the frontend.
+
+### Running the Tests
+
+1. Start the Express server using npm start.
+2. Open a second terminal in the server folder.
+3. Run npm test.
+
+### Test Results
+
+Six automated API tests were executed:
+
+- Valid Buy order: PASS
+- Invalid fractional quantity: PASS
+- Valid Sell boundary: PASS
+- Insufficient shares: PASS
+- Valid Buy boundary: PASS
+- Insufficient cash: PASS
+
+### Automated Test Evidence
+
+![Automated API Test Results](Week-9-Evidence/automated-api-tests.jpeg)
+
+**Final Result: 6/6 tests passed.**
+
+All expected HTTP status codes, transaction statuses,
+and response messages matched the actual backend results.
+
+The automated tests verify BR-3, BR-4, and BR-5 through
+POST /api/trades using JSON requests.
+
 ## Conclusion
 All six integration tests passed. MarketStreet successfully sends trade requests from the browser to the local backend and displays validation results.
 
