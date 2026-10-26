@@ -4,6 +4,10 @@
 
 MarketStreet is a simulated stock trading application that allows users to place and track paper-trading transactions without using real money.
 
+## Team Performance Tracker
+
+**[Open the team tracker workbook](docs/05-team-management/team-tracker.xlsx)** for all six members' weekly contributions, evidence, and contribution ratings. The [update guide](docs/05-team-management/README.md) explains how to add a checkpoint and review entries reconstructed from Git history.
+
 ## Project Scenario
 
 Many beginner investors want to practice trading and understand how stock transactions work without risking real money. MarketStreet provides a simplified environment where users can submit simulated stock trades and track the resulting transaction status.
@@ -20,9 +24,15 @@ The system validates the transaction, applies applicable business rules, records
 
 [Browse the system design documents](docs/03-system-design/README.md) for the architecture, workflow, trade states, field definitions, and tier responsibilities.
 
+## Application Interface
+
+[`frontend/`](frontend/index.html) is the canonical MarketStreet interface. It supports Market orders only (BR-9). With the local server running, open [MarketStreet](http://localhost:3000/). Earlier class exercises and prototypes are preserved in [archive/](archive/README.md).
+
+Each interactive page loads its own script (`trade.js`, `login.js`, `history.js`, or `result.js`). Shared state and helpers remain in `app.js`. Trade form identifiers follow the [data dictionary](docs/03-system-design/data-dictionary.md); `trade.js` maps `stockSymbol` and `shareQuantity` to the existing API's `symbol` and `quantity` fields.
+
 ## Testing
 
-Week 9 API and integration tests are documented in [Testing/Week-9-Integration-Tests.md](Testing/Week-9-Integration-Tests.md). The Week 8 backend test results are in the [Testing](Testing/) folder, and the business rules are in [docs/02-requirements/business-rules.md](docs/02-requirements/business-rules.md).
+Week 9 API and integration tests are documented in [Testing/Week-9-Integration-Tests.md](Testing/Week-9-Integration-Tests.md). The [Week 8 backend test results](Testing/Week-8-Backend/test-results%20week%208%20backend) are in `Testing/`, and the business rules are in [docs/02-requirements/business-rules.md](docs/02-requirements/business-rules.md). Testing evidence lives in `Testing/`; the former `docs/04-testing/` location is obsolete.
 
 ## Project Purpose
 
