@@ -101,6 +101,9 @@ function renderTrade() {
     }
     update();
   });
+  form.querySelectorAll("input[name=tradeType]").forEach((input) => {
+    input.addEventListener("change", update);
+  });
   form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
