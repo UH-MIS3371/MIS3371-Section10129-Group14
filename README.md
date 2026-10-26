@@ -6,7 +6,7 @@ MarketStreet is a simulated stock trading application that allows users to place
 
 ## Team Performance Tracker
 
-**[Open the team tracker workbook](docs/05-team-management/team-tracker.xlsx)** for all six members' weekly contributions, evidence, and contribution ratings. The [update guide](docs/05-team-management/README.md) explains how to add a checkpoint and review entries reconstructed from Git history.
+**[Open the team participation tracker](docs/05-team-management/team-tracker.xlsx)** for all six members' weekly participation scores. Everyone starts at **100**; edit the scores directly in Excel. See the [update guide](docs/05-team-management/README.md).
 
 ## Project Scenario
 
