@@ -1,4 +1,5 @@
-// MarketStreet — browser-only version of the app (no backend yet).
+// MarketStreet — frontend. Trade orders are sent to the local Express backend with fetch() (Week 9).
+// The older browser-only code below (Week 7) is still here for the other pages.
 // The code follows the three tiers in docs/03-system-design/architecture.md:
 //   DATA          load/save the account and trade records (localStorage stands in for the database)
 //   APPLICATION   submitOrder() applies the business rules BR-1 to BR-9 and decides Accepted or Rejected
@@ -414,7 +415,7 @@ function renderHistory() {
   }
 }
 
-// Demo sign-in (FR-7): there is no backend yet, so any username and password continue.
+// Demo sign-in (FR-7): sign-in is not connected to the backend, so any username and password continue.
 // The form is handled here so the password is never put in the page address.
 function renderLogin() {
   document.getElementById("login-form").addEventListener("submit", (event) => {
