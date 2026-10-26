@@ -3,31 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <title>MarketStreet</title>
-    <link rel="stylesheet" href="styles.css" />
   </head>
 
   <body>
+    <aside aria-label="Archived coursework"><p><strong>Archived coursework.</strong> This page may offer unsupported Limit orders. <a href="../../../frontend/trade.html">Open the current MarketStreet interface</a>.</p></aside>
     <header>
       <h1>MarketStreet</h1>
-      <p>Paper Trading Platform</p>
+      <p>Use this form to make a paper trade.</p>
     </header>
 
     <main>
-      <h2>Place a Trade</h2>
-      <p>Enter your trade information below.</p>
-
       <form method="get">
         <fieldset>
           <legend>Trade Information</legend>
 
           <label for="symbol">Stock Symbol:</label>
-          <input
-            id="symbol"
-            name="symbol"
-            type="text"
-            placeholder="Example: AAPL"
-            required
-          />
+          <input id="symbol" name="symbol" type="text" required />
+
+          <br /><br />
 
           <label for="trade">Trade Type:</label>
           <select id="trade" name="trade" required>
@@ -36,6 +29,8 @@
             <option value="sell">Sell</option>
           </select>
 
+          <br /><br />
+
           <label for="shares">Number of Shares:</label>
           <input
             id="shares"
@@ -43,9 +38,10 @@
             type="number"
             min="1"
             step="1"
-            placeholder="Enter number of shares"
             required
           />
+
+          <br /><br />
 
           <label for="order">Order Type:</label>
           <select id="order" name="order" required>
@@ -54,17 +50,14 @@
             <option value="limit">Limit</option>
           </select>
 
-          <label for="price">Limit Price (if needed):</label>
-          <input
-            id="price"
-            name="price"
-            type="number"
-            min="0.01"
-            step="0.01"
-            placeholder="Enter limit price"
-          />
+          <br /><br />
 
-          <button type="submit">Submit Trade</button>
+          <label for="price">Limit Price (if needed):</label>
+          <input id="price" name="price" type="number" min="0.01" step="0.01" />
+
+          <br /><br />
+
+          <button type="submit">Submit</button>
         </fieldset>
       </form>
     </main>

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="data.js" defer></script>
     <script src="app.js" defer></script>
+    <script src="trade.js" defer></script>
     <script src="chart.js" defer></script>
   </head>
 
@@ -67,8 +68,10 @@
         <!-- Order panel (FR-1, FR-8). Market orders only (BR-9). -->
         <form class="card side" id="order-form" novalidate>
           <h2 id="order-title"></h2>
+          <input type="hidden" id="stockSymbol" name="stockSymbol" />
+          <input type="hidden" id="orderType" name="orderType" value="Market" />
 
-          <fieldset>
+          <fieldset id="tradeType">
             <legend class="visually-hidden">Buy or sell</legend>
             <div class="toggle">
               <input type="radio" id="buy" name="tradeType" value="Buy" checked />
@@ -82,8 +85,8 @@
           <p class="position"><span>Cash available</span> <strong id="cash"></strong></p>
 
           <div class="field">
-            <label for="quantity">Shares</label>
-            <input id="quantity" name="quantity" type="number" min="1" step="1" value="1" inputmode="numeric" aria-describedby="quantity-hint quantity-error" />
+            <label for="shareQuantity">Shares</label>
+            <input id="shareQuantity" name="shareQuantity" type="number" min="1" step="1" value="1" inputmode="numeric" required aria-describedby="quantity-hint quantity-error" />
             <p id="quantity-hint" class="help"></p>
             <p id="quantity-error" class="error" hidden></p>
           </div>
@@ -94,7 +97,7 @@
 
           <button type="submit" class="button buy" id="submit"></button>
           <p id="server-message" role="status" aria-live="polite"></p>
-          <p class="note">Market orders execute right away at the current simulated price.</p>
+          <p class="note">Market orders are validated by the backend using simulated prices. Trades are not actually executed or saved.</p>
         </form>
       </div>
     </main>

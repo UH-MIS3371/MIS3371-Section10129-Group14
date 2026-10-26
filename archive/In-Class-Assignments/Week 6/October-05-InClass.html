@@ -6,11 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>MarketStreet</title>
-    <link rel="stylesheet" href="October-11-InClass.css" />
-    <script src="October-11-InClass.js" defer></script>
+    <link rel="stylesheet" href="October-05-InClass.css" />
+    <script src="October-05-InClass.js" defer></script>
   </head>
 
   <body>
+    <aside aria-label="Archived coursework"><p><strong>Archived coursework.</strong> This page may offer unsupported Limit orders. <a href="../../../frontend/trade.html">Open the current MarketStreet interface</a>.</p></aside>
     <header>
       <h1>MarketStreet</h1>
       <p>Paper Trading Platform</p>
@@ -20,8 +21,7 @@
       <h2>Place a Trade</h2>
       <p>Enter your trade information below.</p>
 
-      <!-- JavaScript checks the rules and calls reportValidity() on submit. -->
-      <form id="tradeForm" novalidate>
+      <form method="get">
         <fieldset>
           <legend>Trade Information</legend>
 
@@ -53,11 +53,10 @@
                 min="1"
                 step="1"
                 placeholder="Enter number of shares"
-                aria-describedby="sharesMessage"
                 required
               />
 
-              <p id="sharesMessage" class="error" aria-live="polite"></p>
+              <p id="sharesMessage"></p>
             </section>
           </section>
 
@@ -76,14 +75,9 @@
             min="0.01"
             step="0.01"
             placeholder="Enter limit price"
-            aria-describedby="priceHelp priceMessage"
-            disabled
           />
-          <p id="priceHelp">A limit price is required only for Limit orders.</p>
-          <p id="priceMessage" class="error" aria-live="polite"></p>
 
           <button type="submit">Submit Trade</button>
-          <p id="submitMessage" role="status"></p>
         </fieldset>
       </form>
     </main>

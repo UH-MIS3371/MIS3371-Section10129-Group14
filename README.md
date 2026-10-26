@@ -4,6 +4,10 @@
 
 MarketStreet is a simulated stock trading application that allows users to place and track paper-trading transactions without using real money.
 
+## Team Performance Tracker
+
+**[Open the team participation tracker](docs/05-team-management/team-tracker.xlsx)** for all six members' participation in class activities, group exercises, and milestones. Everyone starts at **100**; edit the scores directly in Excel. See the [update guide](docs/05-team-management/README.md).
+
 ## Project Scenario
 
 Many beginner investors want to practice trading and understand how stock transactions work without risking real money. MarketStreet provides a simplified environment where users can submit simulated stock trades and track the resulting transaction status.
@@ -20,9 +24,15 @@ The system validates the transaction, applies applicable business rules, records
 
 [Browse the system design documents](docs/03-system-design/README.md) for the architecture, workflow, trade states, field definitions, and tier responsibilities.
 
+## Application Interface
+
+[`frontend/`](frontend/index.html) is the canonical MarketStreet interface. It supports Market orders only (BR-9). With the local server running, open [MarketStreet](http://localhost:3000/). Earlier class exercises and prototypes are preserved in [archive/](archive/README.md).
+
+Each interactive page loads its own script (`trade.js`, `login.js`, `history.js`, or `result.js`). Shared state and helpers remain in `app.js`. Trade form identifiers follow the [data dictionary](docs/03-system-design/data-dictionary.md); `trade.js` maps `stockSymbol` and `shareQuantity` to the existing API's `symbol` and `quantity` fields.
+
 ## Testing
 
-The [test cases](docs/04-testing/test-cases.md) check every business rule at its boundary, and the [traceability matrix](docs/04-testing/traceability-matrix.md) links each requirement to its rules, user stories, and tests.
+Week 9 API and integration tests are documented in [Testing/Week-9-Integration-Tests.md](Testing/Week-9-Integration-Tests.md). The [Week 8 backend test results](Testing/Week-8-Backend/test-results%20week%208%20backend) are in `Testing/`, and the business rules are in [docs/02-requirements/business-rules.md](docs/02-requirements/business-rules.md). Testing evidence lives in `Testing/`; the former `docs/04-testing/` location is obsolete.
 
 ## Project Purpose
 
@@ -46,6 +56,11 @@ The purpose of this project is to demonstrate the complete processing of a stock
 MarketStreet uses a local Express server to process
 stock trade requests through the existing Week 8
 backend business logic.
+
+Architecture: the browser (frontend/) sends a JSON request with
+fetch() to POST /api/trades on the Express server (server/server.js),
+which calls processTrade() in backend/backend.js and returns a JSON
+result (HTTP 200 ACCEPTED or HTTP 400 REJECTED).
 
 ### How to Run the Server Locally
 
@@ -114,6 +129,14 @@ Users can submit Buy and Sell orders through the browser, and the server process
 
    http://localhost:3000/trade.html?symbol=AAPL
 
+### Automated API Tests
+With the server running, open a second terminal in the server folder and run:
+
+   npm test
+
+This runs server/test-api.js, which sends six JSON requests to
+POST /api/trades and compares the expected and actual results.
+
 ### Integration Testing
 Six integration tests were completed, covering:
 - Valid Buy orders
@@ -129,6 +152,14 @@ All six tests passed.
 
 ### Current Limitations
 Week 9 uses a local Express server without AWS or database integration. Backend responses validate trade requests but do not execute or persist transactions.
+
+### Contributions
+Based on the repository commit history, the Week 9 files
+(server/server.js, server/package.json, server/test-api.js,
+the frontend integration, and Testing/Week-9-Integration-Tests.md
+with its evidence screenshots) were committed by GitHub user
+smusetti-star (Sophia Musetti). The Week 8 backend
+(backend/backend.js) has commits from several team members.
 
 ### Session 2 Contribution
 Sophia Musetti:
