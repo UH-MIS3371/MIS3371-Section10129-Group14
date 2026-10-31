@@ -362,16 +362,6 @@ input[type="number"] {
   gap: 12px;
 }
 
-.link-button {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--brand);
-  font: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
 /* ---------- Result and history ---------- */
 
 .badge {
