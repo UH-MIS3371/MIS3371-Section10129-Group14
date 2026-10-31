@@ -1,12 +1,5 @@
 // Page-specific behavior for history.html.
 function renderHistory() {
-  document.getElementById("reset").addEventListener("click", () => {
-    if (confirm("Reset the demo account to $10,000 cash and clear your trade history?")) {
-      resetState();
-      location.reload();
-    }
-  });
-
   const trades = loadState().trades.slice().reverse();
   const body = document.getElementById("history");
   if (trades.length === 0) {

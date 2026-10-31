@@ -28,7 +28,7 @@ The system validates the transaction, applies applicable business rules, records
 
 [`frontend/`](frontend/index.html) is the canonical MarketStreet interface. It supports Market orders only (BR-9). With the local server running, open [MarketStreet](http://localhost:3000/). Earlier class exercises and prototypes are preserved in [archive/](archive/README.md).
 
-Each interactive page loads its own script (`trade.js`, `login.js`, `history.js`, or `result.js`). Shared state and helpers remain in `app.js`. Trade form identifiers follow the [data dictionary](docs/03-system-design/data-dictionary.md); `trade.js` maps `stockSymbol` and `shareQuantity` to the existing API's `symbol` and `quantity` fields.
+Each interactive page loads its own script (`trade.js`, `history.js`, or `result.js`). Shared state and helpers remain in `app.js`. Trade form identifiers follow the [data dictionary](docs/03-system-design/data-dictionary.md); `trade.js` maps `stockSymbol` and `shareQuantity` to the existing API's `symbol` and `quantity` fields.
 
 ## Testing
 
