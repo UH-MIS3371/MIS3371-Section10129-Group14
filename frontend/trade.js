@@ -159,7 +159,6 @@ function renderTrade() {
       return;
     }
 
-    // Week 11: the Lambda saves accepted trades to DynamoDB and returns the official ID
     serverMessage.textContent = result.persisted
       ? "Trade accepted and saved. Transaction ID: " + result.transactionId
       : "Trade validated by backend but not saved.";

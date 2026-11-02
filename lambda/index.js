@@ -3,16 +3,13 @@
 // Runtime: Node.js 20.x or later    Handler: index.handler
 // Routes:  POST /api/trades                   validate a trade and save it if accepted
 //          GET  /api/trades/{transactionId}   read one saved trade
-// Week 11: accepted trades are saved to DynamoDB. The table name comes from the
-// TABLE_NAME environment variable; its partition key is transactionId (String).
-// The AWS SDK v3 is built into the Lambda Node.js runtime, so nothing extra is uploaded.
+// Week 11: accepted trades are saved to the DynamoDB table in TABLE_NAME (key: transactionId).
 const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
 const { validateTrade } = require("./backend/trades");
 const { PRICE_CENTS } = require("./backend/market-data");
 
-// One DynamoDB client per Lambda container, reused by every request
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -60,9 +57,7 @@ async function postTrade(event) {
     return reply(500, serverError("The trade could not be saved. Please try again."));
   }
 
-  // Week 11: build the official record on the server. The symbol, price, ID, status and
-  // time all come from the server, never from the browser. validateTrade already checked
-  // that the symbol is in our price list and the quantity is a positive whole number.
+  // The record is built from server values only, never from browser-supplied ID, price, status or time
   const stockSymbol = trade.symbol.trim().toUpperCase();
   const priceCents = PRICE_CENTS[stockSymbol];
   const record = {

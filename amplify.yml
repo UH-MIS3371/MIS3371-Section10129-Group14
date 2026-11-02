@@ -1,5 +1,3 @@
-# AWS Amplify Hosting build settings. The frontend is plain HTML/CSS/JS,
-# so there is no build step: Amplify publishes the frontend/ folder as-is.
 version: 1
 frontend:
   phases:
