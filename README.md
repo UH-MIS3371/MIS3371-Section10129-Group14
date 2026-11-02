@@ -168,3 +168,12 @@ Sophia Musetti:
 - Added accepted, rejected, and connection-error feedback.
 - Conducted six integration tests.
 - Documented expected versus actual results and Network evidence.
+
+## Week 11 — Saving Trades to DynamoDB
+
+The Lambda (`MarketStreet-ProcessTrade`) still validates every trade with the existing business rules in `lambda/backend/trades.js`. Accepted trades are now saved to the DynamoDB table `MarketStreetTrades` with a server-generated `transactionId`, and rejected trades are not saved.
+
+- `POST /api/trades` validates the trade and saves it if accepted (`persisted: true`).
+- `GET /api/trades/{transactionId}` returns one saved trade.
+
+[View the Week 11 setup, deployment checklist and test results](Testing/Week-11-DynamoDB/README.md)

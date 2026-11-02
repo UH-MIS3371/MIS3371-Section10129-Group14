@@ -1,0 +1,9 @@
+{
+  "version": "2.0",
+  "routeKey": "POST /api/trades",
+  "rawPath": "/api/trades",
+  "headers": { "content-type": "application/json" },
+  "requestContext": { "http": { "method": "POST", "path": "/api/trades" } },
+  "body": "{\"symbol\":\"AAPL\",\"tradeType\":\"Buy\",\"quantity\":2,\"orderType\":\"Market\"}",
+  "isBase64Encoded": false
+}

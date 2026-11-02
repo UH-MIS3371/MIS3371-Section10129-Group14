@@ -1,10 +1,41 @@
 "use strict";
-// Run locally:     node lambda/tests/test-lambda.js
+// Run locally:     cd lambda && npm install && npm test
 // Run against AWS: API_URL=https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades node lambda/tests/test-lambda.js
-// Each case sends a trade and compares the expected and actual HTTP code, status, and message.
-const { handler } = require("../index");
+// Each case sends a trade and compares the expected and actual HTTP code, status, message,
+// and whether the trade was saved. Locally, DynamoDB is replaced by an in-memory table.
+const { DynamoDBDocumentClient, PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
 
 const API_URL = process.env.API_URL;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ---- Local fake DynamoDB (only used when API_URL is not set) ----
+const table = new Map();
+let dbFails = false;
+if (!API_URL) {
+  process.env.TABLE_NAME = "MarketStreetTrades-test";
+  process.env.AWS_REGION = process.env.AWS_REGION || "us-east-1";
+  DynamoDBDocumentClient.prototype.send = async function (command) {
+    if (dbFails) throw new Error("Simulated DynamoDB failure (secret internal detail)");
+    if (command.input.TableName !== process.env.TABLE_NAME) throw new Error("Wrong table: " + command.input.TableName);
+    if (command instanceof PutCommand) {
+      const item = command.input.Item;
+      if (table.has(item.transactionId)) {
+        const e = new Error("The conditional request failed");
+        e.name = "ConditionalCheckFailedException";
+        throw e;
+      }
+      table.set(item.transactionId, structuredClone(item));
+      return {};
+    }
+    if (command instanceof GetCommand) {
+      const item = table.get(command.input.Key.transactionId);
+      return item ? { Item: structuredClone(item) } : {};
+    }
+    throw new Error("Unexpected command: " + command.constructor.name);
+  };
+}
+const { handler } = require("../index");
+
 const base = { symbol: "AAPL", tradeType: "Buy", quantity: 1, orderType: "Market", price: 185.5, cash: 10000, sharesOwned: 10 };
 
 // body can be an object (sent as JSON) or a raw string (sent as-is)
@@ -35,8 +66,8 @@ const tests = [
   { name: "JSON array", body: "[1,2]", code: 400, status: "REJECTED", text: "A JSON trade object is required." }
 ];
 
-// Sends one test case to the Lambda handler (a fake API Gateway v2 event) or to the real API
-async function send(body) {
+// Sends a trade to the Lambda handler (a fake API Gateway v2 event) or to the real API
+async function post(body) {
   const raw = typeof body === "string" ? body : JSON.stringify(body);
   if (API_URL) {
     const res = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: raw });
@@ -47,37 +78,89 @@ async function send(body) {
   return { code: res.statusCode, json: JSON.parse(res.body) };
 }
 
+// Reads one saved trade, the same way API Gateway calls GET /api/trades/{transactionId}
+async function get(id) {
+  if (API_URL) {
+    const res = await fetch(API_URL + "/" + encodeURIComponent(id));
+    return { code: res.status, json: await res.json() };
+  }
+  const event = { version: "2.0", routeKey: "GET /api/trades/{transactionId}", requestContext: { http: { method: "GET" } }, pathParameters: { transactionId: id } };
+  const res = await handler(event);
+  return { code: res.statusCode, json: JSON.parse(res.body) };
+}
+
 async function run() {
   console.log(API_URL ? "Testing the real API: " + API_URL : "Testing the Lambda handler locally");
-  let total = tests.length;
+  let total = 0;
   let passed = 0;
-  for (const t of tests) {
-    const actual = await send(t.body);
-    const actualText = actual.json.reason || actual.json.message;
-    const ok = actual.code === t.code && actual.json.status === t.status && actualText === t.text;
+  function check(name, ok, detail) {
+    total++;
     if (ok) passed++;
-    console.log((ok ? "PASS" : "FAIL") + ": " + t.name);
-    console.log("  Expected: " + t.code + ", " + t.status + ", " + t.text);
-    console.log("  Actual:   " + actual.code + ", " + actual.json.status + ", " + actualText);
+    console.log((ok ? "PASS" : "FAIL") + ": " + name + (detail ? "\n  " + detail : ""));
   }
+
+  // Business rule cases: accepted trades must be saved, rejected trades must not be
+  for (const t of tests) {
+    const actual = await post(t.body);
+    const actualText = actual.json.reason || actual.json.message;
+    const shouldSave = t.status === "ACCEPTED";
+    const saved = actual.json.persisted === true && UUID.test(actual.json.transactionId || "");
+    const ok = actual.code === t.code && actual.json.status === t.status && actualText === t.text && saved === shouldSave;
+    check(t.name, ok,
+      "Expected: " + t.code + ", " + t.status + ", " + t.text + ", saved=" + shouldSave +
+      "\n  Actual:   " + actual.code + ", " + actual.json.status + ", " + actualText + ", saved=" + saved);
+  }
+  if (!API_URL) {
+    const accepted = tests.filter((t) => t.status === "ACCEPTED").length;
+    check("Only accepted trades are in the table (" + accepted + ")", table.size === accepted, "Table has " + table.size + " records");
+  }
+
+  // POST then GET returns the same server-built record
+  const saved = await post({ ...base, symbol: " msft ", tradeType: "Sell", quantity: 2, price: 1, transactionId: "hacked", status: "Rejected", submittedAt: "2000-01-01T00:00:00.000Z" });
+  const id = saved.json.transactionId;
+  check("POST Sell 2 MSFT is saved with a server UUID", saved.code === 200 && saved.json.persisted === true && UUID.test(id || "") && id !== "hacked");
+  const found = await get(id);
+  const trade = found.json.trade || {};
+  const expected = { transactionId: id, stockSymbol: "MSFT", tradeType: "Sell", shareQuantity: 2, orderType: "Market", executionPrice: 412.3, transactionValue: 824.6, status: "Accepted", submittedAt: saved.json.submittedAt };
+  const fieldsOk = Object.keys(expected).every((k) => trade[k] === expected[k]);
+  check("GET returns the saved record with server price, ID, status and time", found.code === 200 && found.json.success === true && fieldsOk,
+    "Got: " + found.code + " " + JSON.stringify(trade));
+  check("Browser price, cash and shares are not saved", !("price" in trade) && !("cash" in trade) && !("sharesOwned" in trade));
+  check("GET unknown transactionId returns 404", (await get("00000000-0000-4000-8000-000000000000")).code === 404);
+  check("GET non-UUID transactionId returns 404", (await get("TRD-00418")).code === 404);
 
   // Handler-only checks (a real API Gateway answers some of these itself)
   if (!API_URL) {
-    const post = { requestContext: { http: { method: "POST" } } };
-    const extra = [
-      ["OPTIONS returns 204", (await handler({ requestContext: { http: { method: "OPTIONS" } } })).statusCode === 204],
-      ["GET returns 405", (await handler({ requestContext: { http: { method: "GET" } } })).statusCode === 405],
-      ["Missing body returns 400", (await handler(post)).statusCode === 400],
-      ["Empty event does not crash", (await handler()).statusCode === 400],
-      ["Object body is accepted", (await handler({ ...post, body: base })).statusCode === 200],
-      ["Base64 body is accepted", (await handler({ ...post, isBase64Encoded: true, body: Buffer.from(JSON.stringify(base)).toString("base64") })).statusCode === 200],
-      ["CORS header is sent", (await handler({ ...post, body: JSON.stringify(base) })).headers["Access-Control-Allow-Origin"] === "*"]
-    ];
-    for (const [name, ok] of extra) {
-      total++;
-      if (ok) passed++;
-      console.log((ok ? "PASS" : "FAIL") + ": " + name);
-    }
+    const postEvent = { requestContext: { http: { method: "POST" } } };
+    const getEvent = { requestContext: { http: { method: "GET" } } };
+    check("OPTIONS returns 204", (await handler({ requestContext: { http: { method: "OPTIONS" } } })).statusCode === 204);
+    check("PUT returns 405", (await handler({ requestContext: { http: { method: "PUT" } } })).statusCode === 405);
+    check("Missing body returns 400", (await handler(postEvent)).statusCode === 400);
+    check("Empty event does not crash", (await handler()).statusCode === 400);
+    check("Object body is accepted", (await handler({ ...postEvent, body: base })).statusCode === 200);
+    check("Base64 body is accepted", (await handler({ ...postEvent, isBase64Encoded: true, body: Buffer.from(JSON.stringify(base)).toString("base64") })).statusCode === 200);
+    const cors = (await handler({ ...postEvent, body: JSON.stringify(base) })).headers;
+    check("CORS headers are sent and allow GET", cors["Access-Control-Allow-Origin"] === "*" && cors["Access-Control-Allow-Methods"].includes("GET"));
+    check("GET without pathParameters returns 400", (await handler(getEvent)).statusCode === 400);
+    check("GET with a blank transactionId returns 400", (await handler({ ...getEvent, pathParameters: { transactionId: " " } })).statusCode === 400);
+
+    // Database failures return a controlled 500 and never leak the internal error
+    dbFails = true;
+    const before = table.size;
+    const failedPost = await post(base);
+    check("POST when DynamoDB fails returns 500, persisted false", failedPost.code === 500 && failedPost.json.persisted === false && failedPost.json.status === "ERROR");
+    check("DynamoDB error details are not sent to the browser", !JSON.stringify(failedPost.json).includes("secret"));
+    check("GET when DynamoDB fails returns 500", (await get(id)).code === 500);
+    dbFails = false;
+    check("Nothing was saved during the failure", table.size === before);
+
+    // Missing TABLE_NAME: accepted trades fail safely, rejected trades are still rejected
+    delete process.env.TABLE_NAME;
+    const noTable = await post(base);
+    check("POST without TABLE_NAME returns 500, persisted false", noTable.code === 500 && noTable.json.persisted === false);
+    check("Rejected trade without TABLE_NAME still returns 400", (await post({ ...base, quantity: 0 })).code === 400);
+    check("GET without TABLE_NAME returns 500", (await get(id)).code === 500);
+    process.env.TABLE_NAME = "MarketStreetTrades-test";
   }
 
   console.log("\nResults: " + passed + "/" + total + " tests passed");
