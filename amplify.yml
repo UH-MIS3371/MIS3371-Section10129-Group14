@@ -1,0 +1,14 @@
+# AWS Amplify Hosting build settings. The frontend is plain HTML/CSS/JS,
+# so there is no build step: Amplify publishes the frontend/ folder as-is.
+version: 1
+frontend:
+  phases:
+    build:
+      commands:
+        - echo "Static site - no build step"
+  artifacts:
+    baseDirectory: frontend
+    files:
+      - '**/*'
+  cache:
+    paths: []
