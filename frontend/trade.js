@@ -1,6 +1,6 @@
 // Page-specific behavior for trade.html.
 
-// The AWS API Gateway endpoint that runs the Lambda trade validation
+// The AWS API Gateway endpoint that runs the Lambda trade validation and saving
 const API_URL = "https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades";
 
 function renderTrade() {
@@ -159,8 +159,9 @@ function renderTrade() {
       return;
     }
 
-    serverMessage.textContent =
-      "Trade validated by backend. Not executed or saved yet.";
+    serverMessage.textContent = result.persisted
+      ? "Trade accepted and saved. Transaction ID: " + result.transactionId
+      : "Trade validated by backend but not saved.";
     serverMessage.className = "up";
 
   } catch (error) {

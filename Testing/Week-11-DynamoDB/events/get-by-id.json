@@ -1,0 +1,9 @@
+{
+  "version": "2.0",
+  "routeKey": "GET /api/trades/{transactionId}",
+  "rawPath": "/api/trades/89300543-6517-4f55-bf13-3307d81f8116",
+  "headers": {},
+  "requestContext": { "http": { "method": "GET", "path": "/api/trades/89300543-6517-4f55-bf13-3307d81f8116" } },
+  "pathParameters": { "transactionId": "89300543-6517-4f55-bf13-3307d81f8116" },
+  "isBase64Encoded": false
+}
