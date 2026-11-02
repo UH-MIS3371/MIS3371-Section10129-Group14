@@ -1,4 +1,8 @@
 // Page-specific behavior for trade.html.
+
+// The AWS API Gateway endpoint that runs the Lambda trade validation
+const API_URL = "https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades";
+
 function renderTrade() {
   const params = new URLSearchParams(location.search);
   const symbol = (params.get("symbol") || "AAPL").trim().toUpperCase();
@@ -120,8 +124,8 @@ function renderTrade() {
     return;
   }
 
-  // Form IDs/names follow the data dictionary. The Week 9 API still uses
-  // symbol and quantity, so translate those names only at this boundary.
+  // Form IDs/names follow the data dictionary. The API uses symbol and
+  // quantity, so translate those names only at this boundary.
   const state = loadState();
 
   const trade = {
@@ -137,8 +141,8 @@ function renderTrade() {
   submit.disabled = true;
 
   try {
-    // Send the trade to our Express server
-    const response = await fetch("/api/trades", {
+    // Send the trade to the AWS API Gateway endpoint
+    const response = await fetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -161,7 +165,7 @@ function renderTrade() {
 
   } catch (error) {
     serverMessage.textContent =
-      "Cannot reach the local backend. Check that the server is running.";
+      "Could not reach the trade server. Please check your connection and try again.";
     serverMessage.className = "error";
 
   } finally {
