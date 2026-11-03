@@ -1,8 +1,5 @@
 // Page-specific behavior for trade.html.
 
-// The AWS API Gateway endpoint that runs the Lambda trade validation and saving
-const API_URL = "https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades";
-
 function renderTrade() {
   const params = new URLSearchParams(location.search);
   const symbol = (params.get("symbol") || "AAPL").trim().toUpperCase();
@@ -154,15 +151,13 @@ function renderTrade() {
 
     if (!response.ok || result.status !== "ACCEPTED") {
       serverMessage.textContent =
-        "Trade rejected: " + (result.reason || result.message || "Validation failed.");
+        (result.status === "ERROR" ? "Trade not saved: " : "Trade rejected: ") + (result.reason || result.message || "Validation failed.");
       serverMessage.className = "error";
       return;
     }
 
-    serverMessage.textContent = result.persisted
-      ? "Trade accepted and saved. Transaction ID: " + result.transactionId
-      : "Trade validated by backend but not saved.";
-    serverMessage.className = "up";
+    saveTrade(result.trade);
+    location.href = "result.html?id=" + encodeURIComponent(result.transactionId);
 
   } catch (error) {
     serverMessage.textContent =

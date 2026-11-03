@@ -85,7 +85,7 @@ async function postTrade(event) {
   }
 
   // persisted: true is only sent after DynamoDB has confirmed the save
-  return reply(200, { ...result, persisted: true, transactionId: record.transactionId, submittedAt: record.submittedAt });
+  return reply(200, { ...result, persisted: true, transactionId: record.transactionId, submittedAt: record.submittedAt, trade: record });
 }
 
 // GET /api/trades/{transactionId}: read one saved trade

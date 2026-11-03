@@ -2,6 +2,7 @@
 // Shared state and formatting helpers. Each page loads its own script:
 // trade.js, history.js, and result.js initialize their own pages.
 
+const API_URL = "https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades";
 const STORAGE_KEY = "marketstreet-demo";
 const START = { cash: 1000000, holdings: { AAPL: 10, MSFT: 2, IBM: 1 }, trades: [], nextId: 418 };
 
@@ -15,6 +16,16 @@ function loadState() {
     // Private mode or blocked storage: use the starting account
   }
   return structuredClone(START);
+}
+
+function saveTrade(trade) {
+  const state = loadState();
+  state.trades.push(trade);
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    // Private mode or blocked storage: the trade is still saved on the server
+  }
 }
 
 // ======================= HELPERS =======================

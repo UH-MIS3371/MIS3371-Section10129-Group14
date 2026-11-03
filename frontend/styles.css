@@ -202,18 +202,6 @@ h2 {
   margin-left: 6px;
 }
 
-.ranges button {
-  padding: 4px 10px;
-  border: none;
-  background: none;
-  color: var(--muted);
-}
-
-.ranges [aria-pressed="true"] {
-  color: var(--brand);
-  font-weight: 700;
-}
-
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

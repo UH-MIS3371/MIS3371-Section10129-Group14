@@ -18,8 +18,8 @@ function renderHistory() {
         el("td", { "data-label": "Transaction" }, el("a", { href: "result.html?id=" + encodeURIComponent(t.transactionId) }, t.transactionId)),
         el("td", { "data-label": "Time" }, formatTime(t.completedAt || t.submittedAt, false)),
         el("td", { "data-label": "Order" }, t.tradeType + " " + t.shareQuantity + " " + t.stockSymbol),
-        el("td", { "data-label": "Price", class: "num" }, t.executionPrice ? money(t.executionPrice) : "—"),
-        el("td", { "data-label": "Total", class: "num" }, t.transactionValue ? money(t.transactionValue) : "—"),
+        el("td", { "data-label": "Price", class: "num" }, t.executionPrice ? money(cents(t.executionPrice)) : "—"),
+        el("td", { "data-label": "Total", class: "num" }, t.transactionValue ? money(cents(t.transactionValue)) : "—"),
         el("td", { "data-label": "Status" }, status)
       )
     );

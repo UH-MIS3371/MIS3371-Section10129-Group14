@@ -9,7 +9,7 @@ Accepted trades are now saved to Amazon DynamoDB, and a saved trade can be read 
 | [lambda/index.js](../../lambda/index.js) | POST validates with the unchanged `validateTrade()`, then saves accepted trades with `PutCommand`. New GET route reads one trade with `GetCommand`. |
 | [lambda/backend/](../../lambda/backend/) | Unchanged. All business rules still live in `trades.js`. |
 | [lambda/tests/test-lambda.js](../../lambda/tests/test-lambda.js) | Checks that accepted trades are saved, rejected trades are not, and GET returns the saved record. |
-| [frontend/trade.js](../../frontend/trade.js) | The success message now shows the saved transaction ID. |
+| [frontend/](../../frontend/) | After a trade is saved, the trade page opens the Result page, which loads the trade with GET. History lists trades saved in this browser. |
 
 ## How it works
 
@@ -44,7 +44,7 @@ Field names follow the [data dictionary](../../docs/03-system-design/data-dictio
 
 | Request | Result |
 |---|---|
-| `POST /api/trades` (valid) | 200 `{ status: "ACCEPTED", message, success: true, persisted: true, transactionId, submittedAt }` |
+| `POST /api/trades` (valid) | 200 `{ status: "ACCEPTED", message, success: true, persisted: true, transactionId, submittedAt, trade: { ...saved record } }` |
 | `POST /api/trades` (invalid) | 400 `{ status: "REJECTED", reason, success: false, persisted: false }` and nothing is saved |
 | `POST /api/trades` (save failed) | 500 `{ status: "ERROR", reason, success: false, persisted: false }` |
 | `GET /api/trades/{transactionId}` | 200 `{ success: true, trade: { ...saved record } }` |

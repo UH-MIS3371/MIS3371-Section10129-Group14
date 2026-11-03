@@ -49,13 +49,6 @@
             <p class="price" id="price"></p>
             <p id="change"></p>
             <div class="chart" id="stock-chart" data-height="300" role="img"></div>
-            <div class="ranges" role="group" aria-label="Time range">
-              <button type="button" aria-pressed="false">1D</button>
-              <button type="button" aria-pressed="false">1W</button>
-              <button type="button" aria-pressed="true">1M</button>
-              <button type="button" aria-pressed="false">3M</button>
-              <button type="button" aria-pressed="false">1Y</button>
-            </div>
           </section>
 
           <section class="card" aria-labelledby="stats-title">
@@ -96,7 +89,7 @@
 
           <button type="submit" class="button buy" id="submit"></button>
           <p id="server-message" role="status" aria-live="polite"></p>
-          <p class="note">Market orders are validated by the backend using simulated prices. Trades are not actually executed or saved.</p>
+          <p class="note">Market orders are checked by the backend using simulated prices. Accepted trades are saved.</p>
         </form>
       </div>
     </main>
