@@ -125,6 +125,8 @@ async function run() {
   const fieldsOk = Object.keys(expected).every((k) => trade[k] === expected[k]);
   check("GET returns the saved record with server price, ID, status and time", found.code === 200 && found.json.success === true && fieldsOk,
     "Got: " + found.code + " " + JSON.stringify(trade));
+  const posted = saved.json.trade || {};
+  check("POST returns the same record that was saved", Object.keys(posted).length === Object.keys(trade).length && Object.keys(trade).every((k) => posted[k] === trade[k]));
   check("Browser price, cash and shares are not saved", !("price" in trade) && !("cash" in trade) && !("sharesOwned" in trade));
   check("GET unknown transactionId returns 404", (await get("00000000-0000-4000-8000-000000000000")).code === 404);
   check("GET non-UUID transactionId returns 404", (await get("TRD-00418")).code === 404);
