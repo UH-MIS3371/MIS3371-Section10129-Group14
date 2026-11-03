@@ -83,6 +83,30 @@ Lambda → **Test** → **Create new event**, paste the JSON, then **Test**.
 | [get-by-id.json](events/get-by-id.json): change the ID in `pathParameters` and both paths to the `transactionId` returned by POST | 200, `success: true`, the same record | Pass |
 | [post-invalid.json](events/post-invalid.json): Sell 11 AAPL (only 10 owned) | 400, `REJECTED`, `Insufficient shares.`, `persisted: false`; the item count in DynamoDB does not change | Pass (8 records before and after) |
 
+## CloudWatch logs
+
+Every request writes one JSON line to the log group `/aws/lambda/MarketStreet-ProcessTrade`, for example:
+
+```json
+{"method":"POST","statusCode":400,"result":"REJECTED","reason":"Insufficient shares.","ms":3}
+{"method":"POST","statusCode":200,"result":"ACCEPTED","transactionId":"…","stockSymbol":"AAPL","tradeType":"Buy","shareQuantity":1,"ms":41}
+```
+
+Request bodies are never logged. To search them: CloudWatch → **Logs Insights** → choose the log group, then run:
+
+```
+filter ispresent(result)
+| stats count() by result
+```
+
+or, for rejected trades and their reasons:
+
+```
+fields @timestamp, reason
+| filter result = "REJECTED"
+| sort @timestamp desc
+```
+
 ## Automated tests
 
 ```
@@ -91,7 +115,7 @@ npm install
 npm test
 ```
 
-Runs 46 checks locally with an in-memory table instead of DynamoDB. These cover the original 24 business-rule cases, saving and GET, database failures, a missing `TABLE_NAME`, and ignored browser fields.
+Runs 52 checks locally with an in-memory table instead of DynamoDB. These cover the original 24 business-rule cases, saving and GET, database failures, a missing `TABLE_NAME`, ignored browser fields, and the CloudWatch log lines.
 
 To run the same cases against the deployed API (it writes a few fictional trades to the table):
 
@@ -99,4 +123,4 @@ To run the same cases against the deployed API (it writes a few fictional trades
 API_URL=https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades node lambda/tests/test-lambda.js
 ```
 
-Results on 2026-11-02: **46/46 local** and **29/29 against the live API**. The live run added 6 records to the table, one for each accepted trade (5 business-rule cases and the GET round trip). None of the 19 rejected cases were saved.
+Results on 2026-11-02: **52/52 local** and **30/30 against the live API**. The live run added 6 records to the table, one for each accepted trade (5 business-rule cases and the GET round trip). None of the 19 rejected cases were saved.

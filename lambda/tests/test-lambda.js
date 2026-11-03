@@ -11,7 +11,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // ---- Local fake DynamoDB (only used when API_URL is not set) ----
 const table = new Map();
 let dbFails = false;
+const logLines = [];
 if (!API_URL) {
+  console.info = (line) => logLines.push(line);
   process.env.TABLE_NAME = "MarketStreetTrades-test";
   process.env.AWS_REGION = process.env.AWS_REGION || "us-east-1";
   DynamoDBDocumentClient.prototype.send = async function (command) {
@@ -163,6 +165,18 @@ async function run() {
     check("Rejected trade without TABLE_NAME still returns 400", (await post({ ...base, quantity: 0 })).code === 400);
     check("GET without TABLE_NAME returns 500", (await get(id)).code === 500);
     process.env.TABLE_NAME = "MarketStreetTrades-test";
+
+    // CloudWatch: one JSON log line per request, and request bodies are never logged
+    logLines.length = 0;
+    const logged = await post({ ...base, note: "do-not-log" });
+    await post({ ...base, quantity: 0 });
+    await get(logged.json.transactionId);
+    const logs = logLines.map((line) => JSON.parse(line));
+    check("Each request writes one JSON log line", logs.length === 3, logLines.join("\n  "));
+    check("Accepted trade log has result, ID, symbol and time", logs[0].result === "ACCEPTED" && logs[0].statusCode === 200 && logs[0].transactionId === logged.json.transactionId && logs[0].stockSymbol === "AAPL" && typeof logs[0].ms === "number");
+    check("Rejected trade log has the reason", logs[1].result === "REJECTED" && logs[1].statusCode === 400 && logs[1].reason === "Quantity must be a positive whole number.");
+    check("GET log shows FOUND and the ID", logs[2].method === "GET" && logs[2].result === "FOUND" && logs[2].transactionId === logged.json.transactionId);
+    check("Request bodies are never logged", !logLines.join("").includes("do-not-log"));
   }
 
   console.log("\nResults: " + passed + "/" + total + " tests passed");

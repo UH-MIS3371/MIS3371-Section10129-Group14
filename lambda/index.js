@@ -113,12 +113,8 @@ async function getTrade(event) {
   }
 }
 
-exports.handler = async (event) => {
+async function route(event, method) {
   try {
-    event = event || {};
-    const method = (event.requestContext && event.requestContext.http && event.requestContext.http.method)
-      || event.httpMethod || "POST";
-
     if (method === "OPTIONS") return { statusCode: 204, headers: HEADERS, body: "" };
     if (method === "POST") return await postTrade(event);
     if (method === "GET") return await getTrade(event);
@@ -127,4 +123,32 @@ exports.handler = async (event) => {
     console.log("Unexpected error:", e);
     return reply(500, serverError("Unexpected server error."));
   }
+}
+
+// One JSON line per request for CloudWatch Logs Insights. Request bodies are never logged.
+function logRequest(method, event, response, started) {
+  const body = response.body ? JSON.parse(response.body) : {};
+  const trade = body.trade || {};
+  const requestedId = String((event.pathParameters || {}).transactionId || "").slice(0, 64) || undefined;
+  console.info(JSON.stringify({
+    method,
+    statusCode: response.statusCode,
+    result: body.status || (body.success ? "FOUND" : undefined),
+    transactionId: trade.transactionId || requestedId,
+    stockSymbol: trade.stockSymbol,
+    tradeType: trade.tradeType,
+    shareQuantity: trade.shareQuantity,
+    reason: body.reason,
+    ms: Date.now() - started
+  }));
+}
+
+exports.handler = async (event) => {
+  const started = Date.now();
+  event = event || {};
+  const method = (event.requestContext && event.requestContext.http && event.requestContext.http.method)
+    || event.httpMethod || "POST";
+  const response = await route(event, method);
+  logRequest(method, event, response, started);
+  return response;
 };
