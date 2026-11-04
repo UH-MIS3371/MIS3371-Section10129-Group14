@@ -450,3 +450,63 @@ th {
     color: var(--muted);
   }
 }
+
+/* ---------- Week 11 Session 2: Trade Status ---------- */
+
+.status-lookup {
+  margin-top: 24px;
+}
+
+.status-lookup h2 {
+  color: var(--brand);
+  margin-bottom: 8px;
+}
+
+.status-lookup form {
+  margin-top: 20px;
+}
+
+.confirmation-panel {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  color: #166534;
+}
+
+.confirmation-panel p {
+  margin: 6px 0;
+}
+
+.confirmation-panel code {
+  display: inline-block;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+#viewStatusButton {
+  margin-top: 12px;
+}
+
+#viewStatusButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#statusMessage {
+  margin-top: 16px;
+  font-weight: 500;
+}
+
+#statusResult {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+#statusResult dd {
+  overflow-wrap: anywhere;
+}

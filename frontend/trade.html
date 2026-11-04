@@ -92,6 +92,42 @@
           <p class="note">Market orders are checked by the backend using simulated prices. Accepted trades are saved.</p>
         </form>
       </div>
+
+         <section class="card status-lookup" aria-labelledby="status-heading">
+         <h2 id="status-heading">View Trade Status</h2>
+         <p>Enter your confirmation number to check your saved trade.</p>
+
+
+    <!-- Week 11 Session 2: Saved transaction confirmation -->
+      <div id="confirmationPanel" class="confirmation-panel" hidden>
+       <p>Your trade was successfully saved!</p>
+       <p>
+       <strong>Confirmation Number:</strong>
+       <code id="confirmationNumber"></code>
+       </p>
+    </div>
+
+
+         <form id="statusLookupForm">
+    <div class="field">
+        <label for="statusTransactionId">Confirmation Number</label>
+        <input
+        type="text"
+        id="statusTransactionId"
+        placeholder="Enter your transaction ID"
+        required
+      />
+    </div>
+
+    <button type="submit" class="button" id="viewStatusButton">
+      View Status
+    </button>
+  </form>
+
+  <p id="statusMessage" role="status" aria-live="polite"></p>
+  <div id="statusResult" hidden></div>
+</section>
+
     </main>
 
     <footer class="site-footer">

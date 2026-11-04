@@ -148,16 +148,46 @@ function renderTrade() {
     });
 
     const result = await response.json();
+   
+  if (
+    !response.ok ||
+    result.status !== "ACCEPTED" ||
+    result.success !== true ||
+    result.persisted !== true ||
+    !result.transactionId ||
+    !result.trade
+  ) {
 
-    if (!response.ok || result.status !== "ACCEPTED") {
       serverMessage.textContent =
         (result.status === "ERROR" ? "Trade not saved: " : "Trade rejected: ") + (result.reason || result.message || "Validation failed.");
       serverMessage.className = "error";
       return;
     }
+   
+  saveTrade(result.trade);
 
-    saveTrade(result.trade);
-    location.href = "result.html?id=" + encodeURIComponent(result.transactionId);
+// Show confirmation only after DynamoDB confirms the save
+   document.getElementById("confirmationNumber").textContent =
+   result.transactionId;
+
+   document.getElementById("confirmationPanel").hidden = false;
+
+// Automatically fill the View Status input
+   document.getElementById("statusTransactionId").value =
+   result.transactionId;
+
+// Clear previous lookup results
+   document.getElementById("statusResult").hidden = true;
+
+  document.getElementById("statusMessage").textContent =
+  "Trade saved! Click View Status to retrieve your transaction.";
+
+// Scroll to the confirmation section
+  document.getElementById("confirmationPanel").scrollIntoView({
+  behavior: "smooth",
+  block: "center"
+});
+
 
   } catch (error) {
     serverMessage.textContent =
@@ -172,3 +202,72 @@ update();
 }
 
 renderTrade();
+
+ // Week 11 Session 2: View saved trade status
+const statusForm = document.getElementById("statusLookupForm");
+const statusInput = document.getElementById("statusTransactionId");
+const statusMessage = document.getElementById("statusMessage");
+const statusResult = document.getElementById("statusResult");
+const viewStatusButton = document.getElementById("viewStatusButton");
+
+statusForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const id = statusInput.value.trim();
+  if (!id) return;
+
+  statusMessage.textContent = "Looking up your trade...";
+  statusResult.hidden = true;
+  statusResult.replaceChildren();
+  viewStatusButton.disabled = true;
+
+  try {
+    const response = await fetch(
+      API_URL + "/" + encodeURIComponent(id),
+      { method: "GET" }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || result.success !== true || !result.trade) {
+      statusMessage.textContent =
+        result.reason || result.message || "Trade not found.";
+      return;
+    }
+
+    const trade = result.trade;
+
+    const fields = [
+      ["Confirmation Number", trade.transactionId],
+      ["Status", trade.status],
+      ["Stock Symbol", trade.stockSymbol],
+      ["Trade Type", trade.tradeType],
+      ["Shares", trade.shareQuantity],
+      ["Submitted", trade.submittedAt]
+    ];
+
+    const details = document.createElement("dl");
+    details.className = "details";
+
+    for (const [label, value] of fields) {
+      const term = document.createElement("dt");
+      term.textContent = label;
+
+      const description = document.createElement("dd");
+      description.textContent = String(value ?? "Unavailable");
+
+      details.append(term, description);
+    }
+
+    statusResult.append(details);
+    statusResult.hidden = false;
+    statusMessage.textContent = "Trade retrieved successfully!";
+
+  } catch (error) {
+    statusMessage.textContent =
+      "Unable to retrieve trade. Please try again.";
+
+  } finally {
+    viewStatusButton.disabled = false;
+  }
+});
