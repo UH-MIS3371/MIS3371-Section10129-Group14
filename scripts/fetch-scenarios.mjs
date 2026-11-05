@@ -6,7 +6,10 @@ const SCENARIOS = [
   {
     id: "crisis-2008", name: "2008 Financial Crisis", start: "2008-09-02", end: "2008-12-31", benchmark: "SPY",
     blurb: "Lehman Brothers collapses and banks need a government rescue.",
-    stocks: { BAC: "Bank of America", C: "Citigroup", GS: "Goldman Sachs", AAPL: "Apple", XOM: "Exxon Mobil", WMT: "Walmart", SPY: "S&P 500 ETF" },
+    stocks: {
+      BAC: "Bank of America", C: "Citigroup", GS: "Goldman Sachs", MS: "Morgan Stanley", AIG: "AIG", FNMA: "Fannie Mae",
+      F: "Ford", AAPL: "Apple", XOM: "Exxon Mobil", WMT: "Walmart", SKF: "UltraShort Financials ETF", SPY: "S&P 500 ETF"
+    },
     news: [
       ["2008-09-08", "Fannie Mae and Freddie Mac are placed under government control."],
       ["2008-09-15", "Lehman Brothers files for bankruptcy. Bank of America agrees to buy Merrill Lynch."],
@@ -22,7 +25,10 @@ const SCENARIOS = [
   {
     id: "dotcom-2000", name: "Dot-com Bust", start: "2000-03-01", end: "2000-12-29", benchmark: "QQQ",
     blurb: "Internet stocks hit record highs, then the bubble bursts.",
-    stocks: { MSFT: "Microsoft", CSCO: "Cisco", INTC: "Intel", AMZN: "Amazon", ORCL: "Oracle", QQQ: "Nasdaq-100 ETF" },
+    stocks: {
+      MSFT: "Microsoft", CSCO: "Cisco", INTC: "Intel", AMZN: "Amazon", ORCL: "Oracle", QCOM: "Qualcomm",
+      EBAY: "eBay", NVDA: "NVIDIA", AAPL: "Apple", QQQ: "Nasdaq-100 ETF"
+    },
     news: [
       ["2000-03-10", "The Nasdaq closes at a record high above 5,000."],
       ["2000-04-03", "A judge rules that Microsoft broke antitrust law. The Nasdaq drops sharply."],
@@ -35,7 +41,10 @@ const SCENARIOS = [
   {
     id: "covid-2020", name: "COVID Crash", start: "2020-02-03", end: "2020-06-30", benchmark: "SPY",
     blurb: "A pandemic shuts down travel, then stimulus sparks a fast rebound.",
-    stocks: { AAL: "American Airlines", CCL: "Carnival", ZM: "Zoom", AMZN: "Amazon", XOM: "Exxon Mobil", SPY: "S&P 500 ETF" },
+    stocks: {
+      AAL: "American Airlines", CCL: "Carnival", NCLH: "Norwegian Cruise Line", ZM: "Zoom", PTON: "Peloton", NFLX: "Netflix",
+      AMZN: "Amazon", MRNA: "Moderna", TSLA: "Tesla", XOM: "Exxon Mobil", SPY: "S&P 500 ETF"
+    },
     news: [
       ["2020-02-24", "The Dow falls more than 1,000 points as the virus spreads outside China."],
       ["2020-03-03", "The Federal Reserve makes an emergency half-point rate cut."],
@@ -45,16 +54,21 @@ const SCENARIOS = [
       ["2020-03-23", "The Fed announces unlimited bond buying."],
       ["2020-03-27", "The $2 trillion CARES Act stimulus is signed into law."],
       ["2020-04-20", "US oil futures fall below zero for the first time."],
+      ["2020-05-18", "Moderna reports encouraging early results from its vaccine trial."],
       ["2020-06-05", "The jobs report surprises with 2.5 million jobs added in May."]
     ]
   },
   {
     id: "meme-2021", name: "Meme Stock Squeeze", start: "2021-01-04", end: "2021-02-26", benchmark: "SPY",
     blurb: "Online traders pile into GameStop and squeeze short sellers.",
-    stocks: { GME: "GameStop", AMC: "AMC Entertainment", BB: "BlackBerry", SPY: "S&P 500 ETF" },
+    stocks: {
+      GME: "GameStop", AMC: "AMC Entertainment", BB: "BlackBerry", KOSS: "Koss", NOK: "Nokia", PLTR: "Palantir",
+      TSLA: "Tesla", SPY: "S&P 500 ETF"
+    },
     news: [
       ["2021-01-11", "GameStop adds Chewy co-founder Ryan Cohen to its board."],
       ["2021-01-25", "GameStop and AMC become the most talked-about stocks on Reddit."],
+      ["2021-01-27", "The frenzy spreads: AMC, Koss and BlackBerry soar alongside GameStop."],
       ["2021-01-28", "Robinhood and other brokers stop customers from buying GameStop and AMC."],
       ["2021-02-02", "GameStop shares collapse as the squeeze unwinds."],
       ["2021-02-18", "Congress holds a hearing with the CEOs of Robinhood, Citadel and Reddit."]
@@ -63,13 +77,17 @@ const SCENARIOS = [
   {
     id: "rates-2022", name: "2022 Rate Hikes", start: "2022-01-03", end: "2022-10-31", benchmark: "SPY",
     blurb: "Inflation climbs and the Fed raises rates faster than in decades.",
-    stocks: { META: "Meta Platforms", NFLX: "Netflix", TSLA: "Tesla", XOM: "Exxon Mobil", AAPL: "Apple", SPY: "S&P 500 ETF" },
+    stocks: {
+      META: "Meta Platforms", NFLX: "Netflix", TSLA: "Tesla", COIN: "Coinbase", HOOD: "Robinhood", ARKK: "ARK Innovation ETF",
+      PTON: "Peloton", XOM: "Exxon Mobil", AAPL: "Apple", SPY: "S&P 500 ETF"
+    },
     news: [
       ["2022-02-03", "Meta falls 26% after reporting its first drop in daily users."],
       ["2022-02-24", "Russia invades Ukraine. Oil prices surge."],
       ["2022-03-16", "The Fed raises interest rates for the first time since 2018."],
       ["2022-04-20", "Netflix falls 35% after losing subscribers."],
       ["2022-05-04", "The Fed raises rates by half a point, the most since 2000."],
+      ["2022-05-12", "Crypto prices crash after the TerraUSD stablecoin collapses."],
       ["2022-06-13", "The S&P 500 enters a bear market."],
       ["2022-06-15", "The Fed raises rates by 0.75 points, the most since 1994."],
       ["2022-09-13", "Inflation comes in higher than expected. The S&P 500 drops 4.3%."]

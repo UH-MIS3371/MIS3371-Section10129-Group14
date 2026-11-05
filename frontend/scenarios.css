@@ -177,6 +177,15 @@ button:disabled {
   line-height: 1.1;
 }
 
+/* The header photo is darkened on the left so the title stays readable */
+.hero {
+  padding: 64px 40px;
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgb(12 12 14 / 0.96) 30%, rgb(12 12 14 / 0.55)),
+    url("assets/scenarios/wall-street.jpg") center 40% / cover;
+}
+
 .lead {
   max-width: 60ch;
   margin-top: 16px;
@@ -214,6 +223,47 @@ button:disabled {
 .scenario:hover,
 .scenario:focus-visible {
   border-color: var(--hue);
+}
+
+/* Each card's photo runs to the card's edges, tinted with the scenario's colour and faded into the card */
+.scenario {
+  overflow: hidden;
+}
+
+.photo {
+  position: relative;
+  display: block;
+  height: 150px;
+  margin: -20px -20px 4px;
+}
+
+.photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(0.3) brightness(0.75);
+}
+
+.photo::before,
+.photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.photo::before {
+  background: var(--hue);
+  mix-blend-mode: color;
+  opacity: 0.35;
+}
+
+.photo::after {
+  background: linear-gradient(to bottom, transparent 45%, var(--surface));
+}
+
+.scenario:hover .photo img {
+  filter: grayscale(0) brightness(0.9);
 }
 
 .scenario strong {
@@ -262,7 +312,7 @@ button:disabled {
 
 .game {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 300px;
+  grid-template-columns: 280px minmax(0, 1fr) 300px;
   grid-template-areas:
     "strip strip strip"
     "watch quote ticket"
@@ -320,13 +370,16 @@ button:disabled {
 
 /* ---------- Score strip ---------- */
 
+/* The scenario's photo shows faintly behind the standings */
 .strip {
   display: grid;
   grid-template-columns: minmax(200px, 1fr) auto minmax(280px, 1.3fr);
   gap: 20px;
   align-items: center;
   padding: 12px 20px;
-  background: var(--surface);
+  background:
+    linear-gradient(90deg, var(--surface) 35%, rgb(19 18 23 / 0.86)),
+    var(--photo, none) center 40% / cover;
 }
 
 .strip h1 {
@@ -407,6 +460,21 @@ button:disabled {
 .end-label.mkt { fill: var(--muted); }
 
 /* ---------- Watchlist ---------- */
+
+.watch {
+  max-height: 560px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.game .watch table {
+  font-size: 13px;
+}
+
+.game .watch th,
+.game .watch td {
+  padding: 6px 3px;
+}
 
 .watch tbody tr {
   cursor: pointer;
@@ -868,6 +936,28 @@ dialog.info {
   margin-bottom: 4px;
   font-size: 13px;
   color: var(--accent);
+}
+
+.brief-photo {
+  display: block;
+  width: calc(100% + 48px);
+  max-width: none;
+  height: 180px;
+  margin: -24px -24px 16px;
+  object-fit: cover;
+  filter: brightness(0.8);
+}
+
+.credits {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.credits a {
+  color: var(--muted);
 }
 
 .dialog-actions {

@@ -35,8 +35,10 @@
     </header>
 
     <main id="picker" class="picker">
-      <h1>Trade through history</h1>
-      <p class="lead">Start with $100,000 in a real market crisis. One trading day passes every few seconds and real headlines arrive on their real dates. Finish ahead of the market and the bot.</p>
+      <div class="hero">
+        <h1>Trade through history</h1>
+        <p class="lead">Start with $100,000 in a real market crisis. One trading day passes every few seconds and real headlines arrive on their real dates. Finish ahead of the market and the bot.</p>
+      </div>
       <div class="start">
         <span id="speedLabel">Speed</span>
         <div class="seg" role="group" aria-labelledby="speedLabel" id="speedPick"></div>
@@ -154,7 +156,12 @@
       </section>
     </main>
 
+    <footer class="credits">
+      <p>Pictures: <a href="https://commons.wikimedia.org/wiki/File:Lehman_Brothers-NYC-20080915.jpg">“Lehman Brothers-NYC-20080915”</a> by Robert Scoble, <a href="https://creativecommons.org/licenses/by/2.0">CC BY 2.0</a>; <a href="https://commons.wikimedia.org/wiki/File:NASDAQ_Market_Site_201506.jpg">“NASDAQ Market Site 201506”</a> by Luca Marfè at Italia all'ONU, <a href="https://creativecommons.org/licenses/by/2.0">CC BY 2.0</a>; <a href="https://commons.wikimedia.org/wiki/File:Grand_Central_Station_Empty_Streets_New_York_City_COVID19.jpg">“Grand Central Station Empty Streets New York City COVID19”</a> by Anthony Quintano, <a href="https://creativecommons.org/licenses/by/2.0">CC BY 2.0</a>; <a href="https://commons.wikimedia.org/w/index.php?curid=101264412">“GameStop Retail Store - Vallejo - California”</a> by Will Buckner, <a href="https://creativecommons.org/licenses/by/2.0/">CC BY 2.0</a>; <a href="https://commons.wikimedia.org/wiki/File:Eccles_Building_(26088200676).jpg">“Eccles Building”</a> by the Federal Reserve, <a href="https://creativecommons.org/publicdomain/mark/1.0/">public domain</a>; <a href="https://commons.wikimedia.org/w/index.php?curid=61748014">“Monochrome wall street sign”</a> by Chris Li, <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.en">CC0</a>. All via Wikimedia Commons. Prices: Yahoo Finance.</p>
+    </footer>
+
     <dialog id="briefDialog" class="info" aria-labelledby="briefTitle">
+      <img id="briefPhoto" class="brief-photo" alt="" />
       <p id="briefPeriod" class="period mono"></p>
       <h2 id="briefTitle"></h2>
       <p id="briefContext"></p>
