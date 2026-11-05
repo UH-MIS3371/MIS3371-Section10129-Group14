@@ -1,5 +1,6 @@
 // MarketStreet Scenarios: candlestick or line chart with moving averages, volume and a hover readout (SVG).
-// drawMarketChart(box, readout, { dates, bars, from, type, mas, mark, trades }) draws bars[from..] where each bar is [open, high, low, close, volume].
+// drawMarketChart(box, readout, { dates, bars, from, type, mas, mark, trades, news, position }) draws
+// bars[from..] where each bar is [open, high, low, close, volume].
 
 (() => {
   const NS = "http://www.w3.org/2000/svg";
@@ -46,23 +47,24 @@
         className: change >= 0 ? "up" : "down",
         textContent: (change >= 0 ? "▲ +" : "▼ −") + Math.abs((change / prevClose) * 100).toFixed(2) + "%"
       }),
-      "   Vol " + volume(vol));
+      vol ? "   Vol " + volume(vol) : "");
   }
 
   window.drawMarketChart = function (box, readout, view) {
-    const { dates, bars, from, type, mas, mark, trades } = view;
+    const { dates, bars, from, type, mas, mark, trades, news, position } = view;
     const shown = bars.slice(from);
     const averages = mas.map((n) => [n, movingAverage(bars, n).slice(from)]);
     const width = box.clientWidth;
-    const height = 360;
-    const pad = { top: 8, right: 64, bottom: 24, left: 4 };
-    const volH = 56;
+    const height = box.clientHeight || 360;
+    const pad = { top: 10, right: 64, bottom: 24, left: 4 };
+    const volH = Math.round(height * 0.16);
     const plotW = width - pad.left - pad.right;
     const priceBottom = height - pad.bottom - volH - 12;
     const slot = plotW / shown.length;
 
     const values = shown.flatMap((b) => (type === "line" ? [b[3]] : [b[1], b[2]]));
     averages.forEach(([, line]) => line.forEach((v) => v !== null && values.push(v)));
+    if (position) values.push(position.avg);
     const step = niceStep(Math.max(...values) - Math.min(...values) || 1);
     const min = Math.floor(Math.min(...values) / step) * step;
     const max = Math.ceil(Math.max(...values) / step) * step;
@@ -70,12 +72,17 @@
     const x = (i) => pad.left + slot * (i + 0.5);
     const y = (v) => pad.top + (1 - (v - min) / (max - min)) * (priceBottom - pad.top);
     const decimals = step < 1 ? 2 : 0;
+    const last = shown.at(-1);
+    const lastDir = last[3] >= (bars[from + shown.length - 2] || last)[3] ? "up" : "down";
 
     const root = svg("svg", { width, height, viewBox: `0 0 ${width} ${height}`, "aria-hidden": "true" });
 
+    // Price grid; a label that would sit under the last-price tag is left out
     for (let v = min; v <= max + step / 2; v += step) {
       root.append(svg("line", { x1: pad.left, x2: pad.left + plotW, y1: y(v), y2: y(v), class: "grid" }));
-      root.append(svg("text", { x: width - 4, y: y(v) + 4, "text-anchor": "end", class: "axis" }, "$" + v.toFixed(decimals)));
+      if (Math.abs(y(v) - y(last[3])) > 14) {
+        root.append(svg("text", { x: width - 4, y: y(v) + 4, "text-anchor": "end", class: "axis" }, "$" + v.toFixed(decimals)));
+      }
     }
 
     const labels = Math.min(5, shown.length, Math.floor(plotW / 90) + 1);
@@ -88,7 +95,7 @@
 
     shown.forEach(([open, high, low, close, vol], i) => {
       const dir = close >= open ? "up" : "down";
-      const barW = Math.max(1, slot * 0.6);
+      const barW = Math.max(1, slot * 0.65);
       const vh = (vol / maxVol) * volH;
       root.append(svg("rect", { x: x(i) - barW / 2, y: height - pad.bottom - vh, width: barW, height: vh, class: "vol " + dir }));
       if (type === "line") return;
@@ -106,12 +113,22 @@
       if (d) root.append(svg("path", { d, class: "ma " + MA_CLASS[n] }));
     });
 
-    // Last price: dashed line with a tag on the price axis
-    const last = shown.at(-1);
-    const lastDir = last[3] >= (bars[from + shown.length - 2] || last)[3] ? "up" : "down";
+    // Last price: dotted line with a tag on the price axis
     root.append(svg("line", { x1: pad.left, x2: pad.left + plotW, y1: y(last[3]), y2: y(last[3]), class: "last " + lastDir }));
     root.append(svg("rect", { x: pad.left + plotW + 2, y: y(last[3]) - 9, width: pad.right - 4, height: 18, rx: 3, class: "tag " + lastDir }));
     root.append(svg("text", { x: width - 4, y: y(last[3]) + 4, "text-anchor": "end", class: "tag-text" }, last[3].toFixed(2)));
+
+    // Your open position: a dashed line at your average cost, labelled with the profit or loss so far
+    if (position) {
+      const pnl = (last[3] - position.avg) * position.shares;
+      const dir = pnl >= 0 ? "up" : "down";
+      root.append(svg("line", { x1: pad.left, x2: pad.left + plotW, y1: y(position.avg), y2: y(position.avg), class: "cost" }));
+      const dollars = Math.abs(pnl).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const label = (position.shares > 0 ? "LONG " : "SHORT ") + Math.abs(position.shares) + " @ " + position.avg.toFixed(2) + "  " +
+        (pnl >= 0 ? "+$" : "−$") + dollars + " (" + (pnl >= 0 ? "+" : "−") + Math.abs((pnl / (position.avg * Math.abs(position.shares))) * 100).toFixed(1) + "%)";
+      root.append(svg("rect", { x: pad.left + 2, y: y(position.avg) - 20, width: label.length * 7.3 + 10, height: 17, rx: 3, class: "cost-box" }));
+      root.append(svg("text", { x: pad.left + 7, y: y(position.avg) - 8, class: "cost-label " + dir }, label));
+    }
 
     // Where the scenario starts: history is on the left of this line
     if (mark > from && mark < bars.length) {
@@ -120,18 +137,32 @@
       root.append(svg("text", { x: mx + 4, y: pad.top + 12, class: "axis" }, "Start"));
     }
 
-    // Trade markers: buys point up from below the day's low, sells point down from above its high.
-    // Yours are filled, the bot's are outlines; a second trade on the same day stacks further out.
+    // Headline pins sit on the line between price and volume; hover the day to read the headline
+    news.filter(([day]) => day >= from && day < bars.length).forEach(([day]) => {
+      const px = x(day - from);
+      const py = priceBottom + 6;
+      root.append(svg("path", { d: `M${px},${py - 5}l5,5l-5,5l-5,-5z`, class: "pin" }));
+    });
+
+    // Trade markers: buys below the day's low, sells and shorts above its high.
+    // Yours are lettered circles in your colour, the bot's are small outlined triangles.
     const stacked = {};
     trades.filter((t) => t.day >= from && t.day < bars.length).forEach((t) => {
       const i = t.day - from;
-      const key = i + t.side;
+      const buy = t.side === "Buy" || t.side === "Cover";
+      const key = i + (buy ? "b" : "s");
       const n = (stacked[key] = (stacked[key] || 0) + 1) - 1;
       const bar = bars[t.day];
-      const buy = t.side === "Buy" || t.side === "Cover";
-      const tip = buy ? Math.min(y(type === "line" ? bar[3] : bar[2]) + 4 + n * 11, priceBottom) : Math.max(y(type === "line" ? bar[3] : bar[1]) - 4 - n * 11, pad.top);
-      const d = buy ? `M${x(i)},${tip}l5,8h-10z` : `M${x(i)},${tip}l5,-8h-10z`;
-      root.append(svg("path", { d, class: "mk " + (t.who === "Bot" ? "bot" : "you") }));
+      const edge = type === "line" ? bar[3] : buy ? bar[2] : bar[1];
+      const gap = 12 + n * 16;
+      const cy = buy ? Math.min(y(edge) + gap, priceBottom - 2) : Math.max(y(edge) - gap, pad.top + 6);
+      if (t.who === "Bot") {
+        const d = buy ? `M${x(i)},${cy - 5}l5,8h-10z` : `M${x(i)},${cy + 5}l5,-8h-10z`;
+        root.append(svg("path", { d, class: "mk bot" }));
+      } else {
+        root.append(svg("circle", { cx: x(i), cy, r: 7, class: "mk you" }));
+        root.append(svg("text", { x: x(i), y: cy + 3.5, "text-anchor": "middle", class: "mk-letter" }, buy ? "B" : "S"));
+      }
     });
 
     const cross = svg("line", { y1: pad.top, y2: height - pad.bottom, class: "crosshair", visibility: "hidden" });
@@ -152,7 +183,8 @@
       const at = from + i;
       showReadout(readout, dates[at], bars[at], at ? bars[at - 1][3] : bars[at][0]);
       const that = trades.filter((t) => t.day === at).map((t) => "   " + t.who + " " + t.side.toLowerCase() + " " + t.qty);
-      if (that.length) readout.append(that.join(""));
+      const headline = news.find(([day]) => day === at);
+      readout.append(that.join("") + (headline ? "   ◆ " + headline[1] : ""));
     }
 
     hit.addEventListener("pointermove", (e) => {
@@ -170,19 +202,27 @@
   };
 
   // Small line chart with no axes, e.g. the race between you, the bot and the market.
-  // series: [{ values, cls }]; length stretches the x axis so a line can show how far through it is.
+  // series: [{ values, cls, label }]; length stretches the x axis so a line shows how far through it is.
+  // A label is written just after the end of its line, moved down if it would overlap the one above.
   window.drawSpark = function (box, series, length) {
     const width = box.clientWidth;
     const height = box.clientHeight || 48;
+    const right = series.some((s) => s.label) ? 70 : 2;
     const all = series.flatMap((s) => s.values);
     const min = Math.min(...all);
     const range = Math.max(...all) - min || 1;
     const n = Math.max(length || 0, ...series.map((s) => s.values.length)) - 1 || 1;
+    const px = (i) => (i / n) * (width - right - 2) + 2;
+    const py = (v) => 6 + (1 - (v - min) / range) * (height - 12);
     const root = svg("svg", { width, height, viewBox: `0 0 ${width} ${height}`, "aria-hidden": "true" });
     for (const s of series) {
-      const d = s.values.map((v, i) => (i ? "L" : "M") + ((i / n) * (width - 4) + 2).toFixed(1) + "," + (3 + (1 - (v - min) / range) * (height - 6)).toFixed(1)).join("");
-      root.append(svg("path", { d, class: s.cls }));
+      root.append(svg("path", { d: s.values.map((v, i) => (i ? "L" : "M") + px(i).toFixed(1) + "," + py(v).toFixed(1)).join(""), class: s.cls }));
     }
+    let below = -Infinity;
+    series.filter((s) => s.label).map((s) => ({ s, at: py(s.values.at(-1)) + 4 })).sort((a, b) => a.at - b.at).forEach(({ s, at }) => {
+      below = Math.max(at, below + 12);
+      root.append(svg("text", { x: px(s.values.length - 1) + 6, y: below, class: "end-label " + s.cls }, s.label));
+    });
     box.replaceChildren(root);
   };
 })();
