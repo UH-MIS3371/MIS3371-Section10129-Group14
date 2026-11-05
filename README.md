@@ -196,6 +196,7 @@ The Lambda (`MarketStreet-ProcessTrade`) still validates every trade with the ex
 
 - Prices are real daily open, high, low, close and volume. During a day the price moves through that day's real range and ends on the real close. The chart also shows about a year of real history before the scenario starts.
 - The Performance card shows your profit or loss for each month and year, next to the market's return for the same period.
+- You can also short a stock to profit from a fall: Short sells borrowed shares (shown as negative shares), and buying them back covers the short. You can't short a stock you own, your shorts can be worth at most your account value when you open them, and there are no borrowing fees.
 - You also compete against a simple trend-following bot. At each daily close it sells stocks that closed below their 20-day average and buys stocks above it, putting at most an equal share of its money in each stock. The scoreboard at the top races your account against the bot and the market, and both your trades and the bot's are marked on the price chart.
 - [scripts/fetch-scenarios.mjs](scripts/fetch-scenarios.mjs) downloaded the prices once from Yahoo Finance into [frontend/data/scenarios.js](frontend/data/scenarios.js). No API key is used and nothing is fetched while playing. Run `node scripts/fetch-scenarios.mjs` to rebuild it.
 - This prototype runs in the browser only; scenario trades are not sent to the API yet.

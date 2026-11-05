@@ -451,7 +451,7 @@ button {
 
 .sides {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
   margin: 0;
 }
@@ -479,6 +479,20 @@ button {
   background: var(--sell-bg);
   border-color: var(--sell);
   color: var(--sell);
+}
+
+.sides label:has([value="Short"]:checked) {
+  background: var(--raised);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.hint {
+  font-size: 13px;
+}
+
+.hint:empty {
+  display: none;
 }
 
 .sides label:has(:focus-visible) {

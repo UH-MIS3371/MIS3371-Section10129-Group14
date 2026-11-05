@@ -128,7 +128,7 @@
       const key = i + t.side;
       const n = (stacked[key] = (stacked[key] || 0) + 1) - 1;
       const bar = bars[t.day];
-      const buy = t.side === "Buy";
+      const buy = t.side === "Buy" || t.side === "Cover";
       const tip = buy ? Math.min(y(type === "line" ? bar[3] : bar[2]) + 4 + n * 11, priceBottom) : Math.max(y(type === "line" ? bar[3] : bar[1]) - 4 - n * 11, pad.top);
       const d = buy ? `M${x(i)},${tip}l5,8h-10z` : `M${x(i)},${tip}l5,-8h-10z`;
       root.append(svg("path", { d, class: "mk " + (t.who === "Bot" ? "bot" : "you") }));

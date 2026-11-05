@@ -321,7 +321,7 @@ function render() {
   $("totalValue").textContent = money(totalValue());
   $("cash").textContent = money(game.cash);
   $("positionRows").replaceChildren(...Object.keys(game.holdings).map((symbol) =>
-    el("tr", null, el("td", null, symbol), el("td", { class: "right mono" }, game.holdings[symbol]),
+    el("tr", null, el("td", null, symbol), el("td", { class: "right mono" }, game.holdings[symbol] < 0 ? "−" + -game.holdings[symbol] + " short" : game.holdings[symbol]),
       el("td", { class: "right mono" }, money(game.holdings[symbol] * price(symbol))))));
   if (!Object.keys(game.holdings).length) {
     $("positionRows").replaceChildren(el("tr", null, el("td", { colspan: "3", class: "muted" }, "No holdings yet")));
@@ -338,32 +338,53 @@ function render() {
   drawPriceChart();
 }
 
+// A short position is negative shares: you sold borrowed shares and owe them back
+function shortValue() {
+  let total = 0;
+  for (const symbol in game.holdings) total += Math.max(0, -game.holdings[symbol]) * price(symbol);
+  return total;
+}
+
+// The most shares each order can be for. Buying while short covers the short; shorts in total
+// can be worth at most the account's value.
 function maxShares(side) {
-  return side === "Buy" ? Math.floor(game.cash / price(game.symbol)) : game.holdings[game.symbol] || 0;
+  const owned = game.holdings[game.symbol] || 0;
+  const now = price(game.symbol);
+  if (side === "Buy") return owned < 0 ? Math.min(-owned, Math.floor(game.cash / now)) : Math.floor(game.cash / now);
+  if (side === "Sell") return Math.max(0, owned);
+  return owned > 0 ? 0 : Math.max(0, Math.floor((totalValue() - shortValue()) / now));
 }
 
 function updateTicket() {
   const side = document.querySelector("input[name=side]:checked").value;
   const qty = Number($("quantity").value);
-  $("orderButton").textContent = side + " " + game.symbol;
+  const owned = game.holdings[game.symbol] || 0;
+  const covering = side === "Buy" && owned < 0;
+  $("orderButton").textContent = (covering ? "Buy to cover " : side + " ") + game.symbol;
   $("estimate").textContent = Number.isSafeInteger(qty) && qty > 0 ? money(qty * price(game.symbol)) : "—";
-  $("limitLabel").textContent = side === "Buy" ? "You can afford" : "You own";
-  $("limit").textContent = plural(maxShares(side), "share");
+  $("limitLabel").textContent = covering ? "You are short" : { Buy: "You can afford", Sell: "You own", Short: "You can short" }[side];
+  $("limit").textContent = plural(covering ? -owned : maxShares(side), "share");
+  $("sideHint").textContent = side === "Short" ? "Sell borrowed shares now and buy them back later. You profit if the price falls."
+    : covering ? "Buying closes your short. You profit if the price is below where you shorted." : "";
 }
 
-// Same rules as the backend: whole shares of 1 or more, enough cash to buy, enough shares to sell
+// Same rules as the backend (whole shares of 1 or more, enough cash, enough shares), plus the short rules
 function placeOrder(side, qty) {
   if (!Number.isSafeInteger(qty) || qty < 1) return "Quantity must be a positive whole number.";
   const now = price(game.symbol);
   const owned = game.holdings[game.symbol] || 0;
+  if (side === "Sell" && owned <= 0) return "You don't own any " + game.symbol + ". Use Short to bet on a fall.";
+  if (side === "Short" && owned > 0) return "Sell the " + game.symbol + " you own before shorting it.";
+  if (side === "Buy" && owned < 0 && qty > -owned) return "You are short " + plural(-owned, "share") + ". Buy up to that many to cover.";
   if (side === "Buy" && qty * now > game.cash) return "Insufficient cash.";
   if (side === "Sell" && qty > owned) return "Insufficient shares.";
+  if (side === "Short" && qty > maxShares("Short")) return "Short limit reached: your shorts can't be worth more than your account.";
 
-  game.cash += (side === "Buy" ? -1 : 1) * qty * now;
-  const left = owned + (side === "Buy" ? qty : -qty);
-  if (left) game.holdings[game.symbol] = left;
+  const change = side === "Buy" ? qty : -qty;
+  game.cash -= change * now;
+  if (owned + change) game.holdings[game.symbol] = owned + change;
   else delete game.holdings[game.symbol];
-  record("You", side, qty, game.symbol, now);
+  record("You", side === "Buy" && owned < 0 ? "Cover" : side, qty, game.symbol, now);
   return null;
 }
 
@@ -372,7 +393,7 @@ $("orderForm").addEventListener("submit", (e) => {
   const side = document.querySelector("input[name=side]:checked").value;
   const qty = Number($("quantity").value);
   const error = placeOrder(side, qty);
-  $("orderMessage").textContent = error || side + " " + plural(qty, "share") + " of " + game.symbol + " filled.";
+  $("orderMessage").textContent = error || game.log.at(-1).side + " " + plural(qty, "share") + " of " + game.symbol + " filled.";
   $("orderMessage").className = error ? "error" : "ok";
   render();
 });

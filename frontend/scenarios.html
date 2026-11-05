@@ -91,7 +91,7 @@
         <p id="chartReadout" class="readout mono"></p>
         <div class="chart" id="chart"></div>
         <p class="legend muted">
-          <span><i class="mk you-buy"></i>You bought</span><span><i class="mk you-sell"></i>You sold</span>
+          <span><i class="mk you-buy"></i>You bought or covered</span><span><i class="mk you-sell"></i>You sold or shorted</span>
           <span><i class="mk bot-buy"></i>Bot bought</span><span><i class="mk bot-sell"></i>Bot sold</span>
         </p>
       </section>
@@ -103,6 +103,7 @@
             <legend class="visually-hidden">Trade type</legend>
             <label><input type="radio" name="side" value="Buy" checked /> Buy</label>
             <label><input type="radio" name="side" value="Sell" /> Sell</label>
+            <label><input type="radio" name="side" value="Short" /> Short</label>
           </fieldset>
           <label for="quantity">Shares of <span id="ticketSymbol"></span></label>
           <input id="quantity" type="number" min="1" step="1" value="10" inputmode="numeric" />
@@ -111,6 +112,7 @@
           </div>
           <p class="row"><span class="muted">Estimated total</span><span id="estimate" class="mono"></span></p>
           <p class="row"><span class="muted" id="limitLabel"></span><span id="limit" class="mono"></span></p>
+          <p id="sideHint" class="hint muted"></p>
           <button type="submit" class="primary" id="orderButton">Buy</button>
           <p id="orderMessage" role="status" aria-live="polite"></p>
         </form>
@@ -162,7 +164,7 @@
         <tbody id="botView"></tbody>
       </table>
       <h3>How to beat it</h3>
-      <p>A trend follower is always a step late: it buys after a rise has started and sells after a fall has begun. Sudden turns, like a crash followed by a fast rebound, catch it out. Reading the headlines and acting before the trend shows up is your edge.</p>
+      <p>A trend follower is always a step late: it buys after a rise has started and sells after a fall has begun. Sudden turns, like a crash followed by a fast rebound, catch it out. Reading the headlines and acting before the trend shows up is your edge. You can also <strong>short</strong> a stock to profit from a fall; the bot never does.</p>
       <button type="button" class="primary" id="botDialogClose">Got it</button>
     </dialog>
 
