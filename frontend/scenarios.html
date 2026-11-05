@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scenarios – MarketStreet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="scenarios.css" />
+    <script src="data/scenarios.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="market-chart.js" defer></script>
+    <script src="scenarios.js" defer></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <div class="inner">
+        <a class="logo" href="trade.html">MarketStreet</a>
+        <nav class="site-nav" aria-label="Main">
+          <a href="trade.html">Trade</a><a href="history.html">History</a><a href="scenarios.html" aria-current="page">Scenarios</a>
+        </nav>
+        <div class="clock" id="clock" hidden>
+          <strong id="simDate" class="mono"></strong>
+          <span id="dayCount" class="mono muted"></span>
+          <button type="button" class="primary" id="pauseButton">Start the clock</button>
+          <div class="seg" role="group" aria-label="Speed" id="speedGame"></div>
+        </div>
+      </div>
+    </header>
+
+    <main id="picker" class="picker">
+      <h1>Trade through history</h1>
+      <p class="lead">Start with $100,000 in a real market crisis. One trading day passes every few seconds and real headlines arrive on their real dates. Finish ahead of the market and the bot.</p>
+      <div class="scenarios" id="scenarioList"></div>
+      <div class="start">
+        <span id="speedLabel">Speed</span>
+        <div class="seg" role="group" aria-labelledby="speedLabel" id="speedPick"></div>
+        <span id="duration" class="muted"></span>
+        <button type="button" class="primary" id="startButton">Start</button>
+      </div>
+    </main>
+
+    <main id="game" class="game" hidden>
+      <section class="card score" aria-labelledby="scoreTitle">
+        <div class="score-intro">
+          <h1 id="scoreTitle"></h1>
+          <p id="finding" class="finding"></p>
+          <p class="muted"><strong class="bot-name">The bot</strong> follows the trend: at each close it buys stocks trading above their 20-day average and sells any that close below it. <button type="button" class="link" id="botInfoButton">How the bot works</button></p>
+        </div>
+        <ol class="standings" aria-label="Standings">
+          <li class="you"><span class="who">You</span><strong id="youReturn"></strong><span id="youPlace" class="muted"></span></li>
+          <li class="bot"><span class="who">Bot</span><strong id="botReturn"></strong><span id="botHolding" class="muted"></span></li>
+          <li class="mkt"><span class="who" id="benchLabel"></span><strong id="benchReturn"></strong><span class="muted">Buy and hold</span></li>
+        </ol>
+        <div class="race" id="race" aria-hidden="true"></div>
+      </section>
+
+      <section class="card watch" aria-labelledby="watchHeading">
+        <h2 id="watchHeading">Watchlist</h2>
+        <table>
+          <thead><tr><th>Symbol</th><th class="right">Price</th><th class="right">Day</th></tr></thead>
+          <tbody id="watchRows"></tbody>
+        </table>
+      </section>
+
+      <section class="card quote" aria-labelledby="quoteSymbol">
+        <div class="quote-head">
+          <div>
+            <h2 id="quoteSymbol"></h2>
+            <p id="quoteName" class="muted"></p>
+          </div>
+          <div class="right">
+            <p id="quotePrice" class="price mono"></p>
+            <p id="quoteChange" class="mono"></p>
+          </div>
+        </div>
+        <div class="chart-tools">
+          <div class="seg" role="group" aria-label="Range" id="rangeButtons">
+            <button type="button" data-range="21">1M</button><button type="button" data-range="63">3M</button><button type="button" data-range="126" aria-pressed="true">6M</button><button type="button" data-range="252">1Y</button><button type="button" data-range="0">All</button>
+          </div>
+          <div class="seg" role="group" aria-label="Chart type" id="typeButtons">
+            <button type="button" data-type="candles" aria-pressed="true">Candles</button><button type="button" data-type="line">Line</button>
+          </div>
+          <div class="seg" role="group" aria-label="Moving averages" id="maButtons">
+            <button type="button" data-ma="20" class="ma20" aria-pressed="false">MA 20</button><button type="button" data-ma="50" class="ma50" aria-pressed="false">MA 50</button>
+          </div>
+        </div>
+        <p id="chartReadout" class="readout mono"></p>
+        <div class="chart" id="chart"></div>
+        <p class="legend muted">
+          <span><i class="mk you-buy"></i>You bought</span><span><i class="mk you-sell"></i>You sold</span>
+          <span><i class="mk bot-buy"></i>Bot bought</span><span><i class="mk bot-sell"></i>Bot sold</span>
+        </p>
+      </section>
+
+      <section class="card ticket" aria-labelledby="ticketHeading">
+        <h2 id="ticketHeading">Order</h2>
+        <form id="orderForm" novalidate>
+          <fieldset class="sides">
+            <legend class="visually-hidden">Trade type</legend>
+            <label><input type="radio" name="side" value="Buy" checked /> Buy</label>
+            <label><input type="radio" name="side" value="Sell" /> Sell</label>
+          </fieldset>
+          <label for="quantity">Shares of <span id="ticketSymbol"></span></label>
+          <input id="quantity" type="number" min="1" step="1" value="10" inputmode="numeric" />
+          <div class="seg parts" role="group" aria-label="Quick quantity" id="partButtons">
+            <button type="button" data-part="0.25">25%</button><button type="button" data-part="0.5">50%</button><button type="button" data-part="1">Max</button>
+          </div>
+          <p class="row"><span class="muted">Estimated total</span><span id="estimate" class="mono"></span></p>
+          <p class="row"><span class="muted" id="limitLabel"></span><span id="limit" class="mono"></span></p>
+          <button type="submit" class="primary" id="orderButton">Buy</button>
+          <p id="orderMessage" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="card account" aria-labelledby="accountHeading">
+        <h2 id="accountHeading">Your portfolio</h2>
+        <p class="row"><span class="muted">Total value</span><strong id="totalValue" class="mono"></strong></p>
+        <p class="row"><span class="muted">Cash</span><span id="cash" class="mono"></span></p>
+        <table>
+          <thead><tr><th>Holding</th><th class="right">Shares</th><th class="right">Value</th></tr></thead>
+          <tbody id="positionRows"></tbody>
+        </table>
+      </section>
+
+      <section class="card perf" aria-labelledby="perfHeading">
+        <h2 id="perfHeading">Your performance</h2>
+        <table>
+          <thead><tr><th>Period</th><th class="right">P&amp;L</th><th class="right">Return</th><th class="right">Market</th></tr></thead>
+          <tbody id="perfRows"></tbody>
+        </table>
+      </section>
+
+      <section class="card news" aria-labelledby="newsHeading">
+        <h2 id="newsHeading">Headlines</h2>
+        <ol id="newsList" aria-live="polite"></ol>
+      </section>
+
+      <section class="card log" aria-labelledby="logHeading">
+        <h2 id="logHeading">Trades</h2>
+        <table>
+          <thead><tr><th>Date</th><th>Who</th><th>Order</th><th class="right">Price</th><th class="right">Total</th></tr></thead>
+          <tbody id="tradeRows"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <dialog id="botDialog" class="info" aria-labelledby="botDialogTitle">
+      <h2 id="botDialogTitle">How the bot works</h2>
+      <p>The bot is a <strong>trend follower</strong>. It never reads the headlines; it only looks at prices. It starts with the same $100,000 as you, trades at the same real prices and only buys whole shares.</p>
+      <ol class="steps">
+        <li><strong>Every day at the close</strong> it works out each stock's 20-day average: the average of its last 20 closing prices.</li>
+        <li><strong>Sell.</strong> Any stock it owns that closed <em>below</em> its average is sold.</li>
+        <li><strong>Buy.</strong> Stocks that closed <em>above</em> their average, and that it does not own yet, are bought. Each stock gets at most an equal share of its money (<span id="botShare"></span>), so when few stocks are rising, most of its money stays in cash.</li>
+      </ol>
+      <h3>Its view at the close on <span id="botViewDate"></span></h3>
+      <table>
+        <thead><tr><th>Stock</th><th class="right">Close</th><th class="right">20-day avg</th><th class="right">Trend</th><th class="right">Bot owns</th></tr></thead>
+        <tbody id="botView"></tbody>
+      </table>
+      <h3>How to beat it</h3>
+      <p>A trend follower is always a step late: it buys after a rise has started and sells after a fall has begun. Sudden turns, like a crash followed by a fast rebound, catch it out. Reading the headlines and acting before the trend shows up is your edge.</p>
+      <button type="button" class="primary" id="botDialogClose">Got it</button>
+    </dialog>
+
+    <dialog id="endDialog" aria-labelledby="endHeading">
+      <h2 id="endHeading">Scenario complete</h2>
+      <p class="row"><span class="muted">Final value</span><strong id="endValue" class="mono"></strong></p>
+      <p class="row"><span class="muted">Your return</span><span id="endReturn" class="mono"></span></p>
+      <p class="row"><span class="muted">Bot (trend follower)</span><span id="endBot" class="mono"></span></p>
+      <p class="row"><span class="muted" id="endBenchLabel"></span><span id="endBench" class="mono"></span></p>
+      <p id="endVerdict"></p>
+      <button type="button" class="primary" id="againButton">Choose another scenario</button>
+    </dialog>
+  </body>
+</html>
