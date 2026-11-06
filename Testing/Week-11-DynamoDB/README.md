@@ -6,9 +6,9 @@ Accepted trades are now saved to Amazon DynamoDB, and a saved trade can be read 
 
 | Piece | Change |
 |---|---|
-| [lambda/index.js](../../lambda/index.js) | POST validates with the unchanged `validateTrade()`, then saves accepted trades with `PutCommand`. New GET route reads one trade with `GetCommand`. |
-| [lambda/backend/](../../lambda/backend/) | Unchanged. All business rules still live in `trades.js`. |
-| [lambda/tests/test-lambda.js](../../lambda/tests/test-lambda.js) | Checks that accepted trades are saved, rejected trades are not, and GET returns the saved record. |
+| [aws/lambda/index.js](../../aws/lambda/index.js) | POST validates with the unchanged `validateTrade()`, then saves accepted trades with `PutCommand`. New GET route reads one trade with `GetCommand`. |
+| [aws/lambda/backend/](../../aws/lambda/backend/) | Unchanged. All business rules still live in `trades.js`. |
+| [aws/lambda/tests/test-lambda.js](../../aws/lambda/tests/test-lambda.js) | Checks that accepted trades are saved, rejected trades are not, and GET returns the saved record. |
 | [frontend/](../../frontend/) | After a trade is saved, the trade page opens the Result page, which loads the trade with GET. History lists trades saved in this browser. |
 
 ## How it works
@@ -71,7 +71,7 @@ Field names follow the [data dictionary](../../docs/03-system-design/data-dictio
 5. Lambda → **Code**: `backend/trades.js` and `backend/market-data.js` are present. The AWS SDK v3 is built into the Node.js runtime, so no `node_modules` folder is uploaded.
 6. API Gateway → **Routes**: `POST /api/trades` and `GET /api/trades/{transactionId}` both point to `MarketStreet-ProcessTrade`.
 7. API Gateway → **CORS**: allowed methods include `GET` and `POST`.
-8. Replace `index.js` with [lambda/index.js](../../lambda/index.js) and click **Deploy**.
+8. Replace `index.js` with [aws/lambda/index.js](../../aws/lambda/index.js) and click **Deploy**.
 
 ## Lambda console tests
 
@@ -110,7 +110,7 @@ fields @timestamp, reason
 ## Automated tests
 
 ```
-cd lambda
+cd aws/lambda
 npm install
 npm test
 ```
@@ -120,7 +120,7 @@ Runs 52 checks locally with an in-memory table instead of DynamoDB. These cover 
 To run the same cases against the deployed API (it writes a few fictional trades to the table):
 
 ```
-API_URL=https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades node lambda/tests/test-lambda.js
+API_URL=https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades node aws/lambda/tests/test-lambda.js
 ```
 
 Results on 2026-11-02: **52/52 local** and **30/30 against the live API**. The live run added 6 records to the table, one for each accepted trade (5 business-rule cases and the GET round trip). None of the 19 rejected cases were saved.

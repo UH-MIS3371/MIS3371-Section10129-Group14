@@ -1,6 +1,6 @@
 "use strict";
-// Run locally:     cd lambda && npm install && npm test
-// Run against AWS: API_URL=https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades node lambda/tests/test-lambda.js
+// Run locally:     cd aws/lambda && npm install && npm test
+// Run against AWS: API_URL=https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades node aws/lambda/tests/test-lambda.js
 // Each case sends a trade and compares the expected and actual HTTP code, status, message,
 // and whether the trade was saved. Locally, DynamoDB is replaced by an in-memory table.
 const { DynamoDBDocumentClient, PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
