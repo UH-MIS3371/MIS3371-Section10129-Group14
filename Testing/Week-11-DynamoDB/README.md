@@ -8,7 +8,7 @@ Accepted trades are now saved to Amazon DynamoDB, and a saved trade can be read 
 |---|---|
 | [aws/lambda/index.js](../../aws/lambda/index.js) | POST validates with the unchanged `validateTrade()`, then saves accepted trades with `PutCommand`. New GET route reads one trade with `GetCommand`. |
 | [aws/lambda/backend/](../../aws/lambda/backend/) | Unchanged. All business rules still live in `trades.js`. |
-| [aws/lambda/tests/test-lambda.js](../../aws/lambda/tests/test-lambda.js) | Checks that accepted trades are saved, rejected trades are not, and GET returns the saved record. |
+| `lambda/tests/test-lambda.js` (since removed; see git history) | Checks that accepted trades are saved, rejected trades are not, and GET returns the saved record. |
 | [frontend/](../../frontend/) | After a trade is saved, the trade page opens the Result page, which loads the trade with GET. History lists trades saved in this browser. |
 
 ## How it works
@@ -108,6 +108,8 @@ fields @timestamp, reason
 ```
 
 ## Automated tests
+
+> The automated test file was removed from the repository after Week 11. The commands below describe how these results were produced; the file is still available in the git history.
 
 ```
 cd aws/lambda

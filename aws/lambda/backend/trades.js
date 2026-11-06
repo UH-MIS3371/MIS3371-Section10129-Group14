@@ -1,16 +1,23 @@
 "use strict";
-// MarketStreet Week 10: trade validation only (no order execution or saving).
-const { PRICE_CENTS, START_CASH_CENTS, START_SHARES } = require("./market-data");
+// MarketStreet trade validation. validateOrder checks the order itself (BR-1 to BR-3,
+// BR-6, BR-9); checkAccount checks it against an account (BR-4, BR-5). Saving and the
+// account update happen in accounts.js, which re-checks cash and shares in the same commit.
+const { PRICE_CENTS, MAX_PRICE_AGE_MS, getQuote, START_CASH_CENTS, START_SHARES } = require("./market-data");
 
 function reject(reason) {
   return { status: "REJECTED", reason, success: false, persisted: false };
 }
 
-function validateTrade(order) {
+// options.getQuote and options.now can be replaced in tests (for example, an old price)
+function validateOrder(order, options = {}) {
+  const quoteFor = options.getQuote || getQuote;
+  const now = options.now === undefined ? Date.now() : options.now;
+
   if (!order || typeof order !== "object" || Array.isArray(order)) {
     return reject("A JSON trade object is required.");
   }
 
+  // BR-1: Buy or Sell only
   if (order.tradeType !== "Buy" && order.tradeType !== "Sell") {
     return reject("Trade type must be Buy or Sell.");
   }
@@ -23,7 +30,7 @@ function validateTrade(order) {
 
   // BR-9: market orders only
   if (order.orderType !== "Market") {
-    return reject("Only Market orders are supported.");
+    return reject(order.orderType === "Limit" ? "Limit orders are not supported." : "Order type must be Market.");
   }
 
   // BR-3: quantity must be a real number that is a whole number of 1 or more
@@ -32,24 +39,45 @@ function validateTrade(order) {
     return reject("Quantity must be a positive whole number.");
   }
 
-  // Cost in whole cents so the cash check has no floating point errors
-  const totalCents = PRICE_CENTS[symbol] * order.quantity;
-
-  if (order.tradeType === "Buy" && totalCents > START_CASH_CENTS) {
-    return reject("Insufficient cash.");
-  }
-
-  const sharesOwned = START_SHARES[symbol] || 0;
-  if (order.tradeType === "Sell" && order.quantity > sharesOwned) {
-    return reject("Insufficient shares.");
+  // BR-6: the price must be a whole number of cents above $0 (so at most two
+  // decimals) and quoted no more than 15 minutes ago. It is fetched once here
+  // and the trade executes at exactly this price.
+  const quote = quoteFor(symbol, now);
+  if (!quote || !Number.isSafeInteger(quote.priceCents) || quote.priceCents <= 0 ||
+      typeof quote.quotedAt !== "number" || !Number.isFinite(quote.quotedAt) || now - quote.quotedAt > MAX_PRICE_AGE_MS) {
+    return reject("Price unavailable.");
   }
 
   return {
     status: "ACCEPTED",
     message: order.tradeType + " order accepted.",
     success: true,
-    persisted: false
+    persisted: false,
+    // Used by index.js to build the saved record; not sent to the browser as-is
+    quote: { symbol, priceCents: quote.priceCents, quotedAt: quote.quotedAt }
   };
 }
 
-module.exports = { validateTrade };
+// BR-4 and BR-5 against an account { cashCents, holdings }. Amounts are whole cents
+// so "exactly enough cash" compares correctly.
+function checkAccount(order, quote, account) {
+  const totalCents = quote.priceCents * order.quantity;
+  if (order.tradeType === "Buy" && totalCents > account.cashCents) {
+    return reject("Insufficient cash.");
+  }
+  const sharesOwned = (account.holdings && account.holdings[quote.symbol]) || 0;
+  if (order.tradeType === "Sell" && order.quantity > sharesOwned) {
+    return reject("Insufficient shares.");
+  }
+  return null;
+}
+
+// Both checks together. Without options.account it uses the starting account.
+function validateTrade(order, options = {}) {
+  const result = validateOrder(order, options);
+  if (!result.success) return result;
+  const account = options.account || { cashCents: START_CASH_CENTS, holdings: START_SHARES };
+  return checkAccount(order, result.quote, account) || result;
+}
+
+module.exports = { validateOrder, checkAccount, validateTrade, reject };
