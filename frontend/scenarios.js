@@ -6,19 +6,15 @@ const SPEEDS = [[10, "1×"], [5, "2×"], [2, "5×"], [1, "10×"]]; // seconds pe
 const TICK_MS = 250;
 const $ = (id) => document.getElementById(id);
 
-// Each scenario's colour, a line of context shown before it starts, and what its photo shows
-// (photos are in assets/scenarios/<id>.jpg; credits are in the page footer)
+// Each scenario's colour and a line of context shown before it starts
 const THEMES = {
-  "crisis-2008": { hue: "#d08a5a", context: "Mortgage losses are spreading through Wall Street, and banks like BAC, C and GS hold a lot of them.", photo: "News crews outside Lehman Brothers headquarters on September 15, 2008" },
-  "dotcom-2000": { hue: "#9b7be0", context: "Tech stocks are priced for years of perfect growth. Investors are starting to ask when the profits arrive.", photo: "The Nasdaq MarketSite studio in Times Square" },
-  "covid-2020": { hue: "#3fb0c9", context: "A new virus is spreading. Airlines and cruise lines need people to travel; Zoom needs them to stay home.", photo: "An almost empty Park Avenue by Grand Central Terminal in April 2020" },
-  "meme-2021": { hue: "#e07bc0", context: "Hedge funds have bet heavily against GameStop, and traders on Reddit have noticed.", photo: "A GameStop store in Vallejo, California" },
-  "rates-2022": { hue: "#d9b24a", context: "Inflation is the highest in 40 years and the Fed is about to raise rates. Growth stocks are the most exposed.", photo: "The Federal Reserve's Eccles Building in Washington, D.C." }
+  "crisis-2008": { hue: "#d08a5a", context: "Mortgage losses are spreading through Wall Street, and banks like BAC, C and GS hold a lot of them." },
+  "dotcom-2000": { hue: "#9b7be0", context: "Tech stocks are priced for years of perfect growth. Investors are starting to ask when the profits arrive." },
+  "covid-2020": { hue: "#3fb0c9", context: "A new virus is spreading. Airlines and cruise lines need people to travel; Zoom needs them to stay home." },
+  "meme-2021": { hue: "#e07bc0", context: "Hedge funds have bet heavily against GameStop, and traders on Reddit have noticed." },
+  "rates-2022": { hue: "#d9b24a", context: "Inflation is the highest in 40 years and the Fed is about to raise rates. Growth stocks are the most exposed." }
 };
 
-function photoOf(s) {
-  return "assets/scenarios/" + s.id + ".jpg";
-}
 
 let game = null;
 let chosen = SCENARIOS[0];
@@ -246,7 +242,6 @@ function renderPicker() {
   $("scenarioList").replaceChildren(...SCENARIOS.map((s) => {
     const days = s.dates.length - s.start;
     return el("button", { type: "button", class: "scenario", "data-id": s.id, style: "--hue: " + THEMES[s.id].hue },
-      el("span", { class: "photo" }, el("img", { src: photoOf(s), alt: THEMES[s.id].photo, loading: "lazy" })),
       el("span", { class: "period mono" }, periodText(s)),
       el("strong", null, s.name),
       el("span", null, THEMES[s.id].context),
@@ -267,8 +262,6 @@ $("scenarioList").addEventListener("click", (e) => {
   $("briefPeriod").textContent = periodText(chosen);
   $("briefTitle").textContent = chosen.name;
   $("briefContext").textContent = THEMES[chosen.id].context;
-  $("briefPhoto").src = photoOf(chosen);
-  $("briefPhoto").alt = THEMES[chosen.id].photo;
   $("briefDialog").style.setProperty("--accent", THEMES[chosen.id].hue);
   $("briefDialog").showModal();
 });
@@ -298,7 +291,6 @@ function startGame() {
     news: chosen.news.map(([date, text]) => [chosen.dates.indexOf(date), text])
   };
   document.body.style.setProperty("--accent", THEMES[chosen.id].hue);
-  $("game").style.setProperty("--photo", "url(" + photoOf(chosen) + ")");
   renderSpeeds($("speedGame"));
   $("scoreTitle").textContent = chosen.name;
   $("benchLabel").textContent = "Market · " + chosen.benchmark;
@@ -701,6 +693,7 @@ $("pickButton").addEventListener("click", () => {
   $("progress").hidden = true;
   $("picker").hidden = false;
   renderPicker();
+  window.startHeroScene && startHeroScene();
 });
 
 $("boardButton").addEventListener("click", () => $("endDialog").close());
