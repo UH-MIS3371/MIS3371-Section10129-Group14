@@ -26,7 +26,17 @@ The system validates the transaction, applies applicable business rules, records
 
 ## Application Interface
 
-[`frontend/`](frontend/index.html) is the canonical MarketStreet interface. It supports Market orders only (BR-9). With the local server running, open [MarketStreet](http://localhost:3000/). Earlier class exercises and prototypes are preserved in [archive/](archive/README.md).
+[`frontend/`](frontend/index.html) is the canonical MarketStreet interface. It supports Market orders only (BR-9) and sends trades to the AWS backend. Open `frontend/index.html` in a browser, or use the deployed Amplify site. Earlier class exercises and prototypes are preserved in [archive/](archive/README.md).
+
+## Project Layout
+
+| Folder | What it is |
+|---|---|
+| [`frontend/`](frontend/) | The website (HTML, CSS, JavaScript), deployed with AWS Amplify |
+| [`aws/lambda/`](aws/README.md) | The live backend: the Lambda `MarketStreet-ProcessTrade` behind API Gateway, saving to DynamoDB |
+| [`archive/local-backend/`](archive/local-backend/) | The retired Week 8–9 Express server and business logic (`server/`, `backend/`), kept as coursework evidence |
+| [`docs/`](docs/) | Requirements, business rules, and system design |
+| [`Testing/`](Testing/) | Test plans, results, and evidence for each week |
 
 Each interactive page loads its own script (`trade.js`, `history.js`, or `result.js`). Shared state and helpers remain in `app.js`. Trade form identifiers follow the [data dictionary](docs/03-system-design/data-dictionary.md); `trade.js` maps `stockSymbol` and `shareQuantity` to the existing API's `symbol` and `quantity` fields.
 
@@ -52,14 +62,16 @@ The purpose of this project is to demonstrate the complete processing of a stock
 
 ## Week 9 — Local API Setup (Session 1)
 
+> **Archived:** the Week 9 Express server and Week 8 backend now live in `archive/local-backend/`. The current backend is the AWS Lambda in [`aws/lambda/`](aws/README.md).
+
 ### Overview
 MarketStreet uses a local Express server to process
 stock trade requests through the existing Week 8
 backend business logic.
 
 Architecture: the browser (frontend/) sends a JSON request with
-fetch() to POST /api/trades on the Express server (server/server.js),
-which calls processTrade() in backend/backend.js and returns a JSON
+fetch() to POST /api/trades on the Express server (now archive/local-backend/server/server.js),
+which calls processTrade() in archive/local-backend/backend/backend.js and returns a JSON
 result (HTTP 200 ACCEPTED or HTTP 400 REJECTED).
 
 ### How to Run the Server Locally
@@ -69,7 +81,7 @@ result (HTTP 200 ACCEPTED or HTTP 400 REJECTED).
 3. Open a terminal in the main project folder.
 4. Run these commands:
 
-    cd server
+    cd archive/local-backend/server
     npm install
     npm start
 
@@ -79,7 +91,7 @@ The server runs at http://localhost:3000
 POST /api/trades
 
 The endpoint receives JSON transaction data and
-calls processTrade() from backend/backend.js.
+calls processTrade() from archive/local-backend/backend/backend.js.
 
 ### Endpoint Test Results
 
@@ -119,7 +131,7 @@ Users can submit Buy and Sell orders through the browser, and the server process
 2. Open the terminal.
 3. Navigate to the server folder:
 
-   cd server
+   cd archive/local-backend/server
 
 4. Start the local server:
 
@@ -130,11 +142,11 @@ Users can submit Buy and Sell orders through the browser, and the server process
    http://localhost:3000/trade.html?symbol=AAPL
 
 ### Automated API Tests
-With the server running, open a second terminal in the server folder and run:
+With the server running, open a second terminal in the archive/local-backend/server folder and run:
 
    npm test
 
-This runs server/test-api.js, which sends six JSON requests to
+This runs archive/local-backend/server/test-api.js, which sends six JSON requests to
 POST /api/trades and compares the expected and actual results.
 
 ### Integration Testing
@@ -171,7 +183,7 @@ Sophia Musetti:
 
 ## Week 11 — Saving Trades to DynamoDB
 
-The Lambda (`MarketStreet-ProcessTrade`) still validates every trade with the existing business rules in `lambda/backend/trades.js`. Accepted trades are now saved to the DynamoDB table `MarketStreetTrades` with a server-generated `transactionId`, and rejected trades are not saved.
+The Lambda (`MarketStreet-ProcessTrade`) still validates every trade with the existing business rules in [`aws/lambda/backend/trades.js`](aws/lambda/backend/trades.js). Accepted trades are now saved to the DynamoDB table `MarketStreetTrades` with a server-generated `transactionId`, and rejected trades are not saved.
 
 - `POST /api/trades` validates the trade and saves it if accepted (`persisted: true`).
 - `GET /api/trades/{transactionId}` returns one saved trade.

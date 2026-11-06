@@ -164,7 +164,8 @@ function renderTrade() {
       return;
     }
    
-  saveTrade(result.trade);
+  saveTrade(result.trade, result.account);
+  update(); // show the new cash and shares
 
 // Show confirmation only after DynamoDB confirms the save
    document.getElementById("confirmationNumber").textContent =
@@ -199,6 +200,8 @@ function renderTrade() {
   }
 });
 update();
+// Show the saved account from the server once it loads
+syncAccount().then((ok) => { if (ok) update(); });
 }
 
 renderTrade();

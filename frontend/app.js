@@ -2,7 +2,12 @@
 // Shared state and formatting helpers. Each page loads its own script:
 // trade.js, history.js, and result.js initialize their own pages.
 
-const API_URL = "https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades";
+// On localhost (npm start in aws/lambda) the local server answers /api/trades; everywhere else, AWS does.
+const API_URL = location.hostname === "localhost" || location.hostname === "127.0.0.1"
+  ? "/api/trades"
+  : "https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades";
+// GET /api/account returns the saved cash and holdings (BR-7)
+const ACCOUNT_URL = API_URL.replace(/\/trades$/, "/account");
 const STORAGE_KEY = "marketstreet-demo";
 const START = { cash: 1000000, holdings: { AAPL: 10, MSFT: 2, IBM: 1 }, trades: [], nextId: 418 };
 
@@ -18,13 +23,41 @@ function loadState() {
   return structuredClone(START);
 }
 
-function saveTrade(trade) {
-  const state = loadState();
-  state.trades.push(trade);
+function storeState(state) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) {
-    // Private mode or blocked storage: the trade is still saved on the server
+    // Private mode or blocked storage: the trade and account are still saved on the server
+  }
+}
+
+// The server's account is the official one; the browser only keeps a copy to display
+function applyAccount(state, account) {
+  if (account && Number.isInteger(account.cashCents) && account.holdings) {
+    state.cash = account.cashCents;
+    state.holdings = { ...account.holdings };
+  }
+}
+
+function saveTrade(trade, account) {
+  const state = loadState();
+  state.trades.push(trade);
+  applyAccount(state, account);
+  storeState(state);
+}
+
+// Refreshes the displayed cash and holdings from the server. Returns true if it worked.
+async function syncAccount() {
+  try {
+    const response = await fetch(ACCOUNT_URL);
+    const result = await response.json();
+    if (!response.ok || result.success !== true) return false;
+    const state = loadState();
+    applyAccount(state, result.account);
+    storeState(state);
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 

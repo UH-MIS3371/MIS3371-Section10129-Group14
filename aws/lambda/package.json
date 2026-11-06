@@ -2,10 +2,10 @@
   "name": "marketstreet-lambda",
   "version": "1.0.0",
   "private": true,
-  "description": "MarketStreet Lambda (POST and GET /api/trades with DynamoDB)",
+  "description": "MarketStreet Lambda (POST and GET /api/trades, GET /api/account, with DynamoDB)",
   "main": "index.js",
   "scripts": {
-    "test": "node tests/test-lambda.js"
+    "start": "node local-server.js"
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.1161.0",

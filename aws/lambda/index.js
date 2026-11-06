@@ -1,14 +1,15 @@
 "use strict";
 // MarketStreet API Gateway HTTP API (Lambda proxy, payload format 2.0).
 // Runtime: Node.js 20.x or later    Handler: index.handler
-// Routes:  POST /api/trades                   validate a trade and save it if accepted
+// Routes:  POST /api/trades                   validate a trade; if accepted, save it and update the account
 //          GET  /api/trades/{transactionId}   read one saved trade
-// Week 11: accepted trades are saved to the DynamoDB table in TABLE_NAME (key: transactionId).
+//          GET  /api/account                  read the current cash and holdings
+// Environment: TABLE_NAME (trades, key transactionId) and ACCOUNTS_TABLE (accounts, key userId).
 const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, PutCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
-const { validateTrade } = require("./backend/trades");
-const { PRICE_CENTS } = require("./backend/market-data");
+const { DynamoDBDocumentClient, GetCommand } = require("@aws-sdk/lib-dynamodb");
+const { validateOrder, checkAccount } = require("./backend/trades");
+const { DEMO_USER_ID, getOrCreateAccount, commitTrade, publicAccount } = require("./backend/accounts");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
@@ -33,8 +34,16 @@ function serverError(reason) {
   return { status: "ERROR", reason, success: false, persisted: false };
 }
 
-// POST /api/trades: validate with the existing backend rules, then save accepted trades
+function tablesConfigured() {
+  if (process.env.TABLE_NAME && process.env.ACCOUNTS_TABLE) return true;
+  console.log("TABLE_NAME and ACCOUNTS_TABLE environment variables must both be set.");
+  return false;
+}
+
+// POST /api/trades: check the rules, then save an accepted trade and update the account together
 async function postTrade(event) {
+  const submittedAt = new Date().toISOString();
+
   // The body is normally a JSON string. A plain object is also accepted (Lambda console tests).
   let trade = event.body;
   if (typeof trade === "string") {
@@ -49,43 +58,92 @@ async function postTrade(event) {
     return reply(400, rejected("A JSON request body is required."));
   }
 
-  const result = validateTrade(trade);
+  // BR-1, BR-2, BR-3, BR-6, BR-9: these do not need the account
+  const { quote, ...result } = validateOrder(trade);
   if (!result.success) return reply(400, result); // rejected trades are never saved
 
-  if (!process.env.TABLE_NAME) {
-    console.log("TABLE_NAME environment variable is not set.");
+  if (!tablesConfigured()) return reply(500, serverError("The trade could not be saved. Please try again."));
+
+  let account;
+  try {
+    account = await getOrCreateAccount(db, process.env.ACCOUNTS_TABLE, DEMO_USER_ID, submittedAt);
+  } catch (e) {
+    console.log("Account read failed:", e);
     return reply(500, serverError("The trade could not be saved. Please try again."));
   }
 
-  // The record is built from server values only, never from browser-supplied ID, price, status or time
-  const stockSymbol = trade.symbol.trim().toUpperCase();
-  const priceCents = PRICE_CENTS[stockSymbol];
+  // BR-4, BR-5 against the saved account (the browser's cash and shares are ignored)
+  const accountProblem = checkAccount(trade, quote, account);
+  if (accountProblem) return reply(400, accountProblem);
+  const validatedAt = new Date().toISOString();
+
+  // The record is built from server values only, never from browser-supplied ID, price, status or time.
+  // The price is the one validateOrder checked (BR-6), so the trade executes at exactly that price.
+  const completedAt = new Date().toISOString();
   const record = {
     transactionId: crypto.randomUUID(),
-    stockSymbol,
+    userId: DEMO_USER_ID,
+    stockSymbol: quote.symbol,
     tradeType: trade.tradeType,
     shareQuantity: trade.quantity,
     orderType: trade.orderType,
-    executionPrice: priceCents / 100,
-    transactionValue: (priceCents * trade.quantity) / 100,
+    executionPrice: quote.priceCents / 100,
+    transactionValue: (quote.priceCents * trade.quantity) / 100,
+    priceTimestamp: new Date(quote.quotedAt).toISOString(),
     status: "Accepted",
-    submittedAt: new Date().toISOString()
+    submittedAt,
+    validatedAt,
+    completedAt,
+    updatedAt: completedAt
   };
 
+  let outcome;
   try {
-    // PutCommand writes the record; the condition makes sure an existing record is never overwritten
-    await db.send(new PutCommand({
-      TableName: process.env.TABLE_NAME,
-      Item: record,
-      ConditionExpression: "attribute_not_exists(transactionId)"
-    }));
+    // One transaction: the trade record and the cash/holdings change are saved together or not at all (BR-7)
+    outcome = await commitTrade(db, {
+      tradesTable: process.env.TABLE_NAME,
+      accountsTable: process.env.ACCOUNTS_TABLE,
+      record,
+      priceCents: quote.priceCents
+    });
   } catch (e) {
     console.log("DynamoDB save failed:", e);
     return reply(500, serverError("The trade could not be saved. Please try again."));
   }
+  if (outcome === "insufficient") {
+    // The account changed after it was read (another order got there first); nothing was saved
+    return reply(400, rejected(trade.tradeType === "Buy" ? "Insufficient cash." : "Insufficient shares."));
+  }
+
+  const totalCents = quote.priceCents * trade.quantity;
+  const holdings = { ...account.holdings };
+  holdings[quote.symbol] = (holdings[quote.symbol] || 0) + (trade.tradeType === "Buy" ? trade.quantity : -trade.quantity);
+  const updated = {
+    cashCents: account.cashCents + (trade.tradeType === "Buy" ? -totalCents : totalCents),
+    holdings
+  };
 
   // persisted: true is only sent after DynamoDB has confirmed the save
-  return reply(200, { ...result, persisted: true, transactionId: record.transactionId, submittedAt: record.submittedAt, trade: record });
+  return reply(200, {
+    ...result,
+    persisted: true,
+    transactionId: record.transactionId,
+    submittedAt: record.submittedAt,
+    trade: record,
+    account: publicAccount(updated)
+  });
+}
+
+// GET /api/account: the current cash and holdings (created with the starting values if new)
+async function getAccount() {
+  if (!tablesConfigured()) return reply(500, { success: false, reason: "The account could not be loaded. Please try again." });
+  try {
+    const account = await getOrCreateAccount(db, process.env.ACCOUNTS_TABLE, DEMO_USER_ID, new Date().toISOString());
+    return reply(200, { success: true, account: publicAccount(account) });
+  } catch (e) {
+    console.log("Account read failed:", e);
+    return reply(500, { success: false, reason: "The account could not be loaded. Please try again." });
+  }
 }
 
 // GET /api/trades/{transactionId}: read one saved trade
@@ -113,12 +171,17 @@ async function getTrade(event) {
   }
 }
 
+function isAccountRoute(event) {
+  return event.routeKey === "GET /api/account" || /\/api\/account\/?$/.test(event.rawPath || "");
+}
+
 async function route(event, method) {
   try {
     if (method === "OPTIONS") return { statusCode: 204, headers: HEADERS, body: "" };
     if (method === "POST") return await postTrade(event);
+    if (method === "GET" && isAccountRoute(event)) return await getAccount();
     if (method === "GET") return await getTrade(event);
-    return reply(405, rejected("Use POST /api/trades or GET /api/trades/{transactionId}."));
+    return reply(405, rejected("Use POST /api/trades, GET /api/trades/{transactionId} or GET /api/account."));
   } catch (e) {
     console.log("Unexpected error:", e);
     return reply(500, serverError("Unexpected server error."));

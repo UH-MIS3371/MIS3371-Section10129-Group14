@@ -11,7 +11,7 @@ Verify that the existing MarketStreet trading interface communicates with the lo
 - Local Express server: http://localhost:3000
 - Endpoint: POST /api/trades
 - Frontend: frontend/trade.html
-- Backend logic: backend/backend.js
+- Backend logic: backend/backend.js (now archive/local-backend/backend/backend.js)
 - Browser: Google Chrome
 
 ## Expected vs. Actual Results
@@ -47,13 +47,13 @@ Chrome Developer Tools confirmed requests to POST /api/trades using fetch().
 ## Automated API Testing
 
 Automated HTTP integration tests were implemented in
-server/test-api.js to verify the local Express endpoint
+archive/local-backend/server/test-api.js (originally server/test-api.js) to verify the local Express endpoint
 independently of the frontend.
 
 ### Running the Tests
 
 1. Start the Express server using npm start.
-2. Open a second terminal in the server folder.
+2. Open a second terminal in the archive/local-backend/server folder.
 3. Run npm test.
 
 ### Test Results
