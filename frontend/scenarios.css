@@ -1092,3 +1092,12 @@ dialog.info {
 .board .empty:empty {
   display: none;
 }
+
+.board-foot {
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.stars-cell .no-star {
+  color: var(--control);
+}

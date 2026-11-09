@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leaderboard – MarketStreet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="scenarios.css" />
+    <script src="auth.js" defer></script>
+    <script src="data/scenarios.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="leaderboard.js" defer></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <div class="inner">
+        <a class="logo" href="trade.html">MarketStreet</a>
+        <nav class="site-nav" aria-label="Main">
+          <a href="trade.html">Trade</a><a href="history.html">History</a><a href="scenarios.html">Scenarios</a><a href="leaderboard.html" aria-current="page">Leaderboard</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="picker">
+      <h1>Leaderboard</h1>
+      <p class="lead">Each player's best finished game in each scenario, ranked by return. Players appear by the display name they chose, never by email.</p>
+
+      <section class="board" aria-labelledby="boardScenarioName">
+        <div class="board-head">
+          <h2 id="boardScenarioName"></h2>
+          <div class="seg" role="group" aria-label="Scenario" id="boardTabs"></div>
+        </div>
+        <table>
+          <thead><tr><th>Rank</th><th>Player</th><th class="right">Return</th><th class="right">Stars</th><th class="right">Finished</th></tr></thead>
+          <tbody id="boardRows"></tbody>
+        </table>
+        <p id="boardMessage" class="empty"></p>
+        <p class="board-foot muted">★ made a profit · ★★ also beat the bot · ★★★ also beat the market. <a href="scenarios.html">Play a scenario</a></p>
+      </section>
+    </main>
+  </body>
+</html>

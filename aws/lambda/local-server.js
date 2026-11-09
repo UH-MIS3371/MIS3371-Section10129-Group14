@@ -182,7 +182,8 @@ function serveFile(req, res, pathname) {
       res.writeHead(404, { "Content-Type": "text/plain" }).end("Not found");
       return;
     }
-    res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream" });
+    // no-store: a refresh always shows the latest files while developing
+    res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream", "Cache-Control": "no-store" });
     res.end(data);
   });
 }

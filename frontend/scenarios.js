@@ -662,8 +662,7 @@ $("againButton").addEventListener("click", () => {
 
 $("pickButton").addEventListener("click", () => {
   $("endDialog").close();
-  boardScenario = game.s.id;
-  loadBoard();
+  showBoard(game.s.id);
   document.body.style.removeProperty("--accent");
   $("game").hidden = true;
   $("clock").hidden = true;
@@ -703,47 +702,3 @@ async function offerResume() {
 renderSpeeds($("speedPick"));
 renderPicker();
 offerResume();
-
-// ---------- Leaderboard ----------
-
-// The best finished game of each player in one scenario, ranked by the server
-let boardScenario = SCENARIOS[0].id;
-
-function renderBoardTabs() {
-  $("boardTabs").replaceChildren(...SCENARIOS.map((s) =>
-    el("button", { type: "button", "data-id": s.id, "aria-pressed": String(s.id === boardScenario) }, s.dates[s.start].slice(0, 4))));
-}
-
-async function loadBoard() {
-  renderBoardTabs();
-  $("boardMessage").textContent = "Loading…";
-  $("boardRows").replaceChildren();
-  try {
-    const response = await authFetch(API_URL.replace(/\/trades$/, "/leaderboard?scenario=" + encodeURIComponent(boardScenario)));
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.reason);
-    $("boardRows").replaceChildren(...data.entries.map((r) => {
-      const result = el("td", { class: "right" });
-      setSigned(result, pct(r.returnPct), r.returnPct >= 0);
-      return el("tr", { class: r.you ? "you-row" : null },
-        el("td", { class: "mono" }, "#" + r.rank),
-        el("td", null, r.name + (r.you ? " (you)" : "")),
-        result,
-        el("td", { class: "right stars-cell" }, "★".repeat(r.stars) + "☆".repeat(3 - r.stars)),
-        el("td", { class: "right muted" }, new Date(r.finishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })));
-    }));
-    const name = SCENARIOS.find((s) => s.id === boardScenario).name;
-    $("boardMessage").textContent = data.entries.length ? "" : "Nobody has finished " + name + " yet. Finish it to take first place.";
-  } catch (e) {
-    $("boardMessage").textContent = "The leaderboard could not be loaded. Please try again.";
-  }
-}
-
-$("boardTabs").addEventListener("click", (e) => {
-  const button = e.target.closest("button");
-  if (!button) return;
-  boardScenario = button.dataset.id;
-  loadBoard();
-});
-
-loadBoard();
