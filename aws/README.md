@@ -75,27 +75,29 @@ Tests: `cd aws/lambda && npm install && npm test` runs the rules and the `/api/g
 
 ## Sign-in and roles (Amazon Cognito)
 
-Every route needs a signed-in user. Users sign in on Cognito's own login page, so MarketStreet never sees a password.
+Every route needs a signed-in user. MarketStreet's own sign-in page (`frontend/signin.html`) sends the email and password straight to Cognito over HTTPS, so MarketStreet's servers never receive a password.
 
 | Piece | Setting |
 |---|---|
 | User pool | `MarketStreetUsers` (`us-east-1_Bc2WPM5AD`): sign in with email, self sign-up, email verification, passwords of 10+ characters with upper case, lower case and a number |
 | Group | `admins`: may see every player's games (`GET /api/admin/games`) and read any trade. Everyone else is a trader. |
-| App client | `MarketStreetWeb` (`39ufd4fucor0jpnhklpdqdo8lh`): public (no secret), authorization code flow with PKCE, scopes `openid email`. Callback and sign-out URLs end in `/signin.html` for each site that signs in. |
+| App client | `MarketStreetWeb` (`39ufd4fucor0jpnhklpdqdo8lh`): public (no secret), with `ALLOW_USER_PASSWORD_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH`. Display names use the standard `nickname` attribute. |
 | Login page | `https://marketstreet-g14-ig7886.auth.us-east-1.amazoncognito.com` |
 | API Gateway | JWT authorizer `CognitoLogin`: issuer `https://cognito-idp.us-east-1.amazonaws.com/us-east-1_Bc2WPM5AD`, audience = the app client ID, identity source `$request.header.Authorization`. Attached to every route. |
 
 How it works:
 
-1. `frontend/auth.js` sends a user who is not signed in to the Cognito login page. Cognito sends them back to `signin.html` with a one-time code, which is swapped for an ID token (kept in `sessionStorage`).
+1. `frontend/auth.js` sends a user who is not signed in to `signin.html`. There they sign in, create an account (Cognito emails a 6-digit code) or reset a forgotten password; `signin.js` calls Cognito's API directly. The ID token Cognito returns is kept in `sessionStorage`.
 2. Every API request sends `Authorization: Bearer <ID token>`. API Gateway checks the token's signature and expiry before the Lambda runs (401 if it is missing or wrong).
 3. The Lambda reads the user from the checked token ([backend/auth.js](lambda/backend/auth.js)). Each user has their own account (keyed by the token's `sub`). A game belongs to the user who started it: another user gets 403, and an admin may look at it but not play it. The admin check happens in the Lambda, so hiding the Admin link is not the only protection.
 
 To make someone an admin: they sign up first, then **Cognito → User pools → MarketStreetUsers → Groups → admins → Add user** (or `aws cognito-idp admin-add-user-to-group --user-pool-id us-east-1_Bc2WPM5AD --username <email> --group-name admins`). They see the change after signing in again.
 
+**Leaderboard:** `GET /api/leaderboard?scenario=<id>` returns the best finished game of each player in one scenario, ranked by return. It shows display names only, never emails.
+
 On your computer, `local-server.js` reads the token from the `Authorization` header but does **not** check its signature (only API Gateway can). Sign in on `http://localhost:3000` with a real Cognito account.
 
-**Testing on the `cognito-login` branch:** the branch preview (`https://cognito-login.d2kb3xv6llewil.amplifyapp.com`) uses a separate test API (`MarketStreet-API-test`, `qedu5ta2jc`) and Lambda (`MarketStreet-ProcessTrade-test`), so the live site is not affected until the branch is merged. When merging, add the JWT authorizer to the live API's routes, deploy the Lambda, add the live site's `/signin.html` to the app client's callback and sign-out URLs, and remove the test API line from `frontend/app.js`.
+**Testing on the `cognito-login` branch:** the branch preview (`https://cognito-login.d2kb3xv6llewil.amplifyapp.com`) uses a separate test API (`MarketStreet-API-test`, `qedu5ta2jc`) and Lambda (`MarketStreet-ProcessTrade-test`), so the live site is not affected until the branch is merged. When merging, add the JWT authorizer and the `GET /api/leaderboard` route to the live API, deploy the Lambda, and remove the test API line from `frontend/app.js`.
 
 ## Deploy a change
 

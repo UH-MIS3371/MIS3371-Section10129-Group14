@@ -4,35 +4,85 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sign in – MarketStreet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="signin.css" />
     <script src="auth.js" defer></script>
+    <script src="signin.js" defer></script>
   </head>
 
-  <body>
-    <header class="site-header">
-      <div class="inner"><span class="logo">MarketStreet</span></div>
-    </header>
+  <body class="signin-page">
+    <main class="signin">
+      <section class="pitch" aria-label="About MarketStreet">
+        <p class="logo">MarketStreet</p>
+        <h1>Trade through history.</h1>
+        <p class="lead">Start with $100,000 in a real market crisis. Headlines arrive on their real dates. Beat the market, the bot and everyone on the leaderboard.</p>
+        <ul class="eras">
+          <li style="--hue: #d08a5a"><span>2008</span>Financial Crisis</li>
+          <li style="--hue: #9b7be0"><span>2000</span>Dot-com Bust</li>
+          <li style="--hue: #3fb0c9"><span>2020</span>COVID Crash</li>
+          <li style="--hue: #e07bc0"><span>2021</span>Meme Stock Squeeze</li>
+          <li style="--hue: #d9b24a"><span>2022</span>Rate Hikes</li>
+        </ul>
+      </section>
 
-    <main>
-      <section class="card">
-        <h1 id="signinTitle">Signing you in…</h1>
-        <p id="signinText" class="note">Amazon Cognito checks your password. MarketStreet never sees it.</p>
-        <button type="button" class="button" id="signinButton" hidden>Sign in</button>
+      <section class="auth-card" aria-labelledby="authTitle">
+        <div class="auth-tabs" role="tablist" aria-label="Account">
+          <button type="button" role="tab" id="tabSignIn" aria-selected="true" data-view="signIn">Sign in</button>
+          <button type="button" role="tab" id="tabSignUp" aria-selected="false" data-view="signUp">Create account</button>
+        </div>
+        <h2 id="authTitle" class="visually-hidden">Sign in</h2>
+        <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+
+        <form id="signIn" class="auth-form" novalidate>
+          <label for="signInEmail">Email</label>
+          <input id="signInEmail" type="email" autocomplete="username" required />
+          <label for="signInPassword">Password</label>
+          <input id="signInPassword" type="password" autocomplete="current-password" required />
+          <button type="submit" class="button">Sign in</button>
+          <button type="button" class="link-button" data-view="forgot">Forgot your password?</button>
+        </form>
+
+        <form id="signUp" class="auth-form" novalidate hidden>
+          <label for="signUpName">Display name</label>
+          <input id="signUpName" type="text" autocomplete="nickname" maxlength="20" required />
+          <p class="help">Shown on the leaderboard instead of your email. 3–20 letters, numbers or spaces.</p>
+          <label for="signUpEmail">Email</label>
+          <input id="signUpEmail" type="email" autocomplete="email" required />
+          <label for="signUpPassword">Password</label>
+          <input id="signUpPassword" type="password" autocomplete="new-password" required />
+          <p class="help">At least 10 characters, with an upper case letter, a lower case letter and a number.</p>
+          <button type="submit" class="button">Create account</button>
+        </form>
+
+        <form id="confirm" class="auth-form" novalidate hidden>
+          <p>We sent a 6-digit code to <strong id="confirmEmail"></strong>.</p>
+          <label for="confirmCode">Code</label>
+          <input id="confirmCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required />
+          <button type="submit" class="button">Confirm and sign in</button>
+          <button type="button" class="link-button" id="resendCode">Send a new code</button>
+        </form>
+
+        <form id="forgot" class="auth-form" novalidate hidden>
+          <label for="forgotEmail">Email</label>
+          <input id="forgotEmail" type="email" autocomplete="username" required />
+          <button type="submit" class="button">Send a reset code</button>
+          <button type="button" class="link-button" data-view="signIn">Back to sign in</button>
+        </form>
+
+        <form id="reset" class="auth-form" novalidate hidden>
+          <p>Enter the code we sent to <strong id="resetEmail"></strong> and a new password.</p>
+          <label for="resetCode">Code</label>
+          <input id="resetCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required />
+          <label for="resetPassword">New password</label>
+          <input id="resetPassword" type="password" autocomplete="new-password" required />
+          <button type="submit" class="button">Set password and sign in</button>
+        </form>
+
+        <p class="secure-note">Your password goes straight to Amazon Cognito over HTTPS. MarketStreet's servers never see it.</p>
       </section>
     </main>
-
-    <script>
-      // Cognito comes back here with ?code= after a sign-in, or with nothing after a sign-out
-      addEventListener("DOMContentLoaded", async () => {
-        const signedIn = new URLSearchParams(location.search).has("code") && (await finishSignIn().catch(() => false));
-        if (signedIn) return;
-        document.getElementById("signinTitle").textContent = "You are signed out";
-        document.getElementById("signinText").textContent = "Sign in or create an account to trade and play Scenario Mode.";
-        const button = document.getElementById("signinButton");
-        button.hidden = false;
-        button.addEventListener("click", signIn);
-      });
-    </script>
   </body>
 </html>

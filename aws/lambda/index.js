@@ -6,6 +6,7 @@
 //          GET  /api/account                  read the current cash and holdings
 //          /api/games...                      Scenario Mode games (see backend/games.js)
 //          GET  /api/admin/games              every saved game (admins only)
+//          GET  /api/leaderboard?scenario=    best finished game of each player in one scenario
 // Every route needs a signed-in user: API Gateway checks the Amazon Cognito token (JWT authorizer).
 // Environment: TABLE_NAME (trades, key transactionId), ACCOUNTS_TABLE (accounts, key userId)
 //              and GAMES_TABLE (Scenario Mode games, key gameId).

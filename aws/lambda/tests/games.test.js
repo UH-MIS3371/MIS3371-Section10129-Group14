@@ -26,11 +26,13 @@ const OTHER = { sub: "user-b", email: "b@example.com" };
 const ADMIN = { sub: "user-admin", email: "admin@example.com", "cognito:groups": "[admins]" };
 
 // Same shape as an API Gateway HTTP API (payload 2.0) event
-async function call(method, rawPath, body, claims = PLAYER) {
+async function call(method, url, body, claims = PLAYER) {
+  const [rawPath, query] = url.split("?");
   const gameId = (rawPath.match(/^\/api\/games\/([^/]+)/) || [])[1];
   const transactionId = (rawPath.match(/^\/api\/trades\/([^/]+)/) || [])[1];
   const response = await handler({
     rawPath,
+    queryStringParameters: query ? Object.fromEntries(new URLSearchParams(query)) : undefined,
     requestContext: { http: { method }, authorizer: claims ? { jwt: { claims } } : undefined },
     pathParameters: gameId ? { gameId } : transactionId ? { transactionId } : undefined,
     body: body === undefined ? undefined : JSON.stringify(body)
@@ -235,4 +237,25 @@ test("only admins can list every game", async () => {
   const res = await call("GET", "/api/admin/games", undefined, ADMIN);
   assert.strictEqual(res.status, 200);
   assert.ok(res.body.games.length > 0 && res.body.games.every((g) => g.ownerEmail && !("log" in g)));
+});
+
+test("the leaderboard shows each player's best finished game, by display name, highest return first", async () => {
+  const play = async (claims, symbol, amountCents = 5000000) => {
+    const game = (await call("POST", "/api/games", { scenarioId: "meme-2021" }, claims)).body.game;
+    if (symbol) await call("POST", `/api/games/${game.gameId}/orders`, order(game, { symbol, amountCents }), claims);
+    await call("POST", `/api/games/${game.gameId}/advance`, { requestId: crypto.randomUUID(), day: game.day, untilDay: 99999 }, claims);
+  };
+  const FAN = { sub: "user-fan", email: "fan@example.com", nickname: "DiamondHands" };
+  await play(FAN, "GME");          // GME rose about 435%
+  await play(PLAYER, "SPY");       // about flat
+  await play(PLAYER, "GME", 1000000); // PLAYER's better run, a smaller bet
+  await play(OTHER);               // never traded, so 0%
+  const res = await call("GET", "/api/leaderboard?scenario=meme-2021", undefined, FAN);
+  assert.strictEqual(res.status, 200);
+  const rows = res.body.entries;
+  assert.deepStrictEqual(rows.map((r) => r.name), ["DiamondHands", "Player user", "Player user"]);
+  assert.strictEqual(rows.filter((r) => r.name === "DiamondHands").length, 1);
+  assert.ok(rows[0].you && !rows[1].you && rows[0].returnPct > rows[1].returnPct && rows[1].returnPct >= rows[2].returnPct);
+  assert.ok(rows.every((r) => !("email" in r) && !("ownerEmail" in r) && !("ownerId" in r)));
+  assert.strictEqual((await call("GET", "/api/leaderboard?scenario=nope")).status, 400);
 });

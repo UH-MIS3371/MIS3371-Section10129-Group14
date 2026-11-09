@@ -1040,3 +1040,55 @@ dialog.info {
 #pickerMessage:empty {
   display: none;
 }
+
+/* ---------- Leaderboard ---------- */
+
+.board {
+  margin-top: 40px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.board-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.board-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.board th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.board td,
+.board th {
+  padding: 8px 6px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.05);
+}
+
+.board .you-row td {
+  background: var(--raised);
+  font-weight: 600;
+}
+
+.stars-cell {
+  color: var(--warning);
+  letter-spacing: 2px;
+}
+
+.board .empty:empty {
+  display: none;
+}

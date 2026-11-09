@@ -160,6 +160,7 @@ async function callLambda(req, res, routeKey, transactionId, gameId) {
   const event = {
     routeKey: req.method + " " + routeKey,
     rawPath: new URL(req.url, "http://localhost").pathname,
+    queryStringParameters: Object.fromEntries(new URL(req.url, "http://localhost").searchParams),
     requestContext: { http: { method: req.method }, authorizer: claimsFrom(req) },
     pathParameters: transactionId !== undefined ? { transactionId } : gameId !== undefined ? { gameId } : undefined,
     body: chunks.length ? Buffer.concat(chunks).toString("utf8") : undefined,
@@ -192,6 +193,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/trades") return await callLambda(req, res, "/api/trades");
     if (pathname === "/api/account") return await callLambda(req, res, "/api/account");
     if (pathname === "/api/admin/games") return await callLambda(req, res, "/api/admin/games");
+    if (pathname === "/api/leaderboard") return await callLambda(req, res, "/api/leaderboard");
     const game = pathname.match(/^\/api\/games(?:\/([^/]+)(\/[a-z]+)?)?\/?$/);
     if (game) {
       const routeKey = "/api/games" + (game[1] ? "/{gameId}" + (game[2] || "") : "");

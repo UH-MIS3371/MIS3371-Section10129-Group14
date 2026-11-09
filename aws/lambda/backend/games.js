@@ -16,6 +16,8 @@ const SCENARIOS = require("./scenario-data.json");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ROUTE = /^\/api\/games(?:\/([^/]+)(?:\/(orders|close|advance))?)?\/?$/;
 const ADMIN_ROUTE = /^\/api\/admin\/games\/?$/;
+const LEADERBOARD_ROUTE = /^\/api\/leaderboard\/?$/;
+const LEADERBOARD_SIZE = 10;
 const MAX_ORDERS = 1000;     // per game; keeps the saved game far below DynamoDB's 400 KB item limit
 const RECENT_REQUESTS = 20;  // requestIds remembered per game
 
@@ -65,7 +67,7 @@ async function createGame(db, body, user) {
   if (!s) return fail(400, "Choose one of the scenarios.");
   const now = new Date().toISOString();
   const game = {
-    gameId: crypto.randomUUID(), version: 1, ownerId: user.userId, ownerEmail: user.email,
+    gameId: crypto.randomUUID(), version: 1, ownerId: user.userId, ownerEmail: user.email, ownerName: user.name,
     createdAt: now, updatedAt: now, recentRequests: [], ...core.newGame(s)
   };
   await save(db, game);
@@ -156,14 +158,54 @@ async function listGames(db, user) {
   return { statusCode: 200, body: { success: true, games } };
 }
 
+// GET /api/leaderboard?scenario=<id>: the best finished game of each player in one scenario, highest return
+// first. The ranking uses the results the server saved; only display names are shown, never emails.
+async function leaderboard(db, event, user) {
+  const scenarioId = (event.queryStringParameters || {}).scenario;
+  if (!SCENARIOS.some((s) => s.id === scenarioId)) return fail(400, "Choose one of the scenarios.");
+  const items = [];
+  let ExclusiveStartKey;
+  do {
+    const page = await db.send(new ScanCommand({
+      TableName: process.env.GAMES_TABLE,
+      FilterExpression: "scenarioId = :s AND #st = :over",
+      ProjectionExpression: "ownerId, ownerName, #r, updatedAt, scenarioId, #st",
+      ExpressionAttributeNames: { "#r": "result", "#st": "status" },
+      ExpressionAttributeValues: { ":s": scenarioId, ":over": "over" },
+      ExclusiveStartKey
+    }));
+    items.push(...page.Items);
+    ExclusiveStartKey = page.LastEvaluatedKey;
+  } while (ExclusiveStartKey);
+  const best = new Map();
+  for (const g of items) {
+    if (g.scenarioId !== scenarioId || g.status !== "over" || !g.result || !g.ownerId) continue;
+    const kept = best.get(g.ownerId);
+    if (!kept || g.result.mine > kept.result.mine) best.set(g.ownerId, g);
+  }
+  const entries = [...best.values()].sort((a, b) => b.result.mine - a.result.mine).slice(0, LEADERBOARD_SIZE).map((g, i) => ({
+    rank: i + 1, name: g.ownerName || "Player", returnPct: g.result.mine, stars: g.result.stars, finishedAt: g.updatedAt, you: g.ownerId === user.userId
+  }));
+  return { statusCode: 200, body: { success: true, scenarioId, entries } };
+}
+
 // Returns null when the request is not for /api/games, so index.js can route it elsewhere
 async function handleGames(db, event, method, user) {
   const path = event.rawPath || "";
   const match = path.match(ROUTE);
-  if (!match && !ADMIN_ROUTE.test(path)) return null;
+  const board = LEADERBOARD_ROUTE.test(path);
+  if (!match && !board && !ADMIN_ROUTE.test(path)) return null;
   if (!process.env.GAMES_TABLE) {
     console.log("GAMES_TABLE environment variable is not set.");
     return fail(500, "The game could not be saved. Please try again.");
+  }
+  if (board) {
+    try {
+      return method === "GET" ? await leaderboard(db, event, user) : fail(405, "Use GET on /api/leaderboard.");
+    } catch (e) {
+      console.log("Leaderboard failed:", e);
+      return fail(500, "The leaderboard could not be loaded. Please try again.");
+    }
   }
   if (!match) {
     try {

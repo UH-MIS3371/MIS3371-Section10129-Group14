@@ -55,6 +55,17 @@
       </div>
       <p id="pickerMessage" class="error" role="alert"></p>
       <div class="scenarios" id="scenarioList"></div>
+      <section class="board" aria-labelledby="boardTitle">
+        <div class="board-head">
+          <h2 id="boardTitle">Leaderboard</h2>
+          <div class="seg" role="group" aria-label="Scenario" id="boardTabs"></div>
+        </div>
+        <table>
+          <thead><tr><th>Rank</th><th>Player</th><th class="right">Return</th><th class="right">Stars</th><th class="right">Finished</th></tr></thead>
+          <tbody id="boardRows"></tbody>
+        </table>
+        <p id="boardMessage" class="empty"></p>
+      </section>
     </main>
 
     <main id="game" class="game" hidden>
