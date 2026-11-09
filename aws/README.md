@@ -82,7 +82,6 @@ Every route needs a signed-in user. MarketStreet's own sign-in page (`frontend/s
 | User pool | `MarketStreetUsers` (`us-east-1_Bc2WPM5AD`): sign in with email, self sign-up, email verification, passwords of 10+ characters with upper case, lower case and a number |
 | Group | `admins`: may see every player's games (`GET /api/admin/games`) and read any trade. Everyone else is a trader. |
 | App client | `MarketStreetWeb` (`39ufd4fucor0jpnhklpdqdo8lh`): public (no secret), with `ALLOW_USER_PASSWORD_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH`. Display names use the standard `nickname` attribute. |
-| Login page | `https://marketstreet-g14-ig7886.auth.us-east-1.amazoncognito.com` |
 | API Gateway | JWT authorizer `CognitoLogin`: issuer `https://cognito-idp.us-east-1.amazonaws.com/us-east-1_Bc2WPM5AD`, audience = the app client ID, identity source `$request.header.Authorization`. Attached to every route. |
 
 How it works:
