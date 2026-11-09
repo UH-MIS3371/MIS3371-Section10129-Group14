@@ -51,7 +51,7 @@ function liveBar(bar, progress) {
 // ---------- Talking to the server ----------
 
 async function api(method, url, body) {
-  const response = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body && JSON.stringify(body) });
+  const response = await authFetch(url, { method, headers: { "Content-Type": "application/json" }, body: body && JSON.stringify(body) });
   return { ok: response.ok, status: response.status, data: await response.json().catch(() => ({})) };
 }
 

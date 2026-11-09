@@ -546,3 +546,21 @@ th {
 #statusResult dd {
   overflow-wrap: anywhere;
 }
+
+/* ---------- Sign-in (Amazon Cognito) ---------- */
+
+.signout {
+  padding: 4px 12px;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--control);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.signout:hover {
+  color: var(--text);
+  border-color: var(--text);
+}

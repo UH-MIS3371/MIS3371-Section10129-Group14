@@ -20,13 +20,19 @@ const core = require("../backend/game-core");
 const SCENARIOS = require("../backend/scenario-data.json");
 const crisis = SCENARIOS.find((s) => s.id === "crisis-2008");
 
+// Signed-in users, as the claims API Gateway passes after checking a Cognito token
+const PLAYER = { sub: "user-a", email: "a@example.com" };
+const OTHER = { sub: "user-b", email: "b@example.com" };
+const ADMIN = { sub: "user-admin", email: "admin@example.com", "cognito:groups": "[admins]" };
+
 // Same shape as an API Gateway HTTP API (payload 2.0) event
-async function call(method, rawPath, body) {
+async function call(method, rawPath, body, claims = PLAYER) {
   const gameId = (rawPath.match(/^\/api\/games\/([^/]+)/) || [])[1];
+  const transactionId = (rawPath.match(/^\/api\/trades\/([^/]+)/) || [])[1];
   const response = await handler({
     rawPath,
-    requestContext: { http: { method } },
-    pathParameters: gameId ? { gameId } : undefined,
+    requestContext: { http: { method }, authorizer: claims ? { jwt: { claims } } : undefined },
+    pathParameters: gameId ? { gameId } : transactionId ? { transactionId } : undefined,
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   return { status: response.statusCode, body: response.body ? JSON.parse(response.body) : {} };
@@ -191,4 +197,42 @@ test("the existing trade and account routes still answer", async () => {
   assert.strictEqual((await call("GET", "/api/account")).status, 200);
   assert.strictEqual((await call("POST", "/api/trades", {})).status, 400);
   assert.strictEqual((await call("OPTIONS", "/api/games")).status, 204);
+});
+
+// ---------- Sign-in and roles (Amazon Cognito) ----------
+
+test("every route needs a signed-in user", async () => {
+  for (const [method, route] of [["GET", "/api/account"], ["POST", "/api/trades"], ["POST", "/api/games"], ["GET", "/api/admin/games"]]) {
+    const res = await call(method, route, {}, null);
+    assert.deepStrictEqual([res.status, res.body.reason], [401, "Please sign in."]);
+  }
+});
+
+test("each user has their own account", async () => {
+  const a = (await call("GET", "/api/account")).body.account;
+  const trade = await call("POST", "/api/trades", { symbol: "AAPL", tradeType: "Buy", quantity: 1, orderType: "Market", price: 185.5 });
+  assert.strictEqual(trade.status, 200);
+  assert.strictEqual(trade.body.trade.userId, PLAYER.sub);
+  assert.ok((await call("GET", "/api/account")).body.account.cashCents < a.cashCents);
+  assert.strictEqual((await call("GET", "/api/account", undefined, OTHER)).body.account.cashCents, a.cashCents);
+  const path = "/api/trades/" + trade.body.transactionId;
+  assert.strictEqual((await call("GET", path, undefined, OTHER)).status, 404);
+  assert.strictEqual((await call("GET", path, undefined, ADMIN)).status, 200);
+});
+
+test("a game belongs to its player: others get 403, an admin may look but not play", async () => {
+  const game = (await call("POST", "/api/games", { scenarioId: "crisis-2008", ownerId: "someone-else" })).body.game;
+  assert.strictEqual(game.ownerId, PLAYER.sub);
+  const path = `/api/games/${game.gameId}`;
+  assert.strictEqual((await call("GET", path, undefined, OTHER)).status, 403);
+  assert.strictEqual((await call("POST", path + "/orders", order(game), OTHER)).status, 403);
+  assert.strictEqual((await call("GET", path, undefined, ADMIN)).status, 200);
+  assert.strictEqual((await call("POST", path + "/orders", order(game), ADMIN)).status, 403);
+});
+
+test("only admins can list every game", async () => {
+  assert.strictEqual((await call("GET", "/api/admin/games")).status, 403);
+  const res = await call("GET", "/api/admin/games", undefined, ADMIN);
+  assert.strictEqual(res.status, 200);
+  assert.ok(res.body.games.length > 0 && res.body.games.every((g) => g.ownerEmail && !("log" in g)));
 });

@@ -139,7 +139,7 @@ function renderTrade() {
 
   try {
     // Send the trade to the AWS API Gateway endpoint
-    const response = await fetch(API_URL, {
+    const response = await authFetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -225,7 +225,7 @@ statusForm.addEventListener("submit", async (event) => {
   viewStatusButton.disabled = true;
 
   try {
-    const response = await fetch(
+    const response = await authFetch(
       API_URL + "/" + encodeURIComponent(id),
       { method: "GET" }
     );

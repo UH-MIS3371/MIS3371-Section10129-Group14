@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin – MarketStreet</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="auth.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="data/scenarios.js" defer></script>
+    <script src="admin.js" defer></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <div class="inner">
+        <a class="logo" href="trade.html">MarketStreet</a>
+        <nav class="site-nav" aria-label="Main">
+          <a href="trade.html">Trade</a><a href="history.html">History</a><a href="scenarios.html">Scenarios</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wide">
+      <h1>Every Scenario Mode game</h1>
+      <p id="adminMessage" class="note">Loading…</p>
+      <section class="card" id="adminCard" hidden>
+        <table>
+          <thead><tr><th>Player</th><th>Scenario</th><th>Day</th><th>Status</th><th class="num">Stars</th><th class="num">Return</th><th>Last move</th></tr></thead>
+          <tbody id="adminRows"></tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

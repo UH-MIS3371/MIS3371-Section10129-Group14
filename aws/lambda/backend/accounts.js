@@ -8,9 +8,7 @@
 const { GetCommand, PutCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
 const { START_CASH_CENTS, START_SHARES } = require("./market-data");
 
-// Sign-in is not part of the current scope, so every trade uses one demo account.
-const DEMO_USER_ID = "demo";
-
+// Each signed-in user has their own account, keyed by their Cognito user ID (the token's sub claim).
 // Reads the account, creating it with the starting values the first time.
 async function getOrCreateAccount(db, tableName, userId, nowIso) {
   const found = await db.send(new GetCommand({ TableName: tableName, Key: { userId } }));
@@ -88,4 +86,4 @@ function publicAccount(account) {
   return { cashCents: account.cashCents, holdings: { ...account.holdings } };
 }
 
-module.exports = { DEMO_USER_ID, getOrCreateAccount, commitTrade, publicAccount };
+module.exports = { getOrCreateAccount, commitTrade, publicAccount };

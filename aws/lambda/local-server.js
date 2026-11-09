@@ -12,7 +12,7 @@ const path = require("path");
 // Supports exactly the commands the Lambda sends (Get, Put, and the TransactWrite
 // from backend/accounts.js) and follows the same rules: conditions are checked, and a
 // transaction saves everything or nothing.
-const { DynamoDBDocumentClient, GetCommand, PutCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, GetCommand, PutCommand, ScanCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
 
 function installFakeDynamoDB() {
   const tables = new Map(); // table name -> Map(key -> item)
@@ -103,6 +103,11 @@ function installFakeDynamoDB() {
       return {};
     }
 
+    // Returns every item in one page (the Lambda picks the fields it needs)
+    if (command instanceof ScanCommand) {
+      return { Items: [...fake.table(input.TableName).values()].map((item) => structuredClone(item)) };
+    }
+
     throw new Error("Unexpected command: " + command.constructor.name);
   };
 
@@ -135,6 +140,19 @@ const TYPES = {
   ".svg": "image/svg+xml"
 };
 
+// Reads the Cognito ID token from the Authorization header and passes its claims the way API Gateway does.
+// LOCAL ONLY: this does not check the token's signature. On AWS, API Gateway's JWT authorizer does.
+function claimsFrom(req) {
+  const token = (req.headers.authorization || "").replace(/^Bearer /, "");
+  try {
+    const claims = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
+    if (Array.isArray(claims["cognito:groups"])) claims["cognito:groups"] = "[" + claims["cognito:groups"].join(" ") + "]";
+    return { jwt: { claims } };
+  } catch (e) {
+    return undefined;
+  }
+}
+
 // Build the same event API Gateway (HTTP API, payload 2.0) sends to the Lambda
 async function callLambda(req, res, routeKey, transactionId, gameId) {
   const chunks = [];
@@ -142,7 +160,7 @@ async function callLambda(req, res, routeKey, transactionId, gameId) {
   const event = {
     routeKey: req.method + " " + routeKey,
     rawPath: new URL(req.url, "http://localhost").pathname,
-    requestContext: { http: { method: req.method } },
+    requestContext: { http: { method: req.method }, authorizer: claimsFrom(req) },
     pathParameters: transactionId !== undefined ? { transactionId } : gameId !== undefined ? { gameId } : undefined,
     body: chunks.length ? Buffer.concat(chunks).toString("utf8") : undefined,
     isBase64Encoded: false
@@ -173,6 +191,7 @@ const server = http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url, "http://localhost");
     if (pathname === "/api/trades") return await callLambda(req, res, "/api/trades");
     if (pathname === "/api/account") return await callLambda(req, res, "/api/account");
+    if (pathname === "/api/admin/games") return await callLambda(req, res, "/api/admin/games");
     const game = pathname.match(/^\/api\/games(?:\/([^/]+)(\/[a-z]+)?)?\/?$/);
     if (game) {
       const routeKey = "/api/games" + (game[1] ? "/{gameId}" + (game[2] || "") : "");

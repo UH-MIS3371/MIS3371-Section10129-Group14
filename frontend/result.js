@@ -13,7 +13,7 @@ async function renderResult() {
   let result;
   try {
     if (id) {
-      response = await fetch(API_URL + "/" + encodeURIComponent(id));
+      response = await authFetch(API_URL + "/" + encodeURIComponent(id));
       result = await response.json();
     }
   } catch (e) {

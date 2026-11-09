@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign in – MarketStreet</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="auth.js" defer></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <div class="inner"><span class="logo">MarketStreet</span></div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h1 id="signinTitle">Signing you in…</h1>
+        <p id="signinText" class="note">Amazon Cognito checks your password. MarketStreet never sees it.</p>
+        <button type="button" class="button" id="signinButton" hidden>Sign in</button>
+      </section>
+    </main>
+
+    <script>
+      // Cognito comes back here with ?code= after a sign-in, or with nothing after a sign-out
+      addEventListener("DOMContentLoaded", async () => {
+        const signedIn = new URLSearchParams(location.search).has("code") && (await finishSignIn().catch(() => false));
+        if (signedIn) return;
+        document.getElementById("signinTitle").textContent = "You are signed out";
+        document.getElementById("signinText").textContent = "Sign in or create an account to trade and play Scenario Mode.";
+        const button = document.getElementById("signinButton");
+        button.hidden = false;
+        button.addEventListener("click", signIn);
+      });
+    </script>
+  </body>
+</html>

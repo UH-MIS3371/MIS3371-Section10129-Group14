@@ -18,11 +18,20 @@ How the Week 12 controls apply to MarketStreet, using Scenario Mode games (`/api
 | **Collect only what is needed** | A game stores the scenario, cash, positions, trades and daily values. No names, emails or other personal information; there is no leaderboard, so no nicknames either. | `backend/game-core.js` `newGame` | — |
 | **Encryption in transit and at rest** | API Gateway and Amplify use HTTPS; DynamoDB encrypts tables at rest by default. | AWS configuration | — |
 
+## Sign-in and roles (Amazon Cognito)
+
+| Control (lecture) | What MarketStreet does | Where | Test |
+|---|---|---|---|
+| **Authentication: who are you?** | Users sign in on Amazon Cognito's login page (authorization code flow with PKCE). MarketStreet never sees a password. API Gateway's JWT authorizer checks the token on every route before the Lambda runs. | `frontend/auth.js`, API Gateway authorizer `CognitoLogin` | "every route needs a signed-in user" |
+| **Authorization: what may you do?** | Each user has their own account. A game belongs to its player: another user gets 403. Members of the `admins` group may see every game but may not play another player's game. | `backend/auth.js`, `backend/games.js`, `index.js` `getTrade` | "each user has their own account", "a game belongs to its player…", "only admins can list every game" |
+| **Hiding a button is not protection** | Only admins see the Admin link, but the Lambda also checks the group and answers 403 to everyone else. | `backend/games.js` `listGames`, `frontend/admin.js` | "only admins can list every game" |
+| **Official values on the server** | The user ID and email come from the checked token, never from the request body. | `backend/games.js` `createGame`, `index.js` `postTrade` | "a game belongs to its player…" |
+
 ## Not in the application (known limitations)
 
 | Control (lecture) | Status |
 |---|---|
-| **Authentication and MFA (Cognito)** | Not built. Like the rest of the class app, everyone uses the same demo account and anyone with a game's ID can load it. With Cognito, each game would store its owner and the Lambda would check it. |
-| **Authorization by role** | The app has one role (a trader), so there is nothing to approve. |
+| **MFA** | Not turned on. Cognito supports it; the classic login page cannot set up an authenticator app, so it would need Cognito's newer managed login page. |
+| **Local sign-in check** | On a developer's computer, `local-server.js` reads the token without checking its signature; only API Gateway checks signatures. |
 | **Look-ahead in Scenario Mode** | The page still downloads the whole price history to draw charts, so a player could look at future prices in the browser's developer tools. The server owns the prices and the score, but it does not hide the future. Hiding it would mean sending each day's prices only after the day ends. |
 | **Audit trail (CloudTrail)** | Not set up for this project; the saved trades and the CloudWatch log are the evidence kept. |

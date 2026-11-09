@@ -3,9 +3,12 @@
 // trade.js, history.js, and result.js initialize their own pages.
 
 // On localhost (npm start in aws/lambda) the local server answers /api/trades; everywhere else, AWS does.
+// The cognito-login branch preview uses the test API, which requires a Cognito sign-in on every route.
 const API_URL = location.hostname === "localhost" || location.hostname === "127.0.0.1"
   ? "/api/trades"
-  : "https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades";
+  : location.hostname.startsWith("cognito-login.")
+    ? "https://qedu5ta2jc.execute-api.us-east-1.amazonaws.com/api/trades"
+    : "https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades";
 // GET /api/account returns the saved cash and holdings (BR-7)
 const ACCOUNT_URL = API_URL.replace(/\/trades$/, "/account");
 const STORAGE_KEY = "marketstreet-demo";
@@ -49,7 +52,7 @@ function saveTrade(trade, account) {
 // Refreshes the displayed cash and holdings from the server. Returns true if it worked.
 async function syncAccount() {
   try {
-    const response = await fetch(ACCOUNT_URL);
+    const response = await authFetch(ACCOUNT_URL);
     const result = await response.json();
     if (!response.ok || result.success !== true) return false;
     const state = loadState();

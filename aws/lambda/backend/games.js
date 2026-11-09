@@ -7,13 +7,15 @@
 // - Each action carries a requestId. A retried click with the same requestId is applied once.
 // - Each save only succeeds if the game still has the version that was read (no lost or doubled updates).
 // - Errors say what to fix, or that nothing was saved; internal details stay in CloudWatch.
+// - Each game belongs to the user who started it. Only that user may play it; an admin may also look at it.
 const crypto = require("crypto");
-const { GetCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { GetCommand, PutCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb");
 const core = require("./game-core");
 const SCENARIOS = require("./scenario-data.json");
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ROUTE = /^\/api\/games(?:\/([^/]+)(?:\/(orders|close|advance))?)?\/?$/;
+const ADMIN_ROUTE = /^\/api\/admin\/games\/?$/;
 const MAX_ORDERS = 1000;     // per game; keeps the saved game far below DynamoDB's 400 KB item limit
 const RECENT_REQUESTS = 20;  // requestIds remembered per game
 
@@ -57,12 +59,15 @@ async function save(db, game, readVersion) {
   await db.send(new PutCommand(params));
 }
 
-// POST /api/games {scenarioId}
-async function createGame(db, body) {
+// POST /api/games {scenarioId}. The owner comes from the login token, never from the request body.
+async function createGame(db, body, user) {
   const s = body && SCENARIOS.find((x) => x.id === body.scenarioId);
   if (!s) return fail(400, "Choose one of the scenarios.");
   const now = new Date().toISOString();
-  const game = { gameId: crypto.randomUUID(), version: 1, createdAt: now, updatedAt: now, recentRequests: [], ...core.newGame(s) };
+  const game = {
+    gameId: crypto.randomUUID(), version: 1, ownerId: user.userId, ownerEmail: user.email,
+    createdAt: now, updatedAt: now, recentRequests: [], ...core.newGame(s)
+  };
   await save(db, game);
   return ok(201, game);
 }
@@ -105,11 +110,12 @@ const ACTIONS = {
 
 // Runs one action. The same requestId twice returns the game without applying the action again.
 // If another request saved the game in between, it reloads and tries once more.
-async function act(db, gameId, body, apply) {
+async function act(db, gameId, body, apply, user) {
   if (typeof body.requestId !== "string" || !UUID.test(body.requestId)) return fail(400, "A requestId is required.");
   for (let attempt = 0; attempt < 2; attempt++) {
     const game = await load(db, gameId);
     if (!game) return fail(404, "Game not found.");
+    if (game.ownerId !== user.userId) return fail(403, "This game belongs to another player.");
     if (game.recentRequests.includes(body.requestId)) return ok(200, game, { duplicate: true });
     const readVersion = game.version;
     const outcome = apply(SCENARIOS.find((s) => s.id === game.scenarioId), game);
@@ -127,27 +133,61 @@ async function act(db, gameId, body, apply) {
   return fail(409, "This game was changed somewhere else. Reload the game to continue.");
 }
 
+// GET /api/admin/games: a short summary of every game, newest first. The role is checked here on the
+// server; hiding the admin page from other users would not be protection on its own.
+async function listGames(db, user) {
+  if (!user.isAdmin) return fail(403, "Only admins can see every game.");
+  const items = [];
+  let ExclusiveStartKey;
+  do {
+    const page = await db.send(new ScanCommand({
+      TableName: process.env.GAMES_TABLE,
+      ProjectionExpression: "gameId, ownerEmail, scenarioId, #d, #s, #r, updatedAt",
+      ExpressionAttributeNames: { "#d": "day", "#s": "status", "#r": "result" },
+      ExclusiveStartKey
+    }));
+    items.push(...page.Items);
+    ExclusiveStartKey = page.LastEvaluatedKey;
+  } while (ExclusiveStartKey);
+  const games = items.map((g) => ({
+    gameId: g.gameId, ownerEmail: g.ownerEmail, scenarioId: g.scenarioId, day: g.day, status: g.status,
+    stars: g.result ? g.result.stars : null, returnPct: g.result ? g.result.mine : null, updatedAt: g.updatedAt
+  })).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return { statusCode: 200, body: { success: true, games } };
+}
+
 // Returns null when the request is not for /api/games, so index.js can route it elsewhere
-async function handleGames(db, event, method) {
-  const match = (event.rawPath || "").match(ROUTE);
-  if (!match) return null;
+async function handleGames(db, event, method, user) {
+  const path = event.rawPath || "";
+  const match = path.match(ROUTE);
+  if (!match && !ADMIN_ROUTE.test(path)) return null;
   if (!process.env.GAMES_TABLE) {
     console.log("GAMES_TABLE environment variable is not set.");
     return fail(500, "The game could not be saved. Please try again.");
   }
+  if (!match) {
+    try {
+      return method === "GET" ? await listGames(db, user) : fail(405, "Use GET on /api/admin/games.");
+    } catch (e) {
+      console.log("Game list failed:", e);
+      return fail(500, "The games could not be loaded. Please try again.");
+    }
+  }
   const action = match[2];
   const gameId = (event.pathParameters && event.pathParameters.gameId) || match[1];
   try {
-    if (method === "POST" && !gameId) return await createGame(db, parseBody(event));
+    if (method === "POST" && !gameId) return await createGame(db, parseBody(event), user);
     if (!gameId || !UUID.test(gameId)) return fail(404, "Game not found.");
     if (method === "GET" && !action) {
       const game = await load(db, gameId);
-      return game ? ok(200, game) : fail(404, "Game not found.");
+      if (!game) return fail(404, "Game not found.");
+      if (game.ownerId !== user.userId && !user.isAdmin) return fail(403, "This game belongs to another player.");
+      return ok(200, game);
     }
     if (method === "POST" && action) {
       const body = parseBody(event);
       if (!body) return fail(400, "A JSON request body is required.");
-      return await act(db, gameId, body, ACTIONS[action](body));
+      return await act(db, gameId, body, ACTIONS[action](body), user);
     }
     return fail(405, "Use GET or POST on /api/games.");
   } catch (e) {

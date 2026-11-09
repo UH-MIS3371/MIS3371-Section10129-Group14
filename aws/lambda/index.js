@@ -5,13 +5,16 @@
 //          GET  /api/trades/{transactionId}   read one saved trade
 //          GET  /api/account                  read the current cash and holdings
 //          /api/games...                      Scenario Mode games (see backend/games.js)
+//          GET  /api/admin/games              every saved game (admins only)
+// Every route needs a signed-in user: API Gateway checks the Amazon Cognito token (JWT authorizer).
 // Environment: TABLE_NAME (trades, key transactionId), ACCOUNTS_TABLE (accounts, key userId)
 //              and GAMES_TABLE (Scenario Mode games, key gameId).
 const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand } = require("@aws-sdk/lib-dynamodb");
 const { validateOrder, checkAccount } = require("./backend/trades");
-const { DEMO_USER_ID, getOrCreateAccount, commitTrade, publicAccount } = require("./backend/accounts");
+const { getOrCreateAccount, commitTrade, publicAccount } = require("./backend/accounts");
+const { currentUser } = require("./backend/auth");
 const { handleGames } = require("./backend/games");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -44,7 +47,7 @@ function tablesConfigured() {
 }
 
 // POST /api/trades: check the rules, then save an accepted trade and update the account together
-async function postTrade(event) {
+async function postTrade(event, user) {
   const submittedAt = new Date().toISOString();
 
   // The body is normally a JSON string. A plain object is also accepted (Lambda console tests).
@@ -69,7 +72,7 @@ async function postTrade(event) {
 
   let account;
   try {
-    account = await getOrCreateAccount(db, process.env.ACCOUNTS_TABLE, DEMO_USER_ID, submittedAt);
+    account = await getOrCreateAccount(db, process.env.ACCOUNTS_TABLE, user.userId, submittedAt);
   } catch (e) {
     console.log("Account read failed:", e);
     return reply(500, serverError("The trade could not be saved. Please try again."));
@@ -85,7 +88,7 @@ async function postTrade(event) {
   const completedAt = new Date().toISOString();
   const record = {
     transactionId: crypto.randomUUID(),
-    userId: DEMO_USER_ID,
+    userId: user.userId,
     stockSymbol: quote.symbol,
     tradeType: trade.tradeType,
     shareQuantity: trade.quantity,
@@ -137,11 +140,11 @@ async function postTrade(event) {
   });
 }
 
-// GET /api/account: the current cash and holdings (created with the starting values if new)
-async function getAccount() {
+// GET /api/account: the signed-in user's cash and holdings (created with the starting values if new)
+async function getAccount(user) {
   if (!tablesConfigured()) return reply(500, { success: false, reason: "The account could not be loaded. Please try again." });
   try {
-    const account = await getOrCreateAccount(db, process.env.ACCOUNTS_TABLE, DEMO_USER_ID, new Date().toISOString());
+    const account = await getOrCreateAccount(db, process.env.ACCOUNTS_TABLE, user.userId, new Date().toISOString());
     return reply(200, { success: true, account: publicAccount(account) });
   } catch (e) {
     console.log("Account read failed:", e);
@@ -149,8 +152,9 @@ async function getAccount() {
   }
 }
 
-// GET /api/trades/{transactionId}: read one saved trade
-async function getTrade(event) {
+// GET /api/trades/{transactionId}: read one saved trade. Only its owner (or an admin) may read it;
+// anyone else is told it was not found, so another user's trade IDs reveal nothing.
+async function getTrade(event, user) {
   const id = event.pathParameters && event.pathParameters.transactionId;
   if (typeof id !== "string" || !id.trim()) {
     return reply(400, { success: false, reason: "A transactionId is required." });
@@ -166,7 +170,8 @@ async function getTrade(event) {
   try {
     // GetCommand reads one record by its partition key
     const found = await db.send(new GetCommand({ TableName: process.env.TABLE_NAME, Key: { transactionId: id } }));
-    if (!found.Item) return reply(404, { success: false, reason: "Trade not found." });
+    const mine = found.Item && (found.Item.userId === user.userId || user.isAdmin);
+    if (!mine) return reply(404, { success: false, reason: "Trade not found." });
     return reply(200, { success: true, trade: found.Item });
   } catch (e) {
     console.log("DynamoDB read failed:", e);
@@ -181,12 +186,15 @@ function isAccountRoute(event) {
 async function route(event, method) {
   try {
     if (method === "OPTIONS") return { statusCode: 204, headers: HEADERS, body: "" };
+    // Every route needs a signed-in user (Amazon Cognito); API Gateway has already checked the token
+    const user = currentUser(event);
+    if (!user) return reply(401, { success: false, reason: "Please sign in." });
     // Game routes first: every other POST is a trade and every other GET a trade or account lookup
-    const game = await handleGames(db, event, method);
+    const game = await handleGames(db, event, method, user);
     if (game) return reply(game.statusCode, game.body);
-    if (method === "POST") return await postTrade(event);
-    if (method === "GET" && isAccountRoute(event)) return await getAccount();
-    if (method === "GET") return await getTrade(event);
+    if (method === "POST") return await postTrade(event, user);
+    if (method === "GET" && isAccountRoute(event)) return await getAccount(user);
+    if (method === "GET") return await getTrade(event, user);
     return reply(405, rejected("Use POST /api/trades, GET /api/trades/{transactionId} or GET /api/account."));
   } catch (e) {
     console.log("Unexpected error:", e);
