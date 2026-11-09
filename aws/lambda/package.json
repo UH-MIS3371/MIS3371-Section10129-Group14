@@ -2,10 +2,12 @@
   "name": "marketstreet-lambda",
   "version": "1.0.0",
   "private": true,
-  "description": "MarketStreet Lambda (POST and GET /api/trades, GET /api/account, with DynamoDB)",
+  "description": "MarketStreet Lambda (trades, account and Scenario Mode games, with DynamoDB)",
   "main": "index.js",
   "scripts": {
-    "start": "node local-server.js"
+    "start": "node local-server.js",
+    "test": "node --test",
+    "sync-core": "node -e \"require('fs').copyFileSync('backend/game-core.js', '../../frontend/game-core.js')\""
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.1161.0",

@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="scenarios.css" />
     <script src="data/scenarios.js" defer></script>
     <script src="app.js" defer></script>
+    <script src="game-core.js" defer></script>
     <script src="market-chart.js" defer></script>
     <script src="scenarios.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
@@ -47,6 +48,11 @@
         <div class="seg" role="group" aria-labelledby="speedLabel" id="speedPick"></div>
         <span id="speedNote" class="muted"></span>
       </div>
+      <div class="resume" id="resumeBar" hidden>
+        <span>Game in progress: <strong id="resumeName"></strong></span>
+        <button type="button" class="primary" id="resumeButton">Resume</button>
+      </div>
+      <p id="pickerMessage" class="error" role="alert"></p>
       <div class="scenarios" id="scenarioList"></div>
     </main>
 

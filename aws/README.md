@@ -44,6 +44,35 @@ Account balances need these changes in the AWS account that hosts the backend, m
 
 The account is created automatically with $10,000 and 10 AAPL, 2 MSFT, 1 IBM the first time it is used. To reset it, delete the `demo` item in `MarketStreetAccounts`.
 
+## AWS setup for Scenario Mode games
+
+Scenario Mode saves each game on the server. Once, before uploading this version:
+
+1. **DynamoDB → Create table:** name `MarketStreetGames`, partition key `gameId` (String), on-demand capacity.
+2. **Lambda → Configuration → Environment variables:** add `GAMES_TABLE = MarketStreetGames`.
+3. **Lambda permissions:** `LabRole` must allow `dynamodb:GetItem` and `PutItem` on `MarketStreetGames`. Nothing else is needed for games (least privilege).
+4. **API Gateway → Routes:** add these five routes, all with the same Lambda integration:
+
+   | Route | Does |
+   |---|---|
+   | `POST /api/games` | Starts a game in a scenario |
+   | `GET /api/games/{gameId}` | Loads a saved game (used to resume after a refresh) |
+   | `POST /api/games/{gameId}/orders` | Buy or Short an amount of a stock |
+   | `POST /api/games/{gameId}/close` | Closes all or half of a position |
+   | `POST /api/games/{gameId}/advance` | Ends the trading day (or every day up to `untilDay`); the bot trades at each close |
+
+5. **API Gateway → CORS:** allowed methods `GET, POST`, header `content-type` (already set for trades).
+
+How a game stays trustworthy (see [backend/games.js](lambda/backend/games.js)):
+
+- The rules are in [backend/game-core.js](lambda/backend/game-core.js). The page uses a copy of the same file for previews (`npm run sync-core` copies it to `frontend/`; a test fails if the copies differ). The server's copy decides.
+- The server sets the game ID, the times, every price and every trade record. A price sent by the browser is ignored.
+- Every action carries a `requestId`. The same `requestId` twice is applied once (a retried click or a lost reply).
+- Every save checks the game's `version`, so two requests at the same time can't overwrite each other.
+- If the save fails, the reply says nothing was saved; the details go to CloudWatch only.
+
+Tests: `cd aws/lambda && npm install && npm test` runs the rules and the `/api/games` routes against the in-memory DynamoDB from `local-server.js`.
+
 ## Deploy a change
 
 The Lambda is **not** connected to GitHub. Pushing to `main` does not update it.

@@ -1,9 +1,11 @@
 // MarketStreet Scenarios: replay a real market period, one trading day every few seconds.
-// Prototype: the game runs in the browser only. Nothing is sent to the server yet.
+// The game is saved on the server (POST/GET /api/games...). The rules are in game-core.js, the same file
+// the Lambda uses: the page uses it for previews and the animated price, the server's copy decides.
 
-const START_CASH = 10000000; // $100,000 in cents
 const SPEEDS = [[10, "1×"], [5, "2×"], [2, "5×"], [1, "10×"]]; // seconds per trading day
 const TICK_MS = 250;
+const GAMES_URL = API_URL.replace(/\/trades$/, "/games");
+const SAVED_GAME = "marketstreet-scenario-game";
 const $ = (id) => document.getElementById(id);
 
 // Each scenario's colour and a line of context shown before it starts
@@ -15,35 +17,19 @@ const THEMES = {
   "rates-2022": { hue: "#d9b24a", context: "Inflation is the highest in 40 years and the Fed is about to raise rates. Growth stocks are the most exposed." }
 };
 
-
+// game = the server's saved game plus page-only fields: s (the scenario), speed, paused, timer, symbol,
+// newsShown, news and busy (an action is waiting for the server)
 let game = null;
 let chosen = SCENARIOS[0];
 let speed = 5;
 const view = { range: 126, type: "candles", mas: [] };
 
-// During a day the price moves open → low → high → close (or open → high → low → close on a down day),
-// so it always stays inside that day's real range and ends on the real close.
-function pathOf(bar) {
-  const [open, high, low, close] = bar;
-  return close >= open ? [open, low, high, close] : [open, high, low, close];
-}
-
-function priceAt(bar, progress) {
-  const path = pathOf(bar);
-  const leg = Math.min(Math.floor(progress * 3), 2);
-  const t = progress * 3 - leg;
-  return Math.round((path[leg] + (path[leg + 1] - path[leg]) * t) * 100);
-}
-
-// Today's candle so far: real open, the highest and lowest price reached yet, and the current price
-function liveBar(bar, progress) {
-  const now = priceAt(bar, progress) / 100;
-  const reached = pathOf(bar).slice(0, Math.floor(progress * 3) + 1).concat(now);
-  return [bar[0], Math.max(...reached), Math.min(...reached), now, Math.round(bar[4] * progress)];
-}
-
 function price(symbol) {
-  return priceAt(game.s.stocks[symbol].bars[game.day], game.progress);
+  return GameCore.price(game.s, game, symbol);
+}
+
+function totalValue(account) {
+  return GameCore.totalValue(game.s, game, account);
 }
 
 function prevClose(symbol) {
@@ -51,73 +37,70 @@ function prevClose(symbol) {
   return Math.round((game.day ? bars[game.day - 1][3] : bars[0][0]) * 100);
 }
 
-// Works for the player (game) and for the bot (game.bot): both have cash and holdings.
-// A short position is negative shares, so it lowers the value when the price rises.
-function totalValue(account = game) {
-  let total = account.cash;
-  for (const symbol in account.holdings) total += account.holdings[symbol] * price(symbol);
-  return total;
-}
-
-function shortValue() {
-  let total = 0;
-  for (const symbol in game.holdings) total += Math.max(0, -game.holdings[symbol]) * price(symbol);
-  return total;
-}
-
-function benchStart() {
-  return Math.round(game.s.stocks[game.s.benchmark].bars[game.s.start][0] * 100);
-}
-
 function benchReturn() {
-  return price(game.s.benchmark) / benchStart() - 1;
+  return price(game.s.benchmark) / GameCore.benchStart(game.s) - 1;
 }
 
-// Every trade by you or the bot goes into one log: the trades table and the chart markers read it
-function record(who, side, qty, symbol, cents) {
-  game.log.push({ day: game.day, who, side, qty, symbol });
-  $("tradeRows").prepend(el("tr", { class: who === "Bot" ? "by-bot" : null },
-    el("td", { class: "mono" }, shortDate(game.s.dates[game.day])),
-    el("td", null, who),
-    el("td", null, side + " " + qty + " " + symbol),
-    el("td", { class: "right mono" }, money(cents)),
-    el("td", { class: "right mono" }, money(qty * cents))));
-  $("tradesEmpty").hidden = true;
+// Today's candle so far: real open, the highest and lowest price reached yet, and the current price
+function liveBar(bar, progress) {
+  const now = GameCore.priceAt(bar, progress) / 100;
+  const reached = GameCore.pathOf(bar).slice(0, Math.floor(progress * 3) + 1).concat(now);
+  return [bar[0], Math.max(...reached), Math.min(...reached), now, Math.round(bar[4] * progress)];
 }
 
-// A stock's close on a day and its average close over the 20 days up to then.
-// The bot trades on this, and the "How the bot works" panel shows it.
-function trend(symbol, day) {
-  const bars = game.s.stocks[symbol].bars.slice(day - 19, day + 1);
-  return { close: bars.at(-1)[3], average: bars.reduce((sum, bar) => sum + bar[3], 0) / bars.length };
+// ---------- Talking to the server ----------
+
+async function api(method, url, body) {
+  const response = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body && JSON.stringify(body) });
+  return { ok: response.ok, status: response.status, data: await response.json().catch(() => ({})) };
 }
 
-// The bot follows the trend. At each close it sells any stock that closed below its 20-day average,
-// then buys the stocks above their average that it does not own yet. Each stock gets at most an equal
-// share of the bot's value, so when most stocks are falling the bot keeps most of its money in cash.
-function botTrade() {
-  const bot = game.bot;
-  const symbols = Object.keys(game.s.stocks);
-  const above = symbols.filter((symbol) => {
-    const t = trend(symbol, game.day);
-    return t.close > t.average;
-  });
-  for (const symbol in bot.holdings) {
-    if (above.includes(symbol)) continue;
-    bot.cash += bot.holdings[symbol] * price(symbol);
-    record("Bot", "Sell", bot.holdings[symbol], symbol, price(symbol));
-    delete bot.holdings[symbol];
+// Puts the server's game on screen, keeping the page's own fields. Within the same day the animated
+// price keeps its place; the server only moves its clock forward.
+function applyServer(state) {
+  const sameDay = state.day === game.day;
+  const progress = game.progress;
+  Object.assign(game, state);
+  if (sameDay && state.status === "active") game.progress = Math.max(progress, state.progress);
+}
+
+// Sends one action (orders, close or advance). The requestId makes the server apply it once, so a
+// network failure can be retried with the same requestId without doubling it. The screen only changes
+// when the server confirms the save.
+async function act(action, body) {
+  const request = { requestId: crypto.randomUUID(), day: game.day, progress: Math.min(game.progress, 0.999), ...body };
+  game.busy = true;
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await api("POST", GAMES_URL + "/" + game.gameId + "/" + action, request);
+        if (res.ok) {
+          applyServer(res.data.game);
+          return res.data;
+        }
+        if (res.status === 409) await reloadGame();
+        return { error: res.data.reason || "Something went wrong. Please try again." };
+      } catch (e) {
+        // No answer from the server: try once more with the same requestId
+      }
+    }
+    return { error: "Couldn't reach the server. Nothing was saved. Please try again." };
+  } finally {
+    game.busy = false;
   }
-  const buys = above.filter((symbol) => !bot.holdings[symbol]);
-  const budget = Math.min(totalValue(bot) / symbols.length, bot.cash / buys.length);
-  for (const symbol of buys) {
-    const qty = Math.floor(budget / price(symbol));
-    if (!qty) continue;
-    bot.holdings[symbol] = qty;
-    bot.cash -= qty * price(symbol);
-    record("Bot", "Buy", qty, symbol, price(symbol));
-  }
 }
+
+async function reloadGame() {
+  const res = await api("GET", GAMES_URL + "/" + game.gameId);
+  if (res.ok) applyServer(res.data.game);
+}
+
+function showMessage(error, success) {
+  $("orderMessage").textContent = error || success;
+  $("orderMessage").className = error ? "error" : "ok";
+}
+
+// ---------- Scores and charts ----------
 
 // Account values at each close, plus the current moment
 function curve() {
@@ -128,7 +111,7 @@ function curve() {
 // One row per month or year (keyLength 7 = "2008-09", 4 = "2008"). Each period is measured from the
 // previous period's last close, so the rows add up to the total return.
 function periods(keyLength) {
-  let prev = { value: START_CASH, bench: benchStart() };
+  let prev = { value: GameCore.START_CASH, bench: GameCore.benchStart(game.s) };
   const rows = [];
   for (const point of curve()) {
     const key = point.date.slice(0, keyLength);
@@ -154,12 +137,13 @@ function renderPerformance() {
 
 // The race: you, the bot and the market as returns since the first open
 function drawRace(box) {
-  const points = [{ value: START_CASH, bot: START_CASH, bench: benchStart() }].concat(curve());
+  const start = GameCore.START_CASH;
+  const points = [{ value: start, bot: start, bench: GameCore.benchStart(game.s) }].concat(curve());
   const length = game.s.dates.length - game.s.start + 1;
   const end = (r) => (r >= 0 ? "+" : "−") + Math.abs(r * 100).toFixed(1) + "%";
-  const mine = points.map((p) => p.value / START_CASH - 1);
-  const bot = points.map((p) => p.bot / START_CASH - 1);
-  const market = points.map((p) => p.bench / benchStart() - 1);
+  const mine = points.map((p) => p.value / start - 1);
+  const bot = points.map((p) => p.bot / start - 1);
+  const market = points.map((p) => p.bench / GameCore.benchStart(game.s) - 1);
   drawSpark(box, [
     { values: Array(length).fill(0), cls: "base" },
     { values: market, cls: "mkt", label: "Mkt " + end(market.at(-1)) },
@@ -170,8 +154,8 @@ function drawRace(box) {
 
 // Scoreboard: returns, your place, the finding under the title and the race chart
 function renderScore() {
-  const mine = totalValue() / START_CASH - 1;
-  const bot = totalValue(game.bot) / START_CASH - 1;
+  const mine = totalValue() / GameCore.START_CASH - 1;
+  const bot = totalValue(game.bot) / GameCore.START_CASH - 1;
   const market = benchReturn();
   setSigned($("youReturn"), pct(mine), mine >= 0);
   setSigned($("botReturn"), pct(bot), bot >= 0);
@@ -266,74 +250,99 @@ $("scenarioList").addEventListener("click", (e) => {
   $("briefDialog").showModal();
 });
 
-$("briefStart").addEventListener("click", () => {
+$("briefStart").addEventListener("click", async () => {
   $("briefDialog").close();
-  startGame();
-  togglePause();
+  if (await startGame(chosen)) togglePause();
 });
 
 $("briefLook").addEventListener("click", () => {
   $("briefDialog").close();
-  startGame();
+  startGame(chosen);
 });
 
 $("briefBack").addEventListener("click", () => $("briefDialog").close());
 
 // ---------- Game ----------
 
-// The game opens paused on the first morning, so the player can look around and trade before the clock runs
-function startGame() {
-  const symbols = Object.keys(chosen.stocks);
+// Asks the server for a new game; the server sets the game ID, the starting cash and the first day
+async function startGame(s) {
+  $("pickerMessage").textContent = "Starting…";
+  try {
+    const res = await api("POST", GAMES_URL, { scenarioId: s.id });
+    if (!res.ok) throw new Error(res.data.reason);
+    $("pickerMessage").textContent = "";
+    try {
+      localStorage.setItem(SAVED_GAME, res.data.game.gameId);
+    } catch (e) {
+      // Blocked storage: the game still works, it just can't be resumed after a refresh
+    }
+    enterGame(res.data.game);
+    return true;
+  } catch (e) {
+    $("pickerMessage").textContent = "The game could not be started. Please try again.";
+    $("picker").hidden = false;
+    return false;
+  }
+}
+
+// Shows a saved game. It opens paused, so the player can look around and trade before the clock runs.
+function enterGame(state) {
+  const s = SCENARIOS.find((x) => x.id === state.scenarioId);
+  const symbols = Object.keys(s.stocks);
   clearInterval(game && game.timer);
   game = {
-    s: chosen, day: chosen.start, progress: 0, closes: [], log: [], speed, cash: START_CASH, holdings: {}, cost: {},
-    bot: { cash: START_CASH, holdings: {} }, paused: true, over: false, symbol: symbols[0], newsShown: 0,
-    news: chosen.news.map(([date, text]) => [chosen.dates.indexOf(date), text])
+    ...state, s, speed, paused: true, busy: false, symbol: symbols[0], newsShown: 0,
+    news: s.news.map(([date, text]) => [s.dates.indexOf(date), text])
   };
-  document.body.style.setProperty("--accent", THEMES[chosen.id].hue);
+  document.body.style.setProperty("--accent", THEMES[s.id].hue);
   renderSpeeds($("speedGame"));
-  $("scoreTitle").textContent = chosen.name;
-  $("benchLabel").textContent = "Market · " + chosen.benchmark;
+  $("scoreTitle").textContent = s.name;
+  $("benchLabel").textContent = "Market · " + s.benchmark;
   $("watchRows").replaceChildren(...symbols.map((symbol) =>
     el("tr", { "data-symbol": symbol, tabindex: "0" },
-      el("td", null, el("strong", null, symbol), el("span", { class: "muted" }, chosen.stocks[symbol].name)),
+      el("td", null, el("strong", null, symbol), el("span", { class: "muted" }, s.stocks[symbol].name)),
       el("td", { class: "right mono" }), el("td", { class: "right mono" }))));
   $("newsList").replaceChildren();
   $("newsEmpty").hidden = false;
-  $("newsFlash").hidden = true;
-  $("tradeRows").replaceChildren();
-  $("tradesEmpty").hidden = false;
   $("orderMessage").textContent = "";
   $("picker").hidden = true;
+  $("resumeBar").hidden = true;
   $("game").hidden = false;
   $("clock").hidden = false;
   $("progress").hidden = false;
   showPause();
   selectSymbol(game.symbol);
+  $("newsFlash").hidden = true;
+  if (game.status === "over") return finish();
   game.timer = setInterval(tick, TICK_MS);
 }
 
 function tick() {
-  if (game.paused) return;
-  game.progress += TICK_MS / 1000 / game.speed;
-  if (game.progress >= 1) closeDay();
-  if (!game.over) render();
+  if (game.paused || game.busy) return;
+  game.progress = Math.min(1, game.progress + TICK_MS / 1000 / game.speed);
+  if (game.progress >= 1) endDay();
+  else render();
 }
 
-// End of a trading day: record the close, let the bot trade, then move to the next morning.
-// If that morning has a headline and "Pause on news" is on, the clock stops so the player can react.
-function closeDay() {
-  if (game.day === game.s.dates.length - 1) return endGame();
-  game.progress = 1;
-  game.closes.push({ date: game.s.dates[game.day], value: totalValue(), bot: totalValue(game.bot), bench: price(game.s.benchmark) });
-  botTrade();
-  game.day++;
-  game.progress = 0;
+// The server ends the day (and every day up to untilDay): it records the close and runs the bot.
+// If a headline arrives and "Pause on news" is on, the clock stops so the player can react.
+async function endDay(untilDay) {
+  const before = game.day;
+  const res = await act("advance", untilDay === undefined ? {} : { untilDay });
+  if (res.error) {
+    game.progress = Math.min(game.progress, 0.999);
+    game.paused = true;
+    showPause();
+    showMessage("The day was not saved: " + res.error);
+    return render();
+  }
+  if (game.status === "over") return finish();
   $("newsFlash").hidden = true;
-  if ($("autoPause").checked && game.news.some(([day]) => day === game.day)) {
+  if ($("autoPause").checked && game.news.some(([day]) => day > before && day <= game.day)) {
     game.paused = true;
     showPause();
   }
+  render();
 }
 
 function selectSymbol(symbol) {
@@ -356,18 +365,19 @@ function drawPriceChart() {
     dates: game.s.dates, bars, from, type: view.type, mas: view.mas, mark: game.s.start,
     trades: game.log.filter((t) => t.symbol === game.symbol),
     news: game.news.filter(([day]) => day <= game.day),
-    position: shares ? { shares, avg: game.cost[game.symbol] / 100 } : null
+    position: shares ? { shares, avg: game.basis[game.symbol] / Math.abs(shares) / 100 } : null
   });
 }
 
 function render() {
   const date = game.s.dates[game.day];
   const days = game.s.dates.length - game.s.start;
+  const over = game.status === "over";
   $("simDate").textContent = longDate(date);
   $("dayCount").textContent = "Day " + (game.day - game.s.start + 1) + " of " + days;
   $("dayBar").style.width = ((game.day - game.s.start + game.progress) / days) * 100 + "%";
-  $("nextNewsButton").disabled = game.over || game.newsShown >= game.news.length;
-  $("nextDayButton").disabled = game.over;
+  $("nextNewsButton").disabled = over || game.busy || game.newsShown >= game.news.length;
+  $("nextDayButton").disabled = over || game.busy;
 
   for (const row of $("watchRows").children) {
     const symbol = row.dataset.symbol;
@@ -395,6 +405,7 @@ function render() {
     $("newsFlash").hidden = false;
   }
 
+  renderTrades();
   renderPositions();
   updateTicket();
   renderScore();
@@ -402,7 +413,22 @@ function render() {
   drawPriceChart();
 }
 
-// Each open position with its average cost and profit or loss so far, and buttons to close it
+// The trades table is rebuilt from the saved trade records whenever a new one arrives
+function renderTrades() {
+  if (game.tradesShown === game.log.length) return;
+  game.tradesShown = game.log.length;
+  $("tradeRows").replaceChildren(...game.log.slice().reverse().map((t) =>
+    el("tr", { class: t.who === "Bot" ? "by-bot" : null },
+      el("td", { class: "mono" }, shortDate(game.s.dates[t.day])),
+      el("td", null, t.who),
+      el("td", null, t.side + " " + t.qty + " " + t.symbol),
+      el("td", { class: "right mono" }, money(t.price)),
+      el("td", { class: "right mono" }, money(t.qty * t.price)))));
+  $("tradesEmpty").hidden = game.log.length > 0;
+}
+
+// Each open position with its average cost and profit or loss so far, and buttons to close it.
+// basis is what the open shares cost in total.
 function renderPositions() {
   const symbols = Object.keys(game.holdings);
   $("tabPositions").textContent = "Positions" + (symbols.length ? " (" + symbols.length + ")" : "");
@@ -413,14 +439,15 @@ function renderPositions() {
   }
   $("positionRows").replaceChildren(...symbols.map((symbol) => {
     const shares = game.holdings[symbol];
+    const basis = game.basis[symbol];
     const now = price(symbol);
-    const pnl = (now - game.cost[symbol]) * shares;
+    const pnl = now * shares + (shares > 0 ? -basis : basis);
     const result = el("td", { class: "right" });
-    setSigned(result, signedMoney(pnl) + " (" + pct(pnl / (game.cost[symbol] * Math.abs(shares))).slice(2) + ")", pnl >= 0);
+    setSigned(result, signedMoney(pnl) + " (" + pct(pnl / basis).slice(2) + ")", pnl >= 0);
     return el("tr", null,
       el("td", null, el("strong", null, symbol), shares < 0 ? el("span", { class: "badge-short" }, "Short") : null),
       el("td", { class: "right mono" }, Math.abs(shares)),
-      el("td", { class: "right mono" }, money(game.cost[symbol])),
+      el("td", { class: "right mono" }, money(Math.round(basis / Math.abs(shares)))),
       el("td", { class: "right mono" }, money(now)),
       result,
       el("td", { class: "right actions" },
@@ -433,76 +460,36 @@ function chosenSide() {
   return document.querySelector("input[name=side]:checked").value;
 }
 
-// What the order would be, and why it can't be placed (if it can't). The button is disabled
-// with that reason instead of letting the order fail. Rules: whole shares of 1 or more, enough cash
-// to buy, one direction per stock, and shorts worth at most the account's value.
-function orderPlan() {
-  const side = chosenSide();
-  const symbol = game.symbol;
-  const now = price(symbol);
-  const owned = game.holdings[symbol] || 0;
-  const qty = Math.max(0, Math.floor(Math.round(Number($("amount").value) * 100) / now) || 0);
-  let reason = "";
-  if (game.over) reason = "This scenario is over.";
-  else if (side === "Buy" && owned < 0) reason = "You are short " + symbol + ". Close the short in Positions before buying.";
-  else if (side === "Short" && owned > 0) reason = "You own " + symbol + ". Close it in Positions before shorting.";
-  else if (qty < 1) reason = "Enter at least " + money(now) + " to get one share.";
-  else if (side === "Buy" && qty * now > game.cash) reason = "Not enough cash: at most " + plural(Math.floor(game.cash / now), "share") + ".";
-  else if (side === "Short" && shortValue() + qty * now > totalValue()) reason = "Short limit: your shorts can be worth at most your account value.";
-  return { side, symbol, now, owned, qty, reason };
+function amountCents() {
+  return Math.round(Number($("amount").value) * 100);
 }
 
-// The most you can put into this order, in dollars
-function maxAmount(side) {
-  const cents = side === "Buy" ? game.cash : totalValue() - shortValue();
-  return Math.max(0, Math.floor(cents / 100));
-}
-
+// A preview with the shared rules; the button is disabled with the reason instead of letting the order fail
 function updateTicket() {
-  const plan = orderPlan();
-  $("ticketQuote").textContent = plan.symbol + " " + money(plan.now);
-  $("previewShares").textContent = plan.qty ? plan.qty + " · " + money(plan.qty * plan.now) : "—";
-  $("previewCash").textContent = plan.reason ? "—" : money(game.cash + (plan.side === "Buy" ? -1 : 1) * plan.qty * plan.now);
-  $("orderButton").textContent = plan.reason ? plan.side + " " + plan.symbol : plan.side + " " + plan.qty + " " + plan.symbol;
-  $("orderButton").dataset.side = plan.side;
-  $("orderButton").disabled = Boolean(plan.reason);
+  const side = chosenSide();
+  const plan = GameCore.orderPlan(game.s, game, side, game.symbol, amountCents());
+  const now = price(game.symbol);
+  $("ticketQuote").textContent = game.symbol + " " + money(now);
+  $("previewShares").textContent = plan.qty ? plan.qty + " · " + money(plan.qty * now) : "—";
+  $("previewCash").textContent = plan.reason ? "—" : money(game.cash + (side === "Buy" ? -1 : 1) * plan.qty * now);
+  $("orderButton").textContent = plan.reason ? side + " " + game.symbol : side + " " + plan.qty + " " + game.symbol;
+  $("orderButton").dataset.side = side;
+  $("orderButton").disabled = Boolean(plan.reason) || game.busy;
   $("orderReason").textContent = plan.reason;
 }
 
-// Opens or adds to a position at the current price, keeping the average cost per share up to date
-function placeOrder() {
-  const plan = orderPlan();
-  if (plan.reason) return plan.reason;
-  const change = plan.side === "Buy" ? plan.qty : -plan.qty;
-  const shares = plan.owned + change;
-  game.cost[plan.symbol] = (Math.abs(plan.owned) * (game.cost[plan.symbol] || 0) + plan.qty * plan.now) / Math.abs(shares);
-  game.cash -= change * plan.now;
-  game.holdings[plan.symbol] = shares;
-  record("You", plan.side, plan.qty, plan.symbol, plan.now);
-  return null;
+function filledText(res) {
+  if (res.duplicate) return "That action was already saved.";
+  const t = res.trade;
+  return t.side + " " + plural(t.qty, "share") + " of " + t.symbol + " filled at " + money(t.price) + ".";
 }
 
-// Closes all or half of a position: selling shares you own, or buying back shares you shorted
-function closePosition(symbol, part) {
-  const shares = game.holdings[symbol];
-  const qty = part === 1 ? Math.abs(shares) : Math.max(1, Math.floor(Math.abs(shares) / 2));
-  const now = price(symbol);
-  const change = shares > 0 ? -qty : qty;
-  game.cash -= change * now;
-  game.holdings[symbol] = shares + change;
-  record("You", shares > 0 ? "Sell" : "Cover", qty, symbol, now);
-  if (!game.holdings[symbol]) {
-    delete game.holdings[symbol];
-    delete game.cost[symbol];
-  }
-}
-
-$("orderForm").addEventListener("submit", (e) => {
+$("orderForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const plan = orderPlan();
-  const error = placeOrder();
-  $("orderMessage").textContent = error || plan.side + " " + plural(plan.qty, "share") + " of " + plan.symbol + " filled at " + money(plan.now) + ".";
-  $("orderMessage").className = error ? "error" : "ok";
+  if (game.busy || $("orderButton").disabled) return;
+  $("orderButton").disabled = true;
+  const res = await act("orders", { side: chosenSide(), symbol: game.symbol, amountCents: amountCents() });
+  showMessage(res.error, res.error ? "" : filledText(res));
   render();
 });
 
@@ -511,17 +498,15 @@ $("orderForm").addEventListener("input", updateTicket);
 $("amountChips").addEventListener("click", (e) => {
   const button = e.target.closest("button");
   if (!button) return;
-  $("amount").value = button.dataset.amount === "max" ? maxAmount(chosenSide()) : button.dataset.amount;
+  $("amount").value = button.dataset.amount === "max" ? Math.floor(GameCore.maxAmount(game.s, game, chosenSide()) / 100) : button.dataset.amount;
   updateTicket();
 });
 
-$("positionRows").addEventListener("click", (e) => {
+$("positionRows").addEventListener("click", async (e) => {
   const button = e.target.closest("button[data-close]");
-  if (!button || game.over) return;
-  const symbol = button.dataset.close;
-  closePosition(symbol, Number(button.dataset.part));
-  $("orderMessage").textContent = "Closed " + (button.dataset.part === "1" ? "your " : "half of your ") + symbol + " position.";
-  $("orderMessage").className = "ok";
+  if (!button || game.busy || game.status !== "active") return;
+  const res = await act("close", { symbol: button.dataset.close, part: Number(button.dataset.part) });
+  showMessage(res.error, res.error ? "" : filledText(res));
   render();
 });
 
@@ -549,31 +534,29 @@ $("watchRows").addEventListener("keydown", (e) => {
 // While paused the button is the page's main action, so it gets the filled style
 function showPause() {
   const fresh = !game.closes.length && game.progress === 0;
-  $("pauseButton").textContent = game.over ? "See results" : game.paused ? (fresh ? "Start the clock" : "Resume") : "Pause";
+  $("pauseButton").textContent = game.status === "over" ? "See results" : game.paused ? (fresh ? "Start the clock" : "Resume") : "Pause";
   $("pauseButton").className = game.paused ? "primary" : "ghost";
 }
 
 function togglePause() {
-  if (game.over) return $("endDialog").showModal();
+  if (game.status === "over") return $("endDialog").showModal();
   game.paused = !game.paused;
-  if (!game.paused) $("newsFlash").hidden = true;
+  if (!game.paused) {
+    $("newsFlash").hidden = true;
+    $("orderMessage").textContent = "";
+  }
   showPause();
   render();
 }
 
 $("pauseButton").addEventListener("click", togglePause);
 
-$("nextDayButton").addEventListener("click", () => {
-  closeDay();
-  if (!game.over) render();
-});
+$("nextDayButton").addEventListener("click", () => endDay());
 
-// Runs the days forward to the next headline
+// Runs the days forward to the morning of the next headline
 $("nextNewsButton").addEventListener("click", () => {
   const next = game.news[game.newsShown];
-  if (!next) return;
-  while (!game.over && game.day < next[0]) closeDay();
-  if (!game.over) render();
+  if (next) endDay(next[0]);
 });
 
 // Space pauses and resumes, unless the user is typing or pressing a button
@@ -623,7 +606,7 @@ $("botInfoButton").addEventListener("click", () => {
   $("botViewDate").textContent = shortDate(game.s.dates[day]);
   $("botShare").textContent = "with " + count + " stocks, at most 1/" + count + " each";
   $("botView").replaceChildren(...Object.keys(game.s.stocks).map((symbol) => {
-    const t = trend(symbol, day);
+    const t = GameCore.trend(game.s, symbol, day);
     const signal = el("td", { class: "right" });
     setSigned(signal, t.close > t.average ? "▲ Above" : "▼ Below", t.close > t.average);
     return el("tr", null, el("td", null, symbol),
@@ -632,7 +615,7 @@ $("botInfoButton").addEventListener("click", () => {
       signal,
       el("td", { class: "right mono" }, game.bot.holdings[symbol] || "—"));
   }));
-  resumeAfterInfo = !game.paused && !game.over;
+  resumeAfterInfo = !game.paused && game.status === "active";
   if (resumeAfterInfo) togglePause();
   $("botDialog").showModal();
 });
@@ -645,44 +628,36 @@ $("botDialog").addEventListener("close", () => {
 
 // ---------- End of the scenario ----------
 
-// Stars build on each other: one for making a profit, two for also beating the bot, three for also
-// beating the market. Sitting in cash all game earns none.
-function endGame() {
+// The result (stars, returns, best bet in hindsight) is worked out and saved by the server
+function finish() {
   clearInterval(game.timer);
-  game.progress = 1;
   game.paused = true;
-  game.over = true;
   render();
   showPause();
-  const mine = totalValue() / START_CASH - 1;
-  const bot = totalValue(game.bot) / START_CASH - 1;
-  const market = benchReturn();
-  const stars = mine <= 0 ? 0 : mine <= bot ? 1 : mine <= market ? 2 : 3;
-  const count = (who) => game.log.filter((t) => t.who === who).length;
-  $("endStars").textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
-  $("endStars").setAttribute("aria-label", stars + " of 3 stars");
-  $("endValue").textContent = money(totalValue());
-  setSigned($("endReturn"), pct(mine), mine >= 0);
-  setSigned($("endBot"), pct(bot), bot >= 0);
+  try {
+    localStorage.removeItem(SAVED_GAME);
+  } catch (e) {
+    // Blocked storage: nothing to remove
+  }
+  const r = game.result;
+  $("endStars").textContent = "★".repeat(r.stars) + "☆".repeat(3 - r.stars);
+  $("endStars").setAttribute("aria-label", r.stars + " of 3 stars");
+  $("endValue").textContent = money(r.finalValue);
+  setSigned($("endReturn"), pct(r.mine), r.mine >= 0);
+  setSigned($("endBot"), pct(r.bot), r.bot >= 0);
   $("endBenchLabel").textContent = "Market (" + game.s.benchmark + ")";
-  setSigned($("endBench"), pct(market), market >= 0);
-  $("endVerdict").textContent = (mine > market ? "You beat the market. " : "The market beat you. ") + (mine > bot ? "You beat the bot. " : "The bot beat you. ") +
-    "You made " + plural(count("You"), "trade") + ", the bot made " + count("Bot") + ".";
-
-  // The biggest single move in hindsight: buying or shorting one stock on day 1 and holding to the end
-  const best = Object.keys(game.s.stocks).map((symbol) => {
-    const bars = game.s.stocks[symbol].bars;
-    return { symbol, r: bars.at(-1)[3] / bars[game.s.start][0] - 1 };
-  }).sort((a, b) => Math.abs(b.r) - Math.abs(a.r))[0];
-  $("endHindsight").textContent = "Best single bet in hindsight: " + (best.r >= 0 ? "buying " : "shorting ") + best.symbol +
-    " on day 1 and holding to the end would have made " + Math.abs(best.r * 100).toFixed(1) + "%.";
+  setSigned($("endBench"), pct(r.market), r.market >= 0);
+  $("endVerdict").textContent = (r.mine > r.market ? "You beat the market. " : "The market beat you. ") + (r.mine > r.bot ? "You beat the bot. " : "The bot beat you. ") +
+    "You made " + plural(r.trades, "trade") + ", the bot made " + r.botTrades + ".";
+  $("endHindsight").textContent = "Best single bet in hindsight: " + (r.best.r >= 0 ? "buying " : "shorting ") + r.best.symbol +
+    " on day 1 and holding to the end would have made " + Math.abs(r.best.r * 100).toFixed(1) + "%.";
   $("endDialog").showModal();
   drawRace($("endRace"));
 }
 
 $("againButton").addEventListener("click", () => {
   $("endDialog").close();
-  startGame();
+  startGame(game.s);
 });
 
 $("pickButton").addEventListener("click", () => {
@@ -698,5 +673,31 @@ $("pickButton").addEventListener("click", () => {
 
 $("boardButton").addEventListener("click", () => $("endDialog").close());
 
+// A game saved on the server can be resumed after a refresh
+async function offerResume() {
+  let gameId = null;
+  try {
+    gameId = localStorage.getItem(SAVED_GAME);
+  } catch (e) {
+    return;
+  }
+  if (!gameId) return;
+  try {
+    const res = await api("GET", GAMES_URL + "/" + encodeURIComponent(gameId));
+    if (!res.ok || res.data.game.status !== "active") throw new Error("not resumable");
+    const s = SCENARIOS.find((x) => x.id === res.data.game.scenarioId);
+    $("resumeName").textContent = s.name + ", day " + (res.data.game.day - s.start + 1) + " of " + (s.dates.length - s.start);
+    $("resumeBar").hidden = false;
+    $("resumeButton").onclick = () => enterGame(res.data.game);
+  } catch (e) {
+    try {
+      localStorage.removeItem(SAVED_GAME);
+    } catch (ignored) {
+      // Blocked storage
+    }
+  }
+}
+
 renderSpeeds($("speedPick"));
 renderPicker();
+offerResume();
