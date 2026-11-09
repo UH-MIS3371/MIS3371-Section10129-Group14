@@ -26,7 +26,9 @@ function installFakeDynamoDB() {
     }
   };
 
-  const keyOf = (item) => item.transactionId !== undefined ? item.transactionId : item.userId;
+  // Each table has one key attribute: trades use transactionId, accounts userId, games gameId
+  const KEY_NAMES = ["transactionId", "userId", "gameId"];
+  const keyOf = (item) => item[KEY_NAMES.find((name) => item[name] !== undefined)];
 
   function conditionFailed(message) {
     const e = new Error(message || "The conditional request failed");
@@ -59,15 +61,22 @@ function installFakeDynamoDB() {
     const input = command.input;
 
     if (command instanceof GetCommand) {
-      const item = fake.table(input.TableName).get(input.Key.transactionId !== undefined ? input.Key.transactionId : input.Key.userId);
+      const item = fake.table(input.TableName).get(keyOf(input.Key));
       return item ? { Item: structuredClone(item) } : {};
     }
 
     if (command instanceof PutCommand) {
       const table = fake.table(input.TableName);
       const key = keyOf(input.Item);
-      if (input.ConditionExpression && input.ConditionExpression.startsWith("attribute_not_exists") && table.has(key)) {
-        throw conditionFailed();
+      const condition = input.ConditionExpression;
+      if (condition && condition.startsWith("attribute_not_exists")) {
+        if (table.has(key)) throw conditionFailed();
+      } else if (condition === "#v = :read") {
+        // The version check from backend/games.js: the saved game must still have the version that was read
+        const saved = table.get(key);
+        if (!saved || saved[input.ExpressionAttributeNames["#v"]] !== input.ExpressionAttributeValues[":read"]) throw conditionFailed();
+      } else if (condition) {
+        throw new Error("Unexpected ConditionExpression: " + condition);
       }
       table.set(key, structuredClone(input.Item));
       return {};
@@ -100,13 +109,19 @@ function installFakeDynamoDB() {
   return fake;
 }
 
+module.exports = { installFakeDynamoDB };
+
+// Tests import installFakeDynamoDB from this file; the server below only starts with `npm start`
+if (require.main !== module) return;
+
 const PORT = Number(process.env.PORT) || 3000;
 const FRONTEND = path.join(__dirname, "../../frontend");
 
-// Pretend DynamoDB (trades and accounts tables), kept in memory
+// Pretend DynamoDB (trades, accounts and games tables), kept in memory
 installFakeDynamoDB();
 process.env.TABLE_NAME = process.env.TABLE_NAME || "MarketStreetTrades-local";
 process.env.ACCOUNTS_TABLE = process.env.ACCOUNTS_TABLE || "MarketStreetAccounts-local";
+process.env.GAMES_TABLE = process.env.GAMES_TABLE || "MarketStreetGames-local";
 process.env.AWS_REGION = process.env.AWS_REGION || "us-east-1";
 
 const { handler } = require("./index");
@@ -121,14 +136,14 @@ const TYPES = {
 };
 
 // Build the same event API Gateway (HTTP API, payload 2.0) sends to the Lambda
-async function callLambda(req, res, routeKey, transactionId) {
+async function callLambda(req, res, routeKey, transactionId, gameId) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
   const event = {
     routeKey: req.method + " " + routeKey,
     rawPath: new URL(req.url, "http://localhost").pathname,
     requestContext: { http: { method: req.method } },
-    pathParameters: transactionId === undefined ? undefined : { transactionId },
+    pathParameters: transactionId !== undefined ? { transactionId } : gameId !== undefined ? { gameId } : undefined,
     body: chunks.length ? Buffer.concat(chunks).toString("utf8") : undefined,
     isBase64Encoded: false
   };
@@ -158,6 +173,11 @@ const server = http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url, "http://localhost");
     if (pathname === "/api/trades") return await callLambda(req, res, "/api/trades");
     if (pathname === "/api/account") return await callLambda(req, res, "/api/account");
+    const game = pathname.match(/^\/api\/games(?:\/([^/]+)(\/[a-z]+)?)?\/?$/);
+    if (game) {
+      const routeKey = "/api/games" + (game[1] ? "/{gameId}" + (game[2] || "") : "");
+      return await callLambda(req, res, routeKey, undefined, game[1] && decodeURIComponent(game[1]));
+    }
     const match = pathname.match(/^\/api\/trades\/([^/]+)$/);
     if (match) return await callLambda(req, res, "/api/trades/{transactionId}", decodeURIComponent(match[1]));
     if (pathname.startsWith("/api/")) {
@@ -173,5 +193,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`MarketStreet running locally at http://localhost:${PORT}`);
-  console.log("Trades and the account are kept in memory and reset when you stop the server (Ctrl+C).");
+  console.log("Trades, the account and Scenario Mode games are kept in memory and reset when you stop the server (Ctrl+C).");
 });

@@ -189,3 +189,18 @@ The Lambda (`MarketStreet-ProcessTrade`) still validates every trade with the ex
 - `GET /api/trades/{transactionId}` returns one saved trade.
 
 [View the Week 11 setup, deployment checklist and test results](Testing/Week-11-DynamoDB/README.md)
+
+## Scenario Mode (experimental)
+
+[frontend/scenarios.html](frontend/scenarios.html) replays a real market period (2008 crisis, dot-com bust, COVID crash, meme stocks, 2022 rate hikes). You start with $100,000, one trading day passes every few seconds, and real headlines appear on their real dates. At the end your return is compared with the market (SPY or QQQ).
+
+- Prices are real daily open, high, low, close and volume. During a day the price moves through that day's real range and ends on the real close. The chart also shows about a year of real history before the scenario starts.
+- Each scenario opens with a briefing and starts paused, so you can trade before the clock runs. The clock pauses when a headline breaks (it can be turned off), and Next day / Next headline skip quiet stretches.
+- Orders are a dollar amount, rounded down to whole shares. **Buy** profits if the price rises; **Short** sells borrowed shares and profits if it falls. Positions show the average cost and profit or loss, and are closed (all or half) from the Positions tab. You can't buy a stock you are short or short one you own, your shorts can be worth at most your account value when you open them, and there are no borrowing fees.
+- Your average cost is drawn on the chart with your profit or loss, along with your trades, the bot's trades and the headlines. The Performance tab shows your profit or loss for each month and year next to the market's.
+- You compete against a simple trend-following bot. At each daily close it sells stocks that closed below their 20-day average and buys stocks above it, putting at most an equal share of its money in each stock. The score strip races your account against the bot and the market.
+- At the end you earn one star for a profit, two for also beating the bot and three for also beating the market, and see the best single bet in hindsight.
+- [scripts/fetch-scenarios.mjs](scripts/fetch-scenarios.mjs) downloaded the prices once from Yahoo Finance into [frontend/data/scenarios.js](frontend/data/scenarios.js). No API key is used and nothing is fetched while playing. Run `node scripts/fetch-scenarios.mjs` to rebuild it.
+- Each scenario has 8–12 stocks, including some of the period's most famous names (AIG, Fannie Mae and the SKF fund that bets against banks in 2008; Moderna and Peloton in 2020; Koss and Palantir in the meme squeeze; Coinbase and Robinhood in 2022). Companies that went bust and were delisted, such as Lehman Brothers and Bear Stearns, have no free price history, so they appear only in the headlines.
+- The picker header is a 3D bar landscape drawn with three.js (loaded from cdnjs) in [frontend/hero3d.js](frontend/hero3d.js): each row is one scenario's market in the year before it starts.
+- Games are saved on the server (Lambda + DynamoDB, `/api/games`), so a refresh resumes where you left off. The rules are in one file shared by the page and the Lambda, and the server's copy decides every price, trade and score. See [aws/README.md](aws/README.md) for setup and [Testing/Week-12-Security](Testing/Week-12-Security/README.md) for the security controls.

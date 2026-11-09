@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scenarios – MarketStreet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="scenarios.css" />
+    <script src="data/scenarios.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="game-core.js" defer></script>
+    <script src="market-chart.js" defer></script>
+    <script src="scenarios.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+    <script src="hero3d.js" defer></script>
+  </head>
+
+  <body>
+    <header class="site-header game-header">
+      <div class="inner">
+        <a class="logo" href="trade.html">MarketStreet</a>
+        <nav class="site-nav" aria-label="Main">
+          <a href="trade.html">Trade</a><a href="history.html">History</a><a href="scenarios.html" aria-current="page">Scenarios</a>
+        </nav>
+        <div class="clock" id="clock" hidden>
+          <p class="when"><strong id="simDate" class="mono"></strong> <span id="dayCount" class="mono muted"></span></p>
+          <button type="button" class="primary" id="pauseButton" title="Space">Start the clock</button>
+          <button type="button" class="ghost" id="nextDayButton">Next day</button>
+          <button type="button" class="ghost" id="nextNewsButton">Next headline</button>
+          <div class="seg" role="group" aria-label="Speed" id="speedGame"></div>
+          <label class="check"><input type="checkbox" id="autoPause" checked /> Pause on news</label>
+        </div>
+      </div>
+      <div class="progress" id="progress" hidden><span id="dayBar"></span></div>
+    </header>
+
+    <main id="picker" class="picker">
+      <div class="hero">
+        <canvas id="heroScene" aria-hidden="true"></canvas>
+        <h1>Trade through history</h1>
+        <p class="lead">Start with $100,000 in a real market crisis. One trading day passes every few seconds and real headlines arrive on their real dates. Finish ahead of the market and the bot.</p>
+      </div>
+      <div class="start">
+        <span id="speedLabel">Speed</span>
+        <div class="seg" role="group" aria-labelledby="speedLabel" id="speedPick"></div>
+        <span id="speedNote" class="muted"></span>
+      </div>
+      <div class="resume" id="resumeBar" hidden>
+        <span>Game in progress: <strong id="resumeName"></strong></span>
+        <button type="button" class="primary" id="resumeButton">Resume</button>
+      </div>
+      <p id="pickerMessage" class="error" role="alert"></p>
+      <div class="scenarios" id="scenarioList"></div>
+    </main>
+
+    <main id="game" class="game" hidden>
+      <section class="strip" aria-labelledby="scoreTitle">
+        <div class="strip-title">
+          <h1 id="scoreTitle"></h1>
+          <p id="finding"></p>
+        </div>
+        <dl class="standings">
+          <div class="you"><dt>You</dt><dd id="youReturn"></dd><dd id="youPlace" class="sub"></dd></div>
+          <div class="bot"><dt>Bot <button type="button" class="link" id="botInfoButton">How it works</button></dt><dd id="botReturn"></dd><dd id="botHolding" class="sub"></dd></div>
+          <div class="mkt"><dt id="benchLabel"></dt><dd id="benchReturn"></dd><dd class="sub">Buy and hold</dd></div>
+        </dl>
+        <div class="race" id="race" aria-hidden="true"></div>
+      </section>
+
+      <section class="panel watch" aria-labelledby="watchHeading">
+        <h2 id="watchHeading" class="panel-head">Watchlist</h2>
+        <table>
+          <thead><tr><th>Stock</th><th class="right">Price</th><th class="right">Today</th></tr></thead>
+          <tbody id="watchRows"></tbody>
+        </table>
+      </section>
+
+      <section class="panel news" aria-labelledby="newsHeading">
+        <h2 id="newsHeading" class="panel-head">Headlines</h2>
+        <p id="newsEmpty" class="empty">Headlines appear here on the day they happened.</p>
+        <ol id="newsList" aria-live="polite"></ol>
+      </section>
+
+      <section class="panel quote" aria-labelledby="quoteSymbol">
+        <div class="quote-head">
+          <h2 id="quoteSymbol"></h2>
+          <span id="quoteName" class="muted"></span>
+          <span id="quotePrice" class="price mono"></span>
+          <span id="quoteChange" class="mono"></span>
+          <div class="chart-tools">
+            <div class="seg" role="group" aria-label="Range" id="rangeButtons">
+              <button type="button" data-range="21">1M</button><button type="button" data-range="63">3M</button><button type="button" data-range="126" aria-pressed="true">6M</button><button type="button" data-range="252">1Y</button><button type="button" data-range="0">All</button>
+            </div>
+            <div class="seg" role="group" aria-label="Chart type" id="typeButtons">
+              <button type="button" data-type="candles" aria-pressed="true">Candles</button><button type="button" data-type="line">Line</button>
+            </div>
+            <div class="seg" role="group" aria-label="Moving averages" id="maButtons">
+              <button type="button" data-ma="20" class="ma20" aria-pressed="false">MA 20</button><button type="button" data-ma="50" class="ma50" aria-pressed="false">MA 50</button>
+            </div>
+          </div>
+        </div>
+        <p id="newsFlash" class="flash" role="alert" hidden></p>
+        <p id="chartReadout" class="readout mono"></p>
+        <div class="chart" id="chart"></div>
+        <p class="legend muted">
+          <span><i class="mk you-dot">B</i>You bought</span><span><i class="mk you-dot">S</i>You sold or shorted</span>
+          <span><i class="mk bot-buy"></i>Bot bought</span><span><i class="mk bot-sell"></i>Bot sold</span>
+          <span><i class="mk pin-key"></i>Headline</span><span><i class="mk cost-key"></i>Your average cost</span>
+        </p>
+      </section>
+
+      <section class="panel tabs">
+        <div class="tab-list" role="tablist" aria-label="Your account" id="tabList">
+          <button type="button" role="tab" id="tabPositions" aria-controls="panePositions" aria-selected="true">Positions</button>
+          <button type="button" role="tab" id="tabTrades" aria-controls="paneTrades" aria-selected="false">Trades</button>
+          <button type="button" role="tab" id="tabPerf" aria-controls="panePerf" aria-selected="false">Performance</button>
+        </div>
+        <div role="tabpanel" id="panePositions" aria-labelledby="tabPositions">
+          <table>
+            <thead><tr><th>Stock</th><th class="right">Shares</th><th class="right">Avg cost</th><th class="right">Price</th><th class="right">P&amp;L</th><th class="right"><span class="visually-hidden">Close</span></th></tr></thead>
+            <tbody id="positionRows"></tbody>
+          </table>
+        </div>
+        <div role="tabpanel" id="paneTrades" aria-labelledby="tabTrades" hidden>
+          <table>
+            <thead><tr><th>Date</th><th>Who</th><th>Order</th><th class="right">Price</th><th class="right">Total</th></tr></thead>
+            <tbody id="tradeRows"></tbody>
+          </table>
+          <p id="tradesEmpty" class="empty">Trades by you and the bot appear here.</p>
+        </div>
+        <div role="tabpanel" id="panePerf" aria-labelledby="tabPerf" hidden>
+          <table>
+            <thead><tr><th>Period</th><th class="right">Your P&amp;L</th><th class="right">Your return</th><th class="right">Market</th></tr></thead>
+            <tbody id="perfRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel ticket" aria-labelledby="ticketHeading">
+        <h2 id="ticketHeading" class="panel-head">Order <span id="ticketQuote" class="mono"></span></h2>
+        <form id="orderForm" novalidate>
+          <fieldset class="sides">
+            <legend class="visually-hidden">Direction</legend>
+            <label class="side buy"><input type="radio" name="side" value="Buy" checked /><strong>Buy</strong><span>Profits if the price rises</span></label>
+            <label class="side short"><input type="radio" name="side" value="Short" /><strong>Short</strong><span>Profits if the price falls</span></label>
+          </fieldset>
+          <label for="amount">Amount</label>
+          <div class="money-input"><span aria-hidden="true">$</span><input id="amount" type="number" min="0" step="500" value="10000" inputmode="decimal" /></div>
+          <div class="chips" id="amountChips">
+            <button type="button" data-amount="1000">$1k</button><button type="button" data-amount="5000">$5k</button><button type="button" data-amount="10000">$10k</button><button type="button" data-amount="max">Max</button>
+          </div>
+          <p class="row"><span class="muted">Shares</span><span id="previewShares" class="mono"></span></p>
+          <p class="row"><span class="muted">Cash after</span><span id="previewCash" class="mono"></span></p>
+          <button type="submit" class="action" id="orderButton"></button>
+          <p id="orderReason" class="order-reason"></p>
+          <p id="orderMessage" role="status" aria-live="polite"></p>
+        </form>
+        <div class="summary">
+          <p class="row"><span class="muted">Total value</span><strong id="totalValue" class="mono"></strong></p>
+          <p class="row"><span class="muted">Cash</span><span id="cash" class="mono"></span></p>
+        </div>
+      </section>
+    </main>
+
+
+    <dialog id="briefDialog" class="info" aria-labelledby="briefTitle">
+      <p id="briefPeriod" class="period mono"></p>
+      <h2 id="briefTitle"></h2>
+      <p id="briefContext"></p>
+      <h3>Your goal</h3>
+      <p>You start with $100,000. Make a profit for one star, beat the bot as well for two, and beat the market too for three.</p>
+      <ol class="steps">
+        <li><strong>Pick a stock</strong> in the watchlist to see its chart.</li>
+        <li><strong>Buy</strong> if you think it will rise, <strong>Short</strong> if you think it will fall. Close a position from the Positions tab.</li>
+        <li><strong>Watch the headlines.</strong> The game pauses when big news breaks so you can react.</li>
+      </ol>
+      <div class="dialog-actions">
+        <button type="button" class="primary" id="briefStart">Start the clock</button>
+        <button type="button" class="ghost" id="briefLook">Look around first</button>
+        <button type="button" class="ghost" id="briefBack">Back</button>
+      </div>
+    </dialog>
+
+    <dialog id="botDialog" class="info" aria-labelledby="botDialogTitle">
+      <h2 id="botDialogTitle">How the bot works</h2>
+      <p>The bot is a <strong>trend follower</strong>. It never reads the headlines; it only looks at prices. It starts with the same $100,000 as you, trades at the same real prices and only buys whole shares.</p>
+      <ol class="steps">
+        <li><strong>Every day at the close</strong> it works out each stock's 20-day average: the average of its last 20 closing prices.</li>
+        <li><strong>Sell.</strong> Any stock it owns that closed <em>below</em> its average is sold.</li>
+        <li><strong>Buy.</strong> Stocks that closed <em>above</em> their average, and that it does not own yet, are bought. Each stock gets at most an equal share of its money (<span id="botShare"></span>), so when few stocks are rising, most of its money stays in cash.</li>
+      </ol>
+      <h3>Its view at the close on <span id="botViewDate"></span></h3>
+      <table>
+        <thead><tr><th>Stock</th><th class="right">Close</th><th class="right">20-day avg</th><th class="right">Trend</th><th class="right">Bot owns</th></tr></thead>
+        <tbody id="botView"></tbody>
+      </table>
+      <h3>How to beat it</h3>
+      <p>A trend follower is always a step late: it buys after a rise has started and sells after a fall has begun. Sudden turns, like a crash followed by a fast rebound, catch it out. Reading the headlines and acting before the trend shows up is your edge. You can also <strong>short</strong> a stock to profit from a fall; the bot never does.</p>
+      <div class="dialog-actions"><button type="button" class="primary" id="botDialogClose">Got it</button></div>
+    </dialog>
+
+    <dialog id="endDialog" class="info" aria-labelledby="endHeading">
+      <p id="endStars" class="stars"></p>
+      <h2 id="endHeading">Scenario complete</h2>
+      <p id="endVerdict"></p>
+      <div class="race" id="endRace" aria-hidden="true"></div>
+      <p class="row"><span class="muted">Final value</span><strong id="endValue" class="mono"></strong></p>
+      <p class="row"><span class="muted">Your return</span><span id="endReturn" class="mono"></span></p>
+      <p class="row"><span class="muted">Bot (trend follower)</span><span id="endBot" class="mono"></span></p>
+      <p class="row"><span class="muted" id="endBenchLabel"></span><span id="endBench" class="mono"></span></p>
+      <p id="endHindsight" class="muted"></p>
+      <div class="dialog-actions">
+        <button type="button" class="primary" id="againButton">Play again</button>
+        <button type="button" class="ghost" id="pickButton">Choose another scenario</button>
+        <button type="button" class="ghost" id="boardButton">View the board</button>
+      </div>
+    </dialog>
+  </body>
+</html>

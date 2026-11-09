@@ -4,12 +4,15 @@
 // Routes:  POST /api/trades                   validate a trade; if accepted, save it and update the account
 //          GET  /api/trades/{transactionId}   read one saved trade
 //          GET  /api/account                  read the current cash and holdings
-// Environment: TABLE_NAME (trades, key transactionId) and ACCOUNTS_TABLE (accounts, key userId).
+//          /api/games...                      Scenario Mode games (see backend/games.js)
+// Environment: TABLE_NAME (trades, key transactionId), ACCOUNTS_TABLE (accounts, key userId)
+//              and GAMES_TABLE (Scenario Mode games, key gameId).
 const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand } = require("@aws-sdk/lib-dynamodb");
 const { validateOrder, checkAccount } = require("./backend/trades");
 const { DEMO_USER_ID, getOrCreateAccount, commitTrade, publicAccount } = require("./backend/accounts");
+const { handleGames } = require("./backend/games");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
@@ -178,6 +181,9 @@ function isAccountRoute(event) {
 async function route(event, method) {
   try {
     if (method === "OPTIONS") return { statusCode: 204, headers: HEADERS, body: "" };
+    // Game routes first: every other POST is a trade and every other GET a trade or account lookup
+    const game = await handleGames(db, event, method);
+    if (game) return reply(game.statusCode, game.body);
     if (method === "POST") return await postTrade(event);
     if (method === "GET" && isAccountRoute(event)) return await getAccount();
     if (method === "GET") return await getTrade(event);
@@ -201,6 +207,8 @@ function logRequest(method, event, response, started) {
     stockSymbol: trade.stockSymbol,
     tradeType: trade.tradeType,
     shareQuantity: trade.shareQuantity,
+    gameId: body.game ? body.game.gameId : (event.pathParameters || {}).gameId,
+    gameDay: body.game ? body.game.day : undefined,
     reason: body.reason,
     ms: Date.now() - started
   }));

@@ -1,0 +1,1042 @@
+/* MarketStreet Scenarios — page layout. Shared colours and fonts come from styles.css.
+   Each colour has one job: the scenario's colour (--accent) is you, green is Buy, red is Short,
+   light grey is the bot and dashed grey is the market. Panels sit edge to edge on a dark gutter. */
+
+:root {
+  --gutter: #0c0c0e;
+  --bot: #c4c5ca;
+  --ma20: #6b9bd1;
+}
+
+body {
+  background: var(--gutter);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.right {
+  text-align: right;
+}
+
+.ok {
+  color: var(--buy);
+}
+
+button {
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.primary,
+.ghost {
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* Dark text on the coloured buttons keeps them readable on every scenario colour */
+.primary {
+  background: var(--accent);
+  color: #111;
+  border: 0;
+}
+
+.ghost {
+  background: none;
+  border: 1px solid var(--control);
+  font-weight: 500;
+}
+
+.link {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Small labels: section titles, table headers, form labels */
+.panel-head,
+.game th,
+.standings dt,
+.ticket label[for="amount"] {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Segmented buttons: speed, chart range, chart type, moving averages */
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--control);
+  border-radius: 999px;
+}
+
+.seg button {
+  padding: 4px 11px;
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.seg [aria-pressed="true"] {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.seg .ma20[aria-pressed="true"] {
+  box-shadow: inset 0 -2px 0 var(--ma20);
+}
+
+.seg .ma50[aria-pressed="true"] {
+  box-shadow: inset 0 -2px 0 var(--bot);
+}
+
+/* ---------- Header: clock and controls stay on screen ---------- */
+
+.game-header {
+  background: var(--surface);
+}
+
+.clock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-left: auto;
+}
+
+.when strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.clock .ghost,
+.clock .primary {
+  padding: 5px 14px;
+  font-size: 13px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.check input {
+  accent-color: var(--accent);
+}
+
+.progress {
+  height: 2px;
+  background: var(--border);
+}
+
+.progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--accent);
+}
+
+/* ---------- Picker ---------- */
+
+.picker {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.picker h1 {
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1.1;
+}
+
+/* The header has a 3D bar landscape behind the title (hero3d.js) */
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 64px 40px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: radial-gradient(ellipse at 75% 60%, #1a1920, var(--gutter) 70%);
+}
+
+.hero canvas {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 58%;
+  height: 100%;
+}
+
+.hero .lead {
+  max-width: 44ch;
+}
+
+@media (max-width: 700px) {
+  .hero canvas {
+    opacity: 0.35;
+    width: 100%;
+  }
+}
+
+.hero h1,
+.hero .lead {
+  position: relative;
+  text-shadow: 0 2px 12px var(--gutter);
+}
+
+.lead {
+  max-width: 60ch;
+  margin-top: 16px;
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-top: 28px;
+}
+
+.scenarios {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+/* A card is one button: clicking anywhere on it opens the briefing */
+.scenario {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 20px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.scenario:hover,
+.scenario:focus-visible {
+  border-color: var(--hue);
+}
+
+.scenario strong {
+  font-size: 22px;
+}
+
+.scenario .period {
+  font-size: 13px;
+  color: var(--hue);
+}
+
+.spark {
+  display: block;
+  height: 44px;
+}
+
+.spark path {
+  fill: none;
+  stroke: var(--hue);
+  stroke-width: 1.5;
+}
+
+.spark-label {
+  margin-top: -6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.play {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.play b {
+  color: var(--hue);
+}
+
+/* ---------- Game layout ---------- */
+
+.game {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 300px;
+  grid-template-areas:
+    "strip strip strip"
+    "watch quote ticket"
+    "news  tabs  ticket";
+  grid-template-rows: auto auto 1fr;
+  gap: 2px;
+  max-width: none;
+  margin: 0;
+  padding: 2px 0 0;
+}
+
+.strip { grid-area: strip; }
+.watch { grid-area: watch; }
+.news { grid-area: news; }
+.quote { grid-area: quote; }
+.tabs { grid-area: tabs; }
+.ticket { grid-area: ticket; }
+
+.panel {
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--surface);
+}
+
+.panel-head {
+  margin-bottom: 8px;
+}
+
+.empty {
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.game table {
+  font-size: 14px;
+}
+
+.game th,
+.game td {
+  padding: 7px 6px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.05);
+}
+
+.game th {
+  padding-top: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+/* ---------- Score strip ---------- */
+
+.strip {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) auto minmax(280px, 1.3fr);
+  gap: 20px;
+  align-items: center;
+  padding: 12px 20px;
+  background: var(--surface);
+}
+
+.strip h1 {
+  font-size: 18px;
+}
+
+#finding {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.standings {
+  display: flex;
+  margin: 0;
+}
+
+.standings > div {
+  display: grid;
+  gap: 1px;
+  padding: 0 20px;
+  border-left: 1px solid var(--border);
+}
+
+.standings dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* A short line in each line's colour: the standings are the race chart's legend */
+.standings dt::before {
+  content: "";
+  width: 14px;
+  height: 2px;
+}
+
+.you dt::before { background: var(--accent); }
+.bot dt::before { background: var(--bot); }
+.mkt dt::before { background: repeating-linear-gradient(90deg, var(--muted) 0 4px, transparent 4px 7px); }
+
+.standings dd {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.standings dd:first-of-type {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.standings .sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.race {
+  height: 64px;
+}
+
+.race path {
+  fill: none;
+  stroke-width: 2;
+}
+
+.race .you { stroke: var(--accent); }
+.race .bot { stroke: var(--bot); stroke-width: 1.5; }
+.race .mkt { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.race .base { stroke: var(--border); stroke-width: 1; }
+
+.race .end-label {
+  font: 500 11px var(--mono);
+  stroke: none;
+}
+
+.end-label.you { fill: var(--accent); }
+.end-label.bot { fill: var(--bot); }
+.end-label.mkt { fill: var(--muted); }
+
+/* ---------- Watchlist ---------- */
+
+.watch {
+  max-height: 560px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.game .watch table {
+  font-size: 13px;
+}
+
+.game .watch th,
+.game .watch td {
+  padding: 6px 3px;
+}
+
+.watch tbody tr {
+  cursor: pointer;
+}
+
+.watch tbody tr:hover td {
+  background: #18171c;
+}
+
+.watch td span {
+  display: block;
+  max-width: 110px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watch td.right {
+  white-space: nowrap;
+}
+
+.watch tr.selected td {
+  background: var(--raised);
+}
+
+.watch tr.selected td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* ---------- Headlines ---------- */
+
+.news ol {
+  max-height: 380px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.news li {
+  display: grid;
+  gap: 2px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.05);
+  font-size: 14px;
+}
+
+.news time {
+  font-size: 12px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .news li.fresh {
+    animation: arrive 0.8s ease-out;
+  }
+
+  @keyframes arrive {
+    from { background: var(--raised); }
+  }
+}
+
+/* ---------- Quote and chart ---------- */
+
+.quote-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+
+.quote-head h2 {
+  font-size: 22px;
+}
+
+.quote-head .price {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.chart-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.flash {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--text);
+  background: var(--raised);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.readout {
+  min-height: 1.5em;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.chart {
+  position: relative;
+  height: 400px;
+}
+
+.chart .grid { stroke: rgb(255 255 255 / 0.05); }
+.chart .axis { font: 11px var(--mono); }
+.chart .wick.up { stroke: var(--buy); }
+.chart .wick.down { stroke: var(--sell); }
+.chart .body.up { fill: var(--buy); }
+.chart .body.down { fill: var(--sell); }
+.chart .vol { opacity: 0.35; }
+.chart .vol.up { fill: var(--buy); }
+.chart .vol.down { fill: var(--sell); }
+.chart .ma { fill: none; stroke-width: 1.5; }
+.chart .ma20 { stroke: var(--ma20); }
+.chart .ma50 { stroke: var(--bot); stroke-dasharray: 5 3; }
+.chart .last { stroke-dasharray: 2 3; }
+.chart .last.up { stroke: var(--buy); }
+.chart .last.down { stroke: var(--sell); }
+.chart .tag.up { fill: var(--buy); }
+.chart .tag.down { fill: var(--sell); }
+.chart .tag-text { fill: #111; font: 600 12px var(--mono); }
+.chart .start-line { stroke: var(--muted); stroke-dasharray: 4 4; }
+.chart .pin { fill: var(--text); opacity: 0.75; }
+.chart .cost { stroke: var(--accent); stroke-dasharray: 6 4; }
+
+.chart .cost-box {
+  fill: var(--surface);
+  stroke: var(--accent);
+  opacity: 0.92;
+}
+
+.chart .cost-label {
+  font: 600 12px var(--mono);
+}
+
+.chart .cost-label.up { fill: var(--buy); }
+.chart .cost-label.down { fill: var(--sell); }
+.chart .mk.you { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+.chart .mk-letter { fill: #111; font: 700 9px "Public Sans", sans-serif; }
+.chart .mk.bot { fill: var(--surface); stroke: var(--bot); stroke-width: 1.5; }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+/* Legend swatches are the chart's own marks, drawn in CSS */
+.legend .mk {
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+  font-style: normal;
+}
+
+.you-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #111;
+  font: 700 9px/14px "Public Sans", sans-serif;
+  text-align: center;
+}
+
+.bot-buy,
+.bot-sell {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  opacity: 0.8;
+}
+
+.bot-buy { border-bottom: 8px solid var(--bot); }
+.bot-sell { border-top: 8px solid var(--bot); }
+
+.pin-key {
+  width: 8px;
+  height: 8px;
+  background: var(--text);
+  opacity: 0.75;
+  transform: rotate(45deg);
+}
+
+.cost-key {
+  width: 16px;
+  border-top: 1px dashed var(--accent);
+}
+
+/* ---------- Positions, trades and performance tabs ---------- */
+
+.tab-list {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-list [role="tab"] {
+  padding: 2px 0 8px;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tab-list [aria-selected="true"] {
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--text);
+}
+
+.tabs [role="tabpanel"] {
+  max-height: 280px;
+  overflow: auto;
+}
+
+.badge-short {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--sell-bg);
+  color: var(--sell);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+.actions button {
+  margin-left: 4px;
+  padding: 3px 10px;
+  background: none;
+  border: 1px solid var(--control);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.actions button:hover {
+  border-color: var(--text);
+}
+
+#tradeRows tr.by-bot td {
+  color: var(--muted);
+}
+
+#perfRows td {
+  white-space: nowrap;
+}
+
+#perfRows tr.year td {
+  border-top: 1px solid var(--control);
+  font-weight: 600;
+}
+
+/* ---------- Order ticket ---------- */
+
+.ticket .panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.ticket .panel-head span {
+  color: var(--text);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ticket form {
+  display: grid;
+  gap: 10px;
+}
+
+.sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+}
+
+.side {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--control);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.side input {
+  position: absolute;
+  opacity: 0;
+}
+
+.side strong {
+  font-size: 15px;
+}
+
+.side span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.side.buy:has(:checked) {
+  border-color: var(--buy);
+  background: var(--buy-bg);
+}
+
+.side.short:has(:checked) {
+  border-color: var(--sell);
+  background: var(--sell-bg);
+}
+
+.side.buy:has(:checked) strong { color: var(--buy); }
+.side.short:has(:checked) strong { color: var(--sell); }
+
+.side:has(:focus-visible) {
+  outline: 2px solid var(--text);
+}
+
+.money-input {
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+  background: var(--ground);
+  border: 1px solid var(--control);
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.money-input:focus-within {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+.ticket .money-input input {
+  padding: 9px 12px 9px 6px;
+  background: none;
+  border: 0;
+  font: 500 18px var(--mono);
+}
+
+.money-input input:focus-visible {
+  outline: none;
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+}
+
+.chips button {
+  flex: 1;
+  padding: 5px 0;
+  background: none;
+  border: 1px solid var(--control);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.chips button:hover {
+  border-color: var(--text);
+}
+
+/* The order button takes the colour of its side */
+.action {
+  padding: 11px;
+  border: 0;
+  border-radius: 999px;
+  color: #111;
+  font-weight: 700;
+}
+
+.action[data-side="Buy"] { background: var(--buy); }
+.action[data-side="Short"] { background: var(--sell); }
+
+.order-reason {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.order-reason:empty,
+#orderMessage:empty {
+  display: none;
+}
+
+.summary {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Dialogs ---------- */
+
+dialog {
+  width: min(460px, calc(100% - 32px));
+  padding: 24px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--control);
+  border-radius: 6px;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.65);
+}
+
+dialog h2 {
+  margin-bottom: 12px;
+  font-size: 22px;
+}
+
+dialog.info {
+  width: min(600px, calc(100% - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.info p,
+.info .steps {
+  margin: 0 0 12px;
+}
+
+.info h3 {
+  margin: 20px 0 8px;
+  font-size: 15px;
+}
+
+.info .steps {
+  display: grid;
+  gap: 8px;
+  padding-left: 20px;
+}
+
+.info table {
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.info th,
+.info td {
+  padding: 6px 4px;
+}
+
+.info .period {
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.stars {
+  margin-bottom: 4px;
+  font-size: 30px;
+  letter-spacing: 4px;
+  color: var(--accent);
+}
+
+#endRace {
+  height: 90px;
+  margin: 12px 0;
+}
+
+/* ---------- Smaller screens ---------- */
+
+@media (min-width: 701px) {
+  .game-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+}
+
+@media (max-width: 1200px) {
+  .game {
+    grid-template-columns: 220px minmax(0, 1fr) 280px;
+  }
+}
+
+@media (max-width: 1000px) {
+  .game {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "strip  strip"
+      "quote  quote"
+      "ticket watch"
+      "tabs   tabs"
+      "news   news";
+  }
+
+  .strip {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .race {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 700px) {
+  .picker {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .game {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "strip" "quote" "ticket" "tabs" "watch" "news";
+  }
+
+  .strip {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .standings > div {
+    padding: 0 12px;
+  }
+
+  .standings > div:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .standings dd:first-of-type {
+    font-size: 17px;
+  }
+
+  .clock {
+    margin-left: 0;
+  }
+
+  .chart {
+    height: 300px;
+  }
+
+  .chart-tools {
+    margin-left: 0;
+  }
+}
+
+/* ---------- Saved games ---------- */
+
+.resume {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+}
+
+#pickerMessage {
+  margin-top: 16px;
+}
+
+#pickerMessage:empty {
+  display: none;
+}
