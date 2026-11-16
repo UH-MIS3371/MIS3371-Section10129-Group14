@@ -54,7 +54,7 @@ async function busy(form, work) {
 async function signInWith(email, password) {
   const result = await cognito("InitiateAuth", { AuthFlow: "USER_PASSWORD_AUTH", AuthParameters: { USERNAME: email, PASSWORD: password } });
   if (!result.AuthenticationResult) throw Object.assign(new Error(), { code: "NotAuthorizedException" });
-  saveToken(result.AuthenticationResult.IdToken, result.AuthenticationResult.AccessToken);
+  saveToken(result.AuthenticationResult.IdToken, result.AuthenticationResult.AccessToken, result.AuthenticationResult.RefreshToken);
   location.replace(safeBack());
 }
 

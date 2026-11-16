@@ -11,6 +11,7 @@ const COGNITO = {
 };
 const TOKEN_KEY = "marketstreet-id-token";
 const ACCESS_KEY = "marketstreet-access-token";
+const REFRESH_KEY = "marketstreet-refresh-token";
 const PUBLIC_PAGE = /\/(index\.html|signin\.html|help\.html)?$/.test(location.pathname);
 
 function storageGet(key) {
@@ -25,6 +26,7 @@ function storageClear() {
   try {
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(ACCESS_KEY);
+    sessionStorage.removeItem(REFRESH_KEY);
     sessionStorage.removeItem("marketstreet-me");
   } catch (e) {
     // storage blocked: nothing to clear
@@ -49,11 +51,12 @@ function accessToken() {
   return storageGet(ACCESS_KEY);
 }
 
-function saveToken(idToken, access) {
+function saveToken(idToken, access, refresh) {
   try {
     sessionStorage.removeItem("marketstreet-me");
     sessionStorage.setItem(TOKEN_KEY, idToken);
     if (access) sessionStorage.setItem(ACCESS_KEY, access);
+    if (refresh) sessionStorage.setItem(REFRESH_KEY, refresh);
   } catch (e) {
     // storage blocked: nothing to save
   }
@@ -71,6 +74,23 @@ async function cognito(action, body) {
   return data;
 }
 
+let refreshing = null;
+
+function refreshSession() {
+  refreshing ||= (async () => {
+    try {
+      const result = await cognito("InitiateAuth", { AuthFlow: "REFRESH_TOKEN_AUTH", AuthParameters: { REFRESH_TOKEN: storageGet(REFRESH_KEY) } });
+      saveToken(result.AuthenticationResult.IdToken, result.AuthenticationResult.AccessToken);
+      return true;
+    } catch (e) {
+      return false;
+    } finally {
+      refreshing = null;
+    }
+  })();
+  return refreshing;
+}
+
 // Goes to the sign-in page, which comes back to this page afterwards
 function signIn() {
   location.href = "signin.html?back=" + encodeURIComponent(location.pathname + location.search);
@@ -83,14 +103,20 @@ function signOut() {
 
 // fetch() with the sign-in token. If there is no token, or the server answers 401, sign in again.
 async function authFetch(url, options = {}) {
-  const user = signedInUser();
+  if (!signedInUser() && storageGet(REFRESH_KEY)) await refreshSession();
+  const send = (user) => fetch(url, { ...options, headers: { ...options.headers, Authorization: "Bearer " + user.token } });
+  let user = signedInUser();
   if (user) {
-    const response = await fetch(url, { ...options, headers: { ...options.headers, Authorization: "Bearer " + user.token } });
+    let response = await send(user);
+    if (response.status === 401 && (await refreshSession())) response = await send(signedInUser());
     if (response.status !== 401) return response;
-    storageClear();
   }
+  storageClear();
   signIn();
   return new Promise(() => {}); // the page is leaving for the sign-in page
 }
 
-if (!PUBLIC_PAGE && !signedInUser()) signIn();
+if (!PUBLIC_PAGE && !signedInUser()) {
+  if (storageGet(REFRESH_KEY)) refreshSession().then((ok) => ok || signIn());
+  else signIn();
+}
