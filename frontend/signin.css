@@ -1,8 +1,5 @@
-/* MarketStreet sign-in page: the product pitch on the left, the account card on the right */
-
 body.signin-page {
   min-height: 100vh;
-  background: radial-gradient(ellipse at 20% 40%, #1d1b24, var(--ground) 60%);
 }
 
 .signin {
@@ -19,23 +16,20 @@ body.signin-page {
 .pitch .logo {
   margin: 0 0 40px;
   font-size: 18px;
-  font-weight: 700;
 }
 
 .pitch h1 {
-  margin: 0;
-  font-size: clamp(38px, 5vw, 60px);
-  line-height: 1.05;
+  font-size: clamp(32px, 4.5vw, 48px);
+  line-height: 1.1;
 }
 
 .pitch .lead {
   max-width: 46ch;
   margin: 18px 0 32px;
-  font-size: 18px;
+  font-size: 16px;
   color: var(--muted);
 }
 
-/* The five scenarios, each in its own colour */
 .eras {
   display: grid;
   gap: 10px;
@@ -46,51 +40,59 @@ body.signin-page {
 
 .eras li {
   display: flex;
-  align-items: baseline;
-  gap: 14px;
-  padding-left: 12px;
-  border-left: 2px solid var(--hue);
-  font-size: 15px;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.eras li::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex: none;
+  background: var(--hue);
 }
 
 .eras span {
   width: 3.5em;
   font-family: var(--mono);
-  color: var(--hue);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
 }
 
 .auth-card {
   display: grid;
   gap: 16px;
-  padding: 28px;
+  padding: 24px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
 .auth-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 3px;
-  background: var(--ground);
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
 }
 
 .auth-tabs button {
-  padding: 8px;
+  padding: 6px 0;
+  margin-bottom: -1px;
   color: var(--muted);
   background: none;
   border: 0;
-  border-radius: 999px;
+  border-bottom: 1px solid transparent;
   font: inherit;
-  font-weight: 600;
   cursor: pointer;
+}
+
+.auth-tabs button:hover {
+  color: var(--text);
 }
 
 .auth-tabs [aria-selected="true"] {
   color: var(--text);
-  background: var(--raised);
+  border-bottom-color: var(--accent);
 }
 
 .auth-form {
@@ -101,32 +103,28 @@ body.signin-page {
 .auth-form label {
   margin-top: 6px;
   font-size: 13px;
-  font-weight: 600;
   color: var(--muted);
 }
 
 .auth-form input {
   width: 100%;
-  padding: 11px 12px;
+  height: var(--control-height);
+  padding: 0 12px;
   color: var(--text);
   background: var(--ground);
   border: 1px solid var(--control);
-  border-radius: 6px;
+  border-radius: var(--radius);
   font: inherit;
 }
 
 .auth-form input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.auth-form p {
-  margin: 0;
+  outline: 1px solid var(--accent);
+  outline-offset: 0;
+  border-color: var(--accent);
 }
 
 .auth-form .help {
   margin: 0;
-  font-size: 13px;
 }
 
 .auth-form .button {
@@ -145,7 +143,7 @@ body.signin-page {
   background: none;
   border: 0;
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
@@ -153,8 +151,6 @@ body.signin-page {
 
 .auth-message {
   min-height: 1.5em;
-  margin: 0;
-  font-size: 14px;
   color: var(--buy);
 }
 
@@ -167,7 +163,6 @@ body.signin-page {
 }
 
 .secure-note {
-  margin: 0;
   padding-top: 14px;
   border-top: 1px solid var(--border);
   font-size: 12px;
@@ -182,10 +177,7 @@ body.signin-page {
     padding: 32px 16px;
   }
 
-  .pitch .logo {
-    margin-bottom: 20px;
-  }
-
+  .pitch .logo,
   .pitch .lead {
     margin-bottom: 20px;
   }

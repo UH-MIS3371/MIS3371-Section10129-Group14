@@ -50,8 +50,13 @@ function accessToken() {
 }
 
 function saveToken(idToken, access) {
-  sessionStorage.setItem(TOKEN_KEY, idToken);
-  if (access) sessionStorage.setItem(ACCESS_KEY, access);
+  try {
+    sessionStorage.removeItem("marketstreet-me");
+    sessionStorage.setItem(TOKEN_KEY, idToken);
+    if (access) sessionStorage.setItem(ACCESS_KEY, access);
+  } catch (e) {
+    // storage blocked: nothing to save
+  }
 }
 
 // One call to Cognito's public API. Errors come back as { __type: "...#NotAuthorizedException", message }.
