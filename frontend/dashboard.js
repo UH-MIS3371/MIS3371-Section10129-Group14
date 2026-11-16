@@ -38,7 +38,7 @@ function renderPositions(positions) {
       el("strong", null, "You have $10,000 ready to invest"),
       el("p", null, "Pick a stock to see its chart and place your first order."),
       el("div", { class: "suggest", style: "margin-top: 16px; text-align: left" }, SUGGESTED.map((s) =>
-        el("a", { href: "trade.html?symbol=" + s }, el("strong", null, s), el("span", null, STOCKS[s].name), el("span", { class: "mono" }, money(cents(STOCKS[s].price))))))));
+        el("a", { href: "trade.html?symbol=" + s }, el("strong", null, s), el("span", null, STOCKS[s].name), el("span", { class: "mono" }, money(priceCents(s))))))));
     return;
   }
   empty.replaceChildren();
@@ -105,7 +105,7 @@ function renderRecent(trades) {
 async function renderDashboard() {
   document.getElementById("recent").replaceChildren(...skeletonRows(4, 3));
   try {
-    const [me, { trades }] = await Promise.all([loadMe(true), api("/trades")]);
+    const [me, { trades }] = await Promise.all([loadMe(true), api("/trades"), loadQuotes()]);
     const positions = buildPositions(me.account.holdings, trades, me.account.resetAt);
     const value = renderValue(me.account, positions);
     renderPositions(positions);

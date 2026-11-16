@@ -12,7 +12,7 @@ const path = require("path");
 // Supports exactly the commands the Lambda sends (Get, Put, and the TransactWrite
 // from backend/accounts.js) and follows the same rules: conditions are checked, and a
 // transaction saves everything or nothing.
-const { DynamoDBDocumentClient, GetCommand, PutCommand, ScanCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, ScanCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
 
 function installFakeDynamoDB() {
   const tables = new Map(); // table name -> Map(key -> item)
@@ -108,6 +108,15 @@ function installFakeDynamoDB() {
       return { Items: [...fake.table(input.TableName).values()].map((item) => structuredClone(item)) };
     }
 
+    if (command instanceof QueryCommand) {
+      const keyName = input.ExpressionAttributeNames["#k"];
+      const value = input.ExpressionAttributeValues[":v"];
+      const sortKey = input.IndexName.slice(input.IndexName.indexOf("-") + 1, input.IndexName.lastIndexOf("-index"));
+      const Items = [...fake.table(input.TableName).values()].filter((item) => item[keyName] === value).map((item) => structuredClone(item))
+        .sort((a, b) => String(a[sortKey]).localeCompare(String(b[sortKey])) * (input.ScanIndexForward === false ? -1 : 1));
+      return { Items };
+    }
+
     throw new Error("Unexpected command: " + command.constructor.name);
   };
 
@@ -195,6 +204,7 @@ const server = http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url, "http://localhost");
     if (pathname === "/api/trades") return await callLambda(req, res, "/api/trades");
     if (pathname === "/api/account") return await callLambda(req, res, "/api/account");
+    if (pathname === "/api/quotes") return await callLambda(req, res, "/api/quotes");
     if (pathname === "/api/leaderboard") return await callLambda(req, res, "/api/leaderboard");
     if (/^\/api\/(me|account\/reset|admin)(\/|$)/.test(pathname)) return await callLambda(req, res, pathname);
     const game = pathname.match(/^\/api\/games(?:\/([^/]+)(\/[a-z]+)?)?\/?$/);

@@ -15,7 +15,8 @@ process.env.AUDIT_TABLE = "Audit-test";
 process.env.AWS_REGION = "us-east-1";
 
 const { handler } = require("../index");
-const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require("@aws-sdk/lib-dynamodb");
+const { PRICE_CENTS } = require("../backend/market-data");
 
 const now = () => Math.floor(Date.now() / 1000);
 const PLAYER = { sub: "p-1", email: "player@example.com", nickname: "Player One", iat: now() };
@@ -66,6 +67,40 @@ test("GET /api/trades lists only my trades, newest first, Accepted and Rejected 
   assert.ok(list.every((t) => t.userId === PLAYER.sub));
   assert.ok(list.some((t) => t.status === "Accepted") && list.some((t) => t.status === "Rejected"));
   assert.ok(list[0].submittedAt >= list[list.length - 1].submittedAt);
+});
+
+test("per-user reads use QueryCommand and return only my rows, newest first", async () => {
+  await buy(1);
+  const send = DynamoDBDocumentClient.prototype.send;
+  let queries = 0;
+  DynamoDBDocumentClient.prototype.send = function (command) {
+    if (command instanceof QueryCommand) queries++;
+    return send.call(this, command);
+  };
+  let list;
+  try {
+    list = (await call("GET", "/api/trades")).body.trades;
+    assert.strictEqual(queries, 1);
+    await call("GET", "/api/me");
+    assert.strictEqual(queries, 3);
+  } finally {
+    DynamoDBDocumentClient.prototype.send = send;
+  }
+  assert.ok(list.length >= 1 && list.every((t) => t.userId === PLAYER.sub));
+  assert.deepStrictEqual(list.map((t) => t.submittedAt), list.map((t) => t.submittedAt).sort().reverse());
+});
+
+test("GET /api/quotes returns every server price", async () => {
+  const res = await call("GET", "/api/quotes");
+  assert.strictEqual(res.status, 200);
+  assert.deepStrictEqual(Object.keys(res.body.quotes).sort(), Object.keys(PRICE_CENTS).sort());
+  for (const s of Object.keys(PRICE_CENTS)) assert.strictEqual(res.body.quotes[s].priceCents, PRICE_CENTS[s]);
+});
+
+test("frontend/data.js prices match the server prices", () => {
+  const text = require("fs").readFileSync(require("path").join(__dirname, "../../../frontend/data.js"), "utf8");
+  const stocks = JSON.parse(text.slice(text.indexOf("{", text.indexOf("const STOCKS")), text.lastIndexOf("};") + 1));
+  assert.deepStrictEqual(Object.fromEntries(Object.entries(stocks).map(([s, v]) => [s, Math.round(v.price * 100)])), { ...PRICE_CENTS });
 });
 
 test("a player can rename themselves; bad names are refused", async () => {

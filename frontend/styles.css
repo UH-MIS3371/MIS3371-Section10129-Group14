@@ -696,3 +696,7 @@ body.game-page .site-footer { display: none; }
   .stack-sm td { display: flex; justify-content: space-between; gap: 12px; height: auto; padding: 3px 0 !important; border: 0; text-align: right; }
   .stack-sm td::before { content: attr(data-label); color: var(--muted); text-align: left; font-family: var(--sans); }
 }
+
+@media (max-width: 480px) {
+  .landing-header .header-tools .btn.primary { display: none; }
+}

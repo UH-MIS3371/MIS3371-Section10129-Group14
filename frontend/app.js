@@ -161,9 +161,22 @@ function sparkline(values, width = 96, height = 28) {
   return svg;
 }
 
-// Value of holdings at the simulated prices in data.js
+const QUOTE_CENTS = {};
+let quotesPromise;
+
+function loadQuotes() {
+  quotesPromise = quotesPromise || api("/quotes").then(({ quotes }) => {
+    for (const [s, q] of Object.entries(quotes)) QUOTE_CENTS[s] = q.priceCents;
+  }).catch(() => {});
+  return quotesPromise;
+}
+
+function priceCents(symbol) {
+  return QUOTE_CENTS[symbol] ?? (STOCKS[symbol] ? cents(STOCKS[symbol].price) : 0);
+}
+
 function holdingsValue(holdings) {
-  return Object.entries(holdings || {}).reduce((sum, [s, q]) => sum + (STOCKS[s] ? cents(STOCKS[s].price) * q : 0), 0);
+  return Object.entries(holdings || {}).reduce((sum, [s, q]) => sum + priceCents(s) * q, 0);
 }
 
 // Positions with average cost, from the saved holdings and the accepted trades since the last reset.
@@ -185,7 +198,7 @@ function buildPositions(holdings, trades, resetAt) {
   }
   return Object.entries(holdings || {}).filter(([, q]) => q > 0).map(([symbol, shares]) => {
     const s = STOCKS[symbol];
-    const price = s ? cents(s.price) : 0;
+    const price = priceCents(symbol);
     const prev = s ? cents(s.prev) : 0;
     const b = basis[symbol];
     const avg = b && b.shares === shares && shares > 0 ? Math.round(b.cost / shares) : null;

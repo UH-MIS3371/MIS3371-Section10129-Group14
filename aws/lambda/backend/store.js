@@ -1,7 +1,7 @@
 "use strict";
 // Small DynamoDB helpers shared by the profile, admin and audit code.
 const crypto = require("crypto");
-const { GetCommand, PutCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb");
+const { GetCommand, PutCommand, QueryCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb");
 
 async function scanAll(db, TableName) {
   if (!TableName) return [];
@@ -9,6 +9,21 @@ async function scanAll(db, TableName) {
   let ExclusiveStartKey;
   do {
     const page = await db.send(new ScanCommand({ TableName, ExclusiveStartKey }));
+    items.push(...page.Items);
+    ExclusiveStartKey = page.LastEvaluatedKey;
+  } while (ExclusiveStartKey);
+  return items;
+}
+
+async function queryAll(db, TableName, IndexName, keyName, keyValue) {
+  if (!TableName) return [];
+  const items = [];
+  let ExclusiveStartKey;
+  do {
+    const page = await db.send(new QueryCommand({
+      TableName, IndexName, ExclusiveStartKey, ScanIndexForward: false,
+      KeyConditionExpression: "#k = :v", ExpressionAttributeNames: { "#k": keyName }, ExpressionAttributeValues: { ":v": keyValue }
+    }));
     items.push(...page.Items);
     ExclusiveStartKey = page.LastEvaluatedKey;
   } while (ExclusiveStartKey);
@@ -57,4 +72,4 @@ async function audit(db, actor, action, fields = {}, { strict = false } = {}) {
   }
 }
 
-module.exports = { scanAll, getItem, saveVersioned, audit };
+module.exports = { scanAll, queryAll, getItem, saveVersioned, audit };

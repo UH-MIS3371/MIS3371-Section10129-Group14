@@ -50,9 +50,11 @@ These run entirely on DynamoDB, so no extra IAM permissions for Cognito are need
 
 1. **DynamoDB → Create tables** (on-demand): `MarketStreetUsers` (partition key `userId`, String) and `MarketStreetAudit` (partition key `auditId`, String).
 2. **Lambda → Environment variables:** add `USERS_TABLE = MarketStreetUsers` and `AUDIT_TABLE = MarketStreetAudit`.
-3. **Lambda permissions:** `LabRole` must allow `dynamodb:GetItem`, `PutItem` and `Scan` on both new tables, and `Scan` on the trades, accounts and games tables (the admin console and `GET /api/trades` read them).
-4. **API Gateway → Routes** (same Lambda integration and JWT authorizer): `GET /api/trades`, `GET /api/me`, `PATCH /api/me`, `POST /api/me/sign-out-everywhere`, `POST /api/account/reset`, `GET /api/admin/overview`, `GET /api/admin/users`, `GET /api/admin/users/{userId}`, `POST /api/admin/users/{userId}/actions`, `GET /api/admin/trades`, `GET /api/admin/audit`.
+3. **Lambda permissions:** `LabRole` must allow `dynamodb:GetItem`, `PutItem` and `Scan` on both new tables, and `Scan` on the trades, accounts and games tables (the admin console reads them). Also allow `dynamodb:Query` on the two indexes from step 6 (`.../table/MarketStreetTrades/index/*` and `.../table/MarketStreetGames/index/*`).
+4. **API Gateway → Routes** (same Lambda integration and JWT authorizer): `GET /api/trades`, `GET /api/quotes`, `GET /api/me`, `PATCH /api/me`, `POST /api/me/sign-out-everywhere`, `POST /api/account/reset`, `GET /api/admin/overview`, `GET /api/admin/users`, `GET /api/admin/users/{userId}`, `POST /api/admin/users/{userId}/actions`, `GET /api/admin/trades`, `GET /api/admin/audit`.
 5. **API Gateway → CORS:** allowed methods `GET, POST, PATCH`, headers `content-type, authorization`.
+6. **DynamoDB → Indexes** (projection ALL): on the trades table add `userId-submittedAt-index` (partition `userId`, sort `submittedAt`, both String); on the games table add `ownerId-updatedAt-index` (partition `ownerId`, sort `updatedAt`, both String). Override the names with the `TRADES_USER_INDEX` and `GAMES_OWNER_INDEX` environment variables if needed.
+7. **DynamoDB → Backups:** turn on point-in-time recovery for all five tables (trades, accounts, games, users, audit).
 
 How it works ([backend/users.js](lambda/backend/users.js), [backend/admin.js](lambda/backend/admin.js)):
 
@@ -62,7 +64,7 @@ How it works ([backend/users.js](lambda/backend/users.js), [backend/admin.js](la
 - Admins can't disable or demote themselves, and the last admin can't be removed.
 - Rejected trades are now saved with `rejectionReason` and `rejectionCategory` (FR-4, BR-8). Nothing else changes.
 - Every account and admin action writes an audit entry: who, what, target, before → after and an optional reason. Entries are only ever added.
-- `GET /api/trades` and the admin views use `Scan`, which is fine at class scale. A larger site would add a GSI on `userId` + `submittedAt`.
+- `GET /api/trades`, `GET /api/me` and a user's admin page read through the indexes. The admin overview, users list, trades list and audit still use `Scan`, which is fine at class scale.
 
 ## AWS setup for Scenario Mode games
 

@@ -8,6 +8,7 @@
 //          /api/me, /api/account/reset        profile and account settings (see backend/users.js)
 //          /api/games...                      Scenario Mode games (see backend/games.js)
 //          /api/admin/...                     admin console (see backend/admin.js; games in backend/games.js)
+//          GET  /api/quotes                   the server price of every stock
 //          GET  /api/leaderboard?scenario=    best finished game of each player in one scenario
 // Every route needs a signed-in user: API Gateway checks the Amazon Cognito token (JWT authorizer).
 // Environment: TABLE_NAME (trades, key transactionId), ACCOUNTS_TABLE (accounts, key userId),
@@ -16,13 +17,14 @@
 const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { PRICE_CENTS, getQuote } = require("./backend/market-data");
 const { validateOrder, checkAccount } = require("./backend/trades");
 const { getOrCreateAccount, commitTrade, publicAccount } = require("./backend/accounts");
 const { currentUser } = require("./backend/auth");
 const { handleGames } = require("./backend/games");
 const { resolveUser, handleMe } = require("./backend/users");
 const { handleAdmin } = require("./backend/admin");
-const { scanAll, audit } = require("./backend/store");
+const { queryAll, audit } = require("./backend/store");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
@@ -259,12 +261,10 @@ async function getTrade(event, user) {
 }
 
 // GET /api/trades: the signed-in user's own trades, newest first.
-// A Scan with a filter is fine at class scale; a larger site would add an index on userId + submittedAt.
 async function listTrades(user) {
   if (!process.env.TABLE_NAME) return reply(500, { success: false, reason: "Your trades could not be loaded. Please try again." });
   try {
-    const trades = (await scanAll(db, process.env.TABLE_NAME)).filter((t) => t.userId === user.userId)
-      .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+    const trades = await queryAll(db, process.env.TABLE_NAME, process.env.TRADES_USER_INDEX || "userId-submittedAt-index", "userId", user.userId);
     return reply(200, { success: true, trades });
   } catch (e) {
     console.log("Trade list failed:", e);
@@ -297,6 +297,9 @@ async function route(event, method) {
     // Profile, admin and game routes first: every other POST is a trade and every other GET a trade or account lookup
     const handled = (await handleMe(db, event, method, user)) || (await handleAdmin(db, event, method, user)) || (await handleGames(db, event, method, user));
     if (handled) return reply(handled.statusCode, handled.body);
+    if (method === "GET" && /\/api\/quotes\/?$/.test(event.rawPath || "")) {
+      return reply(200, { success: true, quotes: Object.fromEntries(Object.keys(PRICE_CENTS).map((s) => [s, getQuote(s)])) });
+    }
     if (method === "POST") return await postTrade(event, user);
     if (method === "GET" && isAccountRoute(event)) return await getAccount(user);
     if (method === "GET" && isTradeListRoute(event)) return await listTrades(user);

@@ -7,7 +7,7 @@
 //   POST /api/admin/users/{id}/actions     {action, reason?, amountCents?, confirm?}
 //   GET  /api/admin/trades                 every trade, newest first
 //   GET  /api/admin/audit                  the audit log, newest first
-const { scanAll, getItem, saveVersioned, audit } = require("./store");
+const { scanAll, queryAll, getItem, saveVersioned, audit } = require("./store");
 const { isAdminProfile, holdingsValue, resetAccount, writeAccount, parseBody, fail } = require("./users");
 const { publicAccount } = require("./accounts");
 const { PRICE_CENTS, START_CASH_CENTS } = require("./market-data");
@@ -108,12 +108,14 @@ async function userDetail(db, userId) {
     .map(([symbol, shares]) => ({ symbol, shares, priceCents: PRICE_CENTS[symbol] || 0, valueCents: (PRICE_CENTS[symbol] || 0) * shares }));
   const log = (await scanAll(db, process.env.AUDIT_TABLE)).filter((e) => e.targetId === userId).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50);
   const profile = data.profiles.find((p) => p.userId === userId) || {};
+  const userTrades = await queryAll(db, process.env.TABLE_NAME, process.env.TRADES_USER_INDEX || "userId-submittedAt-index", "userId", userId);
+  const userGames = await queryAll(db, process.env.GAMES_TABLE, process.env.GAMES_OWNER_INDEX || "ownerId-updatedAt-index", "ownerId", userId);
   return ok({
     user: { ...row, tokensValidAfter: profile.tokensValidAfter || null },
     account: account ? { ...publicAccount(account), resetAt: account.resetAt || null, updatedAt: account.updatedAt } : null,
     positions,
-    trades: data.trades.filter((t) => t.userId === userId).sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)),
-    games: data.games.filter((g) => g.ownerId === userId).map((g) => ({
+    trades: userTrades,
+    games: userGames.map((g) => ({
       gameId: g.gameId, scenarioId: g.scenarioId, day: g.day, status: g.status,
       stars: g.result ? g.result.stars : null, returnPct: g.result ? g.result.mine : null, createdAt: g.createdAt, updatedAt: g.updatedAt
     })).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),

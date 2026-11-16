@@ -9,7 +9,7 @@
 //          POST  /api/me/sign-out-everywhere   every token issued before now stops working
 //          POST  /api/account/reset {confirm: "RESET"}   back to the starting cash, no holdings
 const { PutCommand } = require("@aws-sdk/lib-dynamodb");
-const { scanAll, getItem, saveVersioned, audit } = require("./store");
+const { queryAll, getItem, saveVersioned, audit } = require("./store");
 const { getOrCreateAccount, publicAccount } = require("./accounts");
 const { PRICE_CENTS, START_CASH_CENTS } = require("./market-data");
 
@@ -51,8 +51,8 @@ function holdingsValue(holdings) {
 
 async function getMe(db, user) {
   const account = await getOrCreateAccount(db, process.env.ACCOUNTS_TABLE, user.userId, new Date().toISOString());
-  const trades = (await scanAll(db, process.env.TABLE_NAME)).filter((t) => t.userId === user.userId);
-  const games = (await scanAll(db, process.env.GAMES_TABLE)).filter((g) => g.ownerId === user.userId);
+  const trades = await queryAll(db, process.env.TABLE_NAME, process.env.TRADES_USER_INDEX || "userId-submittedAt-index", "userId", user.userId);
+  const games = await queryAll(db, process.env.GAMES_TABLE, process.env.GAMES_OWNER_INDEX || "ownerId-updatedAt-index", "ownerId", user.userId);
   const p = user.profile || {};
   return {
     statusCode: 200,

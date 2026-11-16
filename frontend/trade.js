@@ -6,6 +6,7 @@ const stock = STOCKS[symbol];
 let account = null;
 let myTrades = [];
 let reviewing = false;
+let requestId = crypto.randomUUID();
 
 const $ = (id) => document.getElementById(id);
 const form = $("orderForm");
@@ -23,7 +24,7 @@ function quantityError() {
 }
 
 function renderQuote() {
-  const price = cents(stock.price);
+  const price = priceCents(symbol);
   const prev = cents(stock.prev);
   document.title = symbol + " · " + stock.name + " – MarketStreet";
   $("crumbSymbol").textContent = symbol;
@@ -71,6 +72,7 @@ function renderHistory() {
 
 function setReviewing(on) {
   reviewing = on;
+  requestId = crypto.randomUUID();
   $("review").hidden = !on;
   $("edit").hidden = !on;
   quantityInput.disabled = on;
@@ -79,7 +81,7 @@ function setReviewing(on) {
 }
 
 function updateTicket() {
-  const price = cents(stock.price);
+  const price = priceCents(symbol);
   const type = tradeType();
   const qty = Number(quantityInput.value);
   const valid = !quantityError();
@@ -132,8 +134,9 @@ async function submitOrder() {
   submit.textContent = "Submitting…";
   try {
     // Only the order goes to the server; it uses its own price, cash and shares
-    const result = await api("/trades", { method: "POST", body: { symbol, tradeType: tradeType(), quantity: Number(quantityInput.value), orderType: "Market" } })
+    const result = await api("/trades", { method: "POST", body: { symbol, tradeType: tradeType(), quantity: Number(quantityInput.value), orderType: "Market", requestId } })
       .catch((e) => (e.data && e.data.status ? e.data : Promise.reject(e)));
+    requestId = crypto.randomUUID();
     sessionStorage.removeItem("marketstreet-me");
     // FR-5: show the outcome only once the record is saved
     if (result.transactionId) {
@@ -166,7 +169,7 @@ function wireTicket() {
     showFieldError(problem);
     if (problem) return;
     const qty = Number(quantityInput.value);
-    const price = cents(stock.price);
+    const price = priceCents(symbol);
     const type = tradeType();
     const cashAfter = account ? account.cashCents + (type === "Buy" ? -1 : 1) * price * qty : null;
     $("reviewList").replaceChildren(...[
@@ -199,8 +202,10 @@ if (!stock) {
   $("notFound").hidden = false;
   $("missingSymbol").textContent = symbol || "that stock";
 } else {
-  renderQuote();
+  loadQuotes().then(() => {
+    renderQuote();
+    updateTicket();
+    loadAccount();
+  });
   wireTicket();
-  updateTicket();
-  loadAccount();
 }
