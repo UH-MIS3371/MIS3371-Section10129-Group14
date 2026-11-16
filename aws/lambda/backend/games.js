@@ -13,6 +13,7 @@ const { GetCommand, PutCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb")
 const core = require("./game-core");
 const SCENARIOS = require("./scenario-data.json");
 const { scanAll } = require("./store");
+const { PRICE_CENTS, START_CASH_CENTS } = require("./market-data");
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ROUTE = /^\/api\/games(?:\/([^/]+)(?:\/(orders|close|advance))?)?\/?$/;
@@ -162,8 +163,20 @@ async function listGames(db, user) {
 
 // GET /api/leaderboard?scenario=<id>: the best finished game of each player in one scenario, highest return
 // first. The ranking uses the results the server saved; only display names are shown, never emails.
+async function portfolioBoard(db, user) {
+  const profiles = new Map((await scanAll(db, process.env.USERS_TABLE)).map((p) => [p.userId, p]));
+  const entries = (await scanAll(db, process.env.ACCOUNTS_TABLE)).filter((a) => !(profiles.get(a.userId) || {}).disabled).map((a) => {
+    const held = Object.entries(a.holdings || {}).filter(([, n]) => n > 0);
+    const valueCents = a.cashCents + held.reduce((sum, [symbol, n]) => sum + n * (PRICE_CENTS[symbol] || 0), 0);
+    return { name: (profiles.get(a.userId) || {}).name || "Player", returnPct: (valueCents - START_CASH_CENTS) / START_CASH_CENTS, valueCents, holdings: held.length, you: a.userId === user.userId };
+  }).sort((a, b) => b.returnPct - a.returnPct || b.valueCents - a.valueCents).slice(0, LEADERBOARD_SIZE).map((e, i) => ({ rank: i + 1, ...e }));
+  return { statusCode: 200, body: { success: true, board: "portfolio", entries } };
+}
+
 async function leaderboard(db, event, user) {
-  const scenarioId = (event.queryStringParameters || {}).scenario;
+  const query = event.queryStringParameters || {};
+  if (query.board === "portfolio") return portfolioBoard(db, user);
+  const scenarioId = query.scenario;
   if (!SCENARIOS.some((s) => s.id === scenarioId)) return fail(400, "Choose one of the scenarios.");
   const items = [];
   let ExclusiveStartKey;
