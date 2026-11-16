@@ -12,13 +12,15 @@ function renderProfile(me) {
   $("avatar").textContent = initials(u.name);
   $("profileName").textContent = u.name;
   $("profileMeta").textContent = "Member since " + formatDate(u.createdAt) + " · " + plural(me.stats.trades, "accepted order") + " · " + plural(me.stats.finishedGames, "finished challenge");
-  $("displayName").value = u.name;
+  if (document.activeElement !== $("displayName")) $("displayName").value = u.name;
   $("emailText").textContent = u.email;
   $("roleText").textContent = u.isAdmin ? "Admin" : "Member";
   $("roleText").className = "pill " + (u.isAdmin ? "admin" : "");
 }
 
 async function loadAccountPage() {
+  const cached = peek("/me");
+  if (cached) renderProfile(cached);
   try {
     renderProfile(await loadMe(true));
     $("loadError").replaceChildren();

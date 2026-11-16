@@ -22,12 +22,21 @@ function storageGet(key) {
   }
 }
 
+// Drops every cached API response (see peek() in app.js)
+function clearCache() {
+  try {
+    Object.keys(sessionStorage).filter((k) => k.startsWith("ms-cache:")).forEach((k) => sessionStorage.removeItem(k));
+  } catch (e) {
+    // storage blocked: nothing cached
+  }
+}
+
 function storageClear() {
+  clearCache();
   try {
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(ACCESS_KEY);
     sessionStorage.removeItem(REFRESH_KEY);
-    sessionStorage.removeItem("marketstreet-me");
   } catch (e) {
     // storage blocked: nothing to clear
   }
@@ -52,8 +61,8 @@ function accessToken() {
 }
 
 function saveToken(idToken, access, refresh) {
+  clearCache();
   try {
-    sessionStorage.removeItem("marketstreet-me");
     sessionStorage.setItem(TOKEN_KEY, idToken);
     if (access) sessionStorage.setItem(ACCESS_KEY, access);
     if (refresh) sessionStorage.setItem(REFRESH_KEY, refresh);

@@ -105,16 +105,27 @@ function renderRecent(trades) {
     el("td", { class: "num muted", "data-label": "When" }, timeEl(t.submittedAt)))));
 }
 
+function drawDashboard(me, trades) {
+  const positions = buildPositions(me.account.holdings, trades, me.account.resetAt);
+  const value = renderValue(me.account, positions);
+  renderPositions(positions);
+  renderBalances(me.account, positions, value);
+  renderChecklist(me);
+  renderRecent(trades);
+}
+
+// Draws the last known portfolio at once, then refreshes it from the server
 async function renderDashboard() {
-  document.getElementById("recent").replaceChildren(...skeletonRows(4, 3));
+  const me = peek("/me");
+  const cached = peek("/trades");
+  if (me && cached) drawDashboard(me, cached.trades);
+  else {
+    document.getElementById("positions").replaceChildren(...skeletonRows(7, 3));
+    document.getElementById("recent").replaceChildren(...skeletonRows(4, 3));
+  }
   try {
-    const [me, { trades }] = await Promise.all([loadMe(true), api("/trades"), loadQuotes()]);
-    const positions = buildPositions(me.account.holdings, trades, me.account.resetAt);
-    const value = renderValue(me.account, positions);
-    renderPositions(positions);
-    renderBalances(me.account, positions, value);
-    renderChecklist(me);
-    renderRecent(trades);
+    const [fresh, { trades }] = await Promise.all([loadMe(true), api("/trades"), loadQuotes()]);
+    drawDashboard(fresh, trades);
     document.getElementById("loadError").replaceChildren();
   } catch (e) {
     document.getElementById("loadError").replaceChildren(errorState("Your portfolio could not be loaded. " + e.message, renderDashboard));

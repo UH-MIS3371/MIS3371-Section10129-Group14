@@ -41,7 +41,7 @@
                 <p class="mono" id="change"></p>
               </div>
             </div>
-            <div class="chart" id="stockChart" data-height="300" role="img"></div>
+            <div class="chart" id="stockChart" data-height="300" style="min-height: 300px" role="img"></div>
             <p class="note">Simulated closing prices for the last month. Orders fill at the current simulated price.</p>
           </section>
 
@@ -80,6 +80,12 @@
             <div class="field">
               <label for="shareQuantity">Shares</label>
               <input id="shareQuantity" name="shareQuantity" type="number" min="1" step="1" value="1" inputmode="numeric" required aria-describedby="quantityHint quantityError" />
+              <div class="button-row qty-chips" role="group" aria-label="Quick quantity" id="qtyChips">
+                <button type="button" class="btn sm" data-qty="1">1</button>
+                <button type="button" class="btn sm" data-qty="5">5</button>
+                <button type="button" class="btn sm" data-qty="10">10</button>
+                <button type="button" class="btn sm" data-qty="max">Max</button>
+              </div>
               <p id="quantityHint" class="help"></p>
               <p id="quantityError" class="error help" hidden></p>
             </div>

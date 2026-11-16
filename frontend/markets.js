@@ -4,12 +4,15 @@ let sortBy = "symbol";
 let holdings = {};
 
 function marketRows() {
-  return Object.entries(STOCKS).map(([symbol, s]) => ({ symbol, ...s, pct: (priceCents(symbol) - cents(s.prev)) / cents(s.prev) }))
+  const q = document.getElementById("marketFilter").value.trim().toLowerCase();
+  return Object.entries(STOCKS).filter(([symbol, s]) => !q || (symbol + " " + s.name).toLowerCase().includes(q)).map(([symbol, s]) => ({ symbol, ...s, pct: (priceCents(symbol) - cents(s.prev)) / cents(s.prev) }))
     .sort((a, b) => sortBy === "gainers" ? b.pct - a.pct : sortBy === "losers" ? a.pct - b.pct : a.symbol.localeCompare(b.symbol));
 }
 
 function renderMarkets() {
-  document.getElementById("rows").replaceChildren(...marketRows().map((s) => {
+  const rows = marketRows();
+  if (!rows.length) return document.getElementById("rows").replaceChildren(el("tr", null, el("td", { colspan: "8", class: "muted" }, "No stocks match that search.")));
+  document.getElementById("rows").replaceChildren(...rows.map((s) => {
     const link = "trade.html?symbol=" + s.symbol;
     const owned = holdings[s.symbol] || 0;
     return el("tr", { onclick: (e) => { if (!e.target.closest("a")) location.href = link; } },
@@ -32,6 +35,8 @@ document.getElementById("sort").addEventListener("click", (e) => {
   renderMarkets();
 });
 
+document.getElementById("marketFilter").addEventListener("input", renderMarkets);
+renderMarkets();
 loadQuotes().then(renderMarkets);
 loadMe().then((me) => {
   holdings = me.account.holdings;

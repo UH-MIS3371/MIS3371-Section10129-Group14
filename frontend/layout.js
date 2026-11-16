@@ -39,22 +39,8 @@ function icon(name) {
 let mePromise = null;
 function loadMe(fresh) {
   if (mePromise && !fresh) return mePromise;
-  if (!fresh) {
-    try {
-      const cached = JSON.parse(sessionStorage.getItem("marketstreet-me"));
-      if (cached && Date.now() - cached.at < 60000) return (mePromise = Promise.resolve(cached.data));
-    } catch (e) {
-      // no cache
-    }
-  }
-  mePromise = api("/me").then((data) => {
-    try {
-      sessionStorage.setItem("marketstreet-me", JSON.stringify({ at: Date.now(), data }));
-    } catch (e) {
-      // storage blocked: fine, it is only a cache
-    }
-    return data;
-  });
+  const cached = !fresh && peek("/me", 60000);
+  mePromise = cached ? Promise.resolve(cached) : api("/me");
   mePromise.catch(() => (mePromise = null));
   return mePromise;
 }
@@ -66,7 +52,7 @@ function searchForm() {
   if (typeof STOCKS !== "undefined") for (const s in STOCKS) list.append(el("option", { value: s }, STOCKS[s].name));
   const form = el("form", { class: "search", action: "trade.html", role: "search" },
     el("label", { for: "headerSearch", class: "visually-hidden" }, "Search stocks"),
-    el("input", { id: "headerSearch", name: "symbol", type: "search", list: "stockList", placeholder: "Search stocks", autocomplete: "off" }),
+    el("input", { id: "headerSearch", name: "symbol", type: "search", list: "stockList", placeholder: "Search stocks", autocomplete: "off", "aria-keyshortcuts": "/" }),
     list);
   return form;
 }
@@ -108,7 +94,10 @@ function appHeader(current) {
   inner.prepend(logo, nav);
   // Scenario Mode keeps its clock in the header; the tools go after it
   inner.append(tools);
-  loadMe().then((me) => tools.append(accountMenu(me))).catch(() => tools.append(el("button", { type: "button", class: "btn sm", onclick: signOut }, "Sign out")));
+  // The avatar's place is held while the profile loads, so nothing in the header moves
+  const slot = el("span", { class: "avatar", "aria-hidden": "true" });
+  tools.append(slot);
+  loadMe().then((me) => slot.replaceWith(accountMenu(me))).catch(() => slot.replaceWith(el("button", { type: "button", class: "btn sm", onclick: signOut }, "Sign out")));
 }
 
 function publicHeader() {
@@ -219,6 +208,22 @@ function confirmAction({ title, message, confirmLabel, danger, typeToConfirm, re
 
 // ======================= BUILD THE SHELL =======================
 
+// Pages a visitor is about to open are fetched when they hover or touch the link (Chrome and Edge)
+function prefetchLinks() {
+  if (!HTMLScriptElement.supports || !HTMLScriptElement.supports("speculationrules")) return;
+  const rules = el("script", { type: "speculationrules" });
+  rules.textContent = JSON.stringify({ prefetch: [{ where: { and: [{ href_matches: "/*.html*" }, { not: { href_matches: "/signin.html*" } }] }, eagerness: "moderate" }] });
+  document.head.append(rules);
+}
+
+// "/" jumps to the stock search from anywhere outside a text field
+document.addEventListener("keydown", (e) => {
+  const search = document.getElementById("headerSearch");
+  if (e.key !== "/" || !search || e.target.closest("input, textarea, select, [contenteditable]")) return;
+  e.preventDefault();
+  search.focus();
+});
+
 (function buildShell() {
   // A public page that uses the app shell (Help) shows the public header to visitors who aren't signed in
   const shell = document.body.dataset.shell === "app" && !signedInUser() ? "public" : document.body.dataset.shell;
@@ -233,4 +238,5 @@ function confirmAction({ title, message, confirmLabel, danger, typeToConfirm, re
     publicHeader();
     footer();
   }
+  prefetchLinks();
 })();

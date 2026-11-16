@@ -700,3 +700,39 @@ body.game-page .site-footer { display: none; }
 @media (max-width: 480px) {
   .landing-header .header-tools .btn.primary { display: none; }
 }
+
+/* ---------- Steady pages: nothing moves while the shell and data arrive ---------- */
+
+/* The scrollbar's space is always kept, so short and long pages are the same width */
+html { scrollbar-gutter: stable; }
+
+/* The header is built by layout.js; its height is held until it lands */
+body[data-shell="app"]:not(:has(> .site-header)),
+body[data-shell="public"]:not(:has(> .site-header)) { padding-top: 53px; }
+@media (min-width: 1001px) {
+  body[data-shell="admin"]:not(.admin) > main { margin-left: 224px; padding-top: 53px; }
+}
+
+/* Moving between pages cross-fades instead of flashing; the header stays put */
+@view-transition { navigation: auto; }
+.site-header { view-transition-name: site-header; }
+.admin-side { view-transition-name: admin-side; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 140ms; }
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+}
+
+/* A skeleton sits exactly where its value will be */
+.figure .skeleton { display: inline-block; vertical-align: middle; }
+.qty-chips { margin-top: 8px; gap: 6px; }
+td .btn { font-family: var(--sans); }
+.hero-value .change { display: block; min-height: 19px; }
+#quantityHint { min-height: 19px; }
+:where(body:not(.game-page)) .ticket h2 { min-height: 20px; }
+#position { min-height: 106px; }
+:where(body:not(.game-page)) .quote-head { min-height: 62px; }
+/* Scenario cards are drawn by script; their space is held until then */
+#scenarioList:empty { min-height: 917px; }
+@media (max-width: 660px) {
+  #scenarioList:empty { min-height: 1518px; }
+}

@@ -137,7 +137,6 @@ async function submitOrder() {
     const result = await api("/trades", { method: "POST", body: { symbol, tradeType: tradeType(), quantity: Number(quantityInput.value), orderType: "Market", requestId } })
       .catch((e) => (e.data && e.data.status ? e.data : Promise.reject(e)));
     requestId = crypto.randomUUID();
-    sessionStorage.removeItem("marketstreet-me");
     // FR-5: show the outcome only once the record is saved
     if (result.transactionId) {
       location.href = "result.html?id=" + encodeURIComponent(result.transactionId) + "&new=1";
@@ -162,6 +161,14 @@ function wireTicket() {
   });
   form.querySelectorAll("input[name=tradeType]").forEach((i) => i.addEventListener("change", () => { $("serverMessage").hidden = true; updateTicket(); }));
   $("edit").addEventListener("click", () => setReviewing(false));
+  // Quick quantities; Max is everything your buying power covers (Buy) or every share you own (Sell)
+  $("qtyChips").addEventListener("click", (e) => {
+    const button = e.target.closest("button");
+    if (!button || reviewing) return;
+    const max = !account ? 1 : tradeType() === "Buy" ? Math.floor(account.cashCents / priceCents(symbol)) : account.holdings[symbol] || 0;
+    quantityInput.value = String(button.dataset.qty === "max" ? Math.max(max, 1) : button.dataset.qty);
+    quantityInput.dispatchEvent(new Event("input"));
+  });
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     if (reviewing) return submitOrder();
@@ -182,14 +189,22 @@ function wireTicket() {
   if (new URLSearchParams(location.search).get("side") === "Sell") $("sell").checked = true;
 }
 
+function useAccount(me, trades) {
+  account = me.account;
+  myTrades = trades;
+  renderPosition();
+  renderHistory();
+  updateTicket();
+}
+
+// Shows the last known position at once; the fresh account replaces it before an order can be reviewed
 async function loadAccount() {
+  const me = peek("/me");
+  const cached = peek("/trades");
+  if (me && cached) useAccount(me, cached.trades);
   try {
-    const [me, { trades }] = await Promise.all([loadMe(true), api("/trades")]);
-    account = me.account;
-    myTrades = trades;
-    renderPosition();
-    renderHistory();
-    updateTicket();
+    const [fresh, { trades }] = await Promise.all([loadMe(true), api("/trades")]);
+    useAccount(fresh, trades);
   } catch (e) {
     $("serverMessage").textContent = "Your account could not be loaded. " + e.message;
     $("serverMessage").hidden = false;

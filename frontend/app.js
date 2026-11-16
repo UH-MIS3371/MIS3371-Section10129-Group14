@@ -26,7 +26,27 @@ async function api(path, options = {}) {
   }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw Object.assign(new Error(data.reason || "Something went wrong. Please try again."), { status: response.status, data });
+  // GET answers are kept for this tab so the next page can draw at once; any change clears them
+  if (!init.method || init.method === "GET") {
+    try {
+      sessionStorage.setItem("ms-cache:" + path, JSON.stringify({ at: Date.now(), data }));
+    } catch (e) {
+      // storage full or blocked: fine, it is only a cache
+    }
+  } else {
+    clearCache();
+  }
   return data;
+}
+
+// The last answer for a GET path in this tab, or null. Pages draw it first, then refresh.
+function peek(path, maxAgeMs = 10 * 60 * 1000) {
+  try {
+    const hit = JSON.parse(sessionStorage.getItem("ms-cache:" + path));
+    return hit && Date.now() - hit.at < maxAgeMs ? hit.data : null;
+  } catch (e) {
+    return null;
+  }
 }
 
 // ======================= FORMATTING =======================
@@ -164,10 +184,14 @@ function sparkline(values, width = 96, height = 28) {
 const QUOTE_CENTS = {};
 let quotesPromise;
 
+function useQuotes(data) {
+  for (const [s, q] of Object.entries((data && data.quotes) || {})) QUOTE_CENTS[s] = q.priceCents;
+}
+
+useQuotes(peek("/quotes"));
+
 function loadQuotes() {
-  quotesPromise = quotesPromise || api("/quotes").then(({ quotes }) => {
-    for (const [s, q] of Object.entries(quotes)) QUOTE_CENTS[s] = q.priceCents;
-  }).catch(() => {});
+  quotesPromise = quotesPromise || api("/quotes").then(useQuotes).catch(() => {});
   return quotesPromise;
 }
 

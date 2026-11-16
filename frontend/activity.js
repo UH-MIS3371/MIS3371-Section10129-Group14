@@ -43,18 +43,29 @@ function clearFilters() {
   renderRows();
 }
 
+function useActivity(trades, me) {
+  allTrades = trades;
+  const symbols = [...new Set(trades.map((t) => t.stockSymbol).filter(Boolean))].sort();
+  const filter = document.getElementById("symbolFilter");
+  const chosen = filter.value;
+  filter.replaceChildren(el("option", { value: "" }, "All stocks"), ...symbols.map((s) => el("option", { value: s }, s)));
+  filter.value = symbols.includes(chosen) ? chosen : "";
+  if (me.account.resetAt) {
+    document.getElementById("resetNote").replaceChildren(el("div", { class: "alert info" }, "You reset your paper account on " + formatDate(me.account.resetAt) + ". Orders from before the reset stay here for your records."));
+  }
+  renderRows();
+}
+
+// Draws the last known orders at once, then refreshes them from the server
 async function loadActivity() {
-  document.getElementById("rows").replaceChildren(...skeletonRows(6));
+  const cached = peek("/trades");
+  const me = peek("/me");
+  if (cached && me) useActivity(cached.trades, me);
+  else document.getElementById("rows").replaceChildren(...skeletonRows(6));
   document.getElementById("state").replaceChildren();
   try {
-    const [{ trades }, me] = await Promise.all([api("/trades"), loadMe()]);
-    allTrades = trades;
-    const symbols = [...new Set(trades.map((t) => t.stockSymbol).filter(Boolean))].sort();
-    document.getElementById("symbolFilter").replaceChildren(el("option", { value: "" }, "All stocks"), ...symbols.map((s) => el("option", { value: s }, s)));
-    if (me.account.resetAt) {
-      document.getElementById("resetNote").replaceChildren(el("div", { class: "alert info" }, "You reset your paper account on " + formatDate(me.account.resetAt) + ". Orders from before the reset stay here for your records."));
-    }
-    renderRows();
+    const [{ trades }, fresh] = await Promise.all([api("/trades"), loadMe()]);
+    useActivity(trades, fresh);
   } catch (e) {
     document.getElementById("rows").replaceChildren();
     document.getElementById("state").replaceChildren(el("div", { style: "padding: 16px 20px" }, errorState("Your activity could not be loaded. " + e.message, loadActivity)));
