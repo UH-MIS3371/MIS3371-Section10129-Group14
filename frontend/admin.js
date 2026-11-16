@@ -402,8 +402,8 @@ async function renderGame() {
       kpi("Market", ret(r && r.market)),
       kpi("Trades", String(g.log.filter((l) => l.who === "You").length)),
       kpi("Stars", r ? r.stars + " / 3" : "—")),
-    el("section", { class: "panel" }, el("h2", null, "Value over the game"), el("div", { class: "chart", "data-height": "220", "data-points": JSON.stringify(points) })),
-    el("section", { class: "panel flush" }, el("h2", null, "Trade log"), dataTable({
+    el("section", { class: "panel" }, el("div", { class: "panel-head" }, el("h2", null, "Value over the game")), points.length < 2 ? el("p", { class: "muted" }, "The chart starts after the first trading day closes.") : el("div", { class: "chart", "data-height": "220", "data-points": JSON.stringify(points) })),
+    el("section", { class: "panel flush" }, el("div", { class: "panel-head" }, el("h2", null, "Trade log")), dataTable({
       rows: g.log,
       empty: "No trades yet.",
       columns: [

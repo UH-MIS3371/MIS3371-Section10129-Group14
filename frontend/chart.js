@@ -30,7 +30,7 @@
   }
 
   function drawChart(box) {
-    if (!box.dataset.points) return;
+    if (!box.dataset.points || JSON.parse(box.dataset.points).length < 2) return;
     const points = JSON.parse(box.dataset.points);
     const values = points.map((p) => p[1]);
     const width = box.clientWidth;
