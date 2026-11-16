@@ -66,3 +66,18 @@ If a transaction is rejected, the user's simulated cash balance and stock holdin
 Only **Market** orders are executed in the current scope. A Market order executes at the valid price from BR-6, never at a price entered by the user.
 
 Limit orders are not supported. The interface should not offer Limit as a selectable option; if a Limit order reaches the application, it must be rejected with the reason "Limit orders are not supported."
+
+## Internal controls
+
+A **validation** checks that an input is well formed, a **business rule** decides whether a valid order is allowed (a valid order can still be rejected, for example for insufficient cash), and an **internal control** makes the process trustworthy by limiting who can do what and leaving evidence.
+
+| # | Control |
+|---|---|
+| IC-1 | **Role check on every admin request.** The server checks the admin role on every `/api/admin` route. Refusals are audited as `authz.denied`. |
+| IC-2 | **No self-lockout.** An admin cannot demote or disable themselves, and the last admin cannot be removed. |
+| IC-3 | **Audit before change.** Every admin action writes its audit entry before the change. If the entry cannot be written, nothing changes. |
+| IC-4 | **Append-only audit log.** Audit entries are never edited or deleted. |
+| IC-5 | **Limits on adjustments.** Cash adjustments are at most ±$100,000 and cash never goes below $0. An admin account reset requires typing the user's email; a player's own reset requires typing `RESET`. |
+| IC-6 | **Duplicate-order control.** The browser sends a `requestId` (UUID) with each order. The server derives the official `transactionId` from `userId` + `requestId`, so a retried order returns the first result instead of trading twice. |
+| IC-7 | **Server-set IDs, timestamps, and status.** The browser never chooses `transactionId`, `userId`, status, timestamps, or price. |
+| IC-8 | **Disabled users and forced sign-out.** A disabled user, or a token issued before `tokensValidAfter`, is refused. |
