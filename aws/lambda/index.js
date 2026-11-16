@@ -28,6 +28,8 @@ const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const SAVE_FAILED = "The trade could not be saved. Please try again.";
+
 const HEADERS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
@@ -55,76 +57,113 @@ function tablesConfigured() {
 
 // A Rejected record (FR-4, BR-8): the order as sent, the reason and its category. It changes nothing else.
 // Only short, plain values from the request are kept.
-async function saveRejected(trade, user, reason, submittedAt) {
+async function saveRejected(trade, user, reason, submittedAt, quote, id) {
   if (!process.env.TABLE_NAME) return rejected(reason);
   const t = trade && typeof trade === "object" && !Array.isArray(trade) ? trade : {};
   const text = (v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 12) : null);
   const now = new Date().toISOString();
+  const category = reason === "Price unavailable." || reason === SAVE_FAILED ? "System" : "Rule";
   const record = {
-    transactionId: crypto.randomUUID(),
+    transactionId: id && category === "Rule" ? id : crypto.randomUUID(),
     userId: user.userId,
     stockSymbol: text(t.symbol) && text(t.symbol).toUpperCase(),
     tradeType: text(t.tradeType),
     shareQuantity: Number.isFinite(t.quantity) ? t.quantity : null,
     orderType: text(t.orderType),
+    ...(quote && {
+      executionPrice: quote.priceCents / 100,
+      transactionValue: (quote.priceCents * t.quantity) / 100,
+      priceTimestamp: new Date(quote.quotedAt).toISOString()
+    }),
+    ...(typeof t.requestId === "string" && { requestId: t.requestId.slice(0, 36) }),
     status: "Rejected",
     rejectionReason: reason,
-    rejectionCategory: reason === "Price unavailable." ? "System" : "Rule",
+    rejectionCategory: category,
     submittedAt,
     validatedAt: now,
+    completedAt: now,
     updatedAt: now
   };
   try {
     await db.send(new PutCommand({ TableName: process.env.TABLE_NAME, Item: record, ConditionExpression: "attribute_not_exists(transactionId)" }));
     return { ...rejected(reason), persisted: true, transactionId: record.transactionId, trade: record };
   } catch (e) {
+    if (e.name === "ConditionalCheckFailedException") return { ...rejected(reason), duplicate: true, transactionId: record.transactionId };
     console.log("Rejected record not saved:", e);
     return rejected(reason);
   }
 }
 
+// The trade a retried order already created: returned as it was saved, nothing is changed
+async function existingReply(id, user) {
+  const { Item: t } = await db.send(new GetCommand({ TableName: process.env.TABLE_NAME, Key: { transactionId: id } }));
+  if (!t) return reply(500, serverError(SAVE_FAILED));
+  const same = { persisted: true, transactionId: id, submittedAt: t.submittedAt, trade: t, duplicate: true };
+  if (t.status !== "Accepted") return reply(400, { ...rejected(t.rejectionReason), ...same });
+  let account;
+  try {
+    account = publicAccount(await getOrCreateAccount(db, process.env.ACCOUNTS_TABLE, user.userId, new Date().toISOString()));
+  } catch (e) {
+    console.log("Account read failed:", e);
+  }
+  return reply(200, { status: "ACCEPTED", message: t.tradeType + " order accepted.", success: true, ...same, account });
+}
+
 // POST /api/trades: check the rules, then save an accepted trade and update the account together
 async function postTrade(event, user) {
   const submittedAt = new Date().toISOString();
+  let id;
+  const refuse = async (t, reason, quote) => {
+    const r = await saveRejected(t, user, reason, submittedAt, quote, id);
+    return r.duplicate ? existingReply(r.transactionId, user) : reply(400, r);
+  };
 
   // The body is normally a JSON string. A plain object is also accepted (Lambda console tests).
   let trade = event.body;
   if (typeof trade === "string") {
     if (event.isBase64Encoded) trade = Buffer.from(trade, "base64").toString("utf8");
-    if (!trade.trim()) return reply(400, await saveRejected(null, user, "A JSON request body is required.", submittedAt));
+    if (!trade.trim()) return refuse(null, "A JSON request body is required.");
     try {
       trade = JSON.parse(trade);
     } catch (e) {
-      return reply(400, await saveRejected(null, user, "Request body must be valid JSON.", submittedAt));
+      return refuse(null, "Request body must be valid JSON.");
     }
   } else if (trade === undefined || trade === null) {
-    return reply(400, await saveRejected(null, user, "A JSON request body is required.", submittedAt));
+    return refuse(null, "A JSON request body is required.");
+  }
+
+  // The official ID comes from the server: with a requestId it is the same for every retry of that order
+  const requestId = trade && typeof trade === "object" ? trade.requestId : undefined;
+  if (requestId !== undefined) {
+    if (typeof requestId !== "string" || !UUID.test(requestId)) return refuse(trade, "requestId must be a UUID.");
+    const hex = crypto.createHash("sha256").update(user.userId + ":" + requestId).digest("hex");
+    id = [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20, 32)].join("-");
   }
 
   // BR-1, BR-2, BR-3, BR-6, BR-9: these do not need the account
   const { quote, ...result } = validateOrder(trade);
-  if (!result.success) return reply(400, await saveRejected(trade, user, result.reason, submittedAt));
+  if (!result.success) return refuse(trade, result.reason);
 
-  if (!tablesConfigured()) return reply(500, serverError("The trade could not be saved. Please try again."));
+  if (!tablesConfigured()) return reply(500, serverError(SAVE_FAILED));
 
   let account;
   try {
     account = await getOrCreateAccount(db, process.env.ACCOUNTS_TABLE, user.userId, submittedAt);
   } catch (e) {
     console.log("Account read failed:", e);
-    return reply(500, serverError("The trade could not be saved. Please try again."));
+    return reply(500, serverError(SAVE_FAILED));
   }
 
   // BR-4, BR-5 against the saved account (the browser's cash and shares are ignored)
   const accountProblem = checkAccount(trade, quote, account);
-  if (accountProblem) return reply(400, await saveRejected(trade, user, accountProblem.reason, submittedAt));
+  if (accountProblem) return refuse(trade, accountProblem.reason, quote);
   const validatedAt = new Date().toISOString();
 
   // The record is built from server values only, never from browser-supplied ID, price, status or time.
   // The price is the one validateOrder checked (BR-6), so the trade executes at exactly that price.
   const completedAt = new Date().toISOString();
   const record = {
-    transactionId: crypto.randomUUID(),
+    transactionId: id || crypto.randomUUID(),
     userId: user.userId,
     stockSymbol: quote.symbol,
     tradeType: trade.tradeType,
@@ -133,6 +172,7 @@ async function postTrade(event, user) {
     executionPrice: quote.priceCents / 100,
     transactionValue: (quote.priceCents * trade.quantity) / 100,
     priceTimestamp: new Date(quote.quotedAt).toISOString(),
+    ...(requestId !== undefined && { requestId }),
     status: "Accepted",
     submittedAt,
     validatedAt,
@@ -151,11 +191,13 @@ async function postTrade(event, user) {
     });
   } catch (e) {
     console.log("DynamoDB save failed:", e);
-    return reply(500, serverError("The trade could not be saved. Please try again."));
+    const saved = await saveRejected(trade, user, SAVE_FAILED, submittedAt, quote);
+    return reply(500, { ...serverError(SAVE_FAILED), ...(saved.persisted && { persisted: true, transactionId: saved.transactionId }) });
   }
+  if (outcome === "duplicate") return existingReply(record.transactionId, user);
   if (outcome === "insufficient") {
     // The account changed after it was read (another order got there first); nothing was saved
-    return reply(400, await saveRejected(trade, user, trade.tradeType === "Buy" ? "Insufficient cash." : "Insufficient shares.", submittedAt));
+    return refuse(trade, trade.tradeType === "Buy" ? "Insufficient cash." : "Insufficient shares.", quote);
   }
 
   const totalCents = quote.priceCents * trade.quantity;

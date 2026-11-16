@@ -42,7 +42,7 @@ async function saveVersioned(db, TableName, item, keyName) {
 }
 
 // Appends one entry to the audit log. Entries are never changed or deleted. Tokens and passwords are never logged.
-async function audit(db, actor, action, fields = {}) {
+async function audit(db, actor, action, fields = {}, { strict = false } = {}) {
   if (!process.env.AUDIT_TABLE) return;
   const at = new Date().toISOString();
   const entry = {
@@ -52,6 +52,7 @@ async function audit(db, actor, action, fields = {}) {
   try {
     await db.send(new PutCommand({ TableName: process.env.AUDIT_TABLE, Item: entry, ConditionExpression: "attribute_not_exists(auditId)" }));
   } catch (e) {
+    if (strict) throw e;
     console.log("Audit write failed:", e);
   }
 }

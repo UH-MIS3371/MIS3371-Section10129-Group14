@@ -36,7 +36,7 @@ async function getOrCreateAccount(db, tableName, userId, nowIso) {
 // either both are saved or neither is. The condition re-checks cash (Buy) or shares
 // (Sell) inside the commit (BR-4, BR-5), so two orders sent at the same moment can
 // never spend the same cash or sell the same shares twice.
-// Returns "saved", or "insufficient" when the account changed and the re-check failed.
+// Returns "saved", "duplicate" when this transactionId was already saved, or "insufficient" when the account changed and the re-check failed.
 async function commitTrade(db, { tradesTable, accountsTable, record, priceCents }) {
   const totalCents = priceCents * record.shareQuantity;
   const isBuy = record.tradeType === "Buy";
@@ -74,6 +74,7 @@ async function commitTrade(db, { tradesTable, accountsTable, record, priceCents 
     return "saved";
   } catch (e) {
     const reasons = e.CancellationReasons || [];
+    if (e.name === "TransactionCanceledException" && reasons[0] && reasons[0].Code === "ConditionalCheckFailed") return "duplicate";
     if (e.name === "TransactionCanceledException" && reasons[1] && reasons[1].Code === "ConditionalCheckFailed") {
       return "insufficient";
     }

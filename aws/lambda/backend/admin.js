@@ -138,13 +138,29 @@ async function act(db, admin, userId, body) {
   const target = userRows(data).find((u) => u.userId === userId);
   if (!target) return fail(404, "User not found.");
   const self = userId === admin.userId;
-  const entry = (name, before, after) => audit(db, admin, name, { targetId: userId, targetEmail: target.email, before, after, reason: reason || undefined });
+  const entry = (name, before, after, strict, result) => audit(db, admin, name, { targetId: userId, targetEmail: target.email, before, after, reason: reason || undefined, ...(result && { result }) }, { strict });
+  const run = async (name, before, after, apply) => {
+    try {
+      await entry(name, before, after, true);
+    } catch (e) {
+      return fail(500, "Nothing was changed. Please try again.");
+    }
+    try {
+      return await apply();
+    } catch (e) {
+      await entry(name, before, after, false, "failure");
+      throw e;
+    }
+  };
+  const profile = data.profiles.find((p) => p.userId === userId) || {};
 
   if (action === "reset-account") {
     if (body.confirm !== (target.email || userId)) return fail(400, "Type the user's email to confirm.");
-    const { before, after } = await resetAccount(db, userId);
-    await entry("account.reset", publicAccount(before), publicAccount(after));
-    return ok({ message: "Account reset to $" + (START_CASH_CENTS / 100).toLocaleString("en-US") + "." });
+    const old = data.accounts.find((a) => a.userId === userId) || { cashCents: START_CASH_CENTS, holdings: {} };
+    return run("account.reset", publicAccount(old), { cashCents: START_CASH_CENTS, holdings: {} }, async () => {
+      await resetAccount(db, userId);
+      return ok({ message: "Account reset to $" + (START_CASH_CENTS / 100).toLocaleString("en-US") + "." });
+    });
   }
   if (action === "adjust-cash") {
     const amount = body.amountCents;
@@ -153,29 +169,33 @@ async function act(db, admin, userId, body) {
     if (!before) return fail(409, "This user has no account yet.");
     if (before.cashCents + amount < 0) return fail(400, "Cash can't go below $0.");
     const after = { ...before, cashCents: before.cashCents + amount, updatedAt: new Date().toISOString() };
-    await writeAccount(db, process.env.ACCOUNTS_TABLE, before, after);
-    await entry("account.cash_adjust", { cashCents: before.cashCents }, { cashCents: after.cashCents });
-    return ok({ message: "Cash adjusted." });
+    return run("account.cash_adjust", { cashCents: before.cashCents }, { cashCents: after.cashCents }, async () => {
+      await writeAccount(db, process.env.ACCOUNTS_TABLE, before, after);
+      return ok({ message: "Cash adjusted." });
+    });
   }
   if (!process.env.USERS_TABLE) return fail(500, "Profiles are not set up on this server.");
   if (action === "disable" || action === "enable") {
     if (self) return fail(400, "You can't disable your own account.");
-    const { before, after } = await changeProfile(db, userId, { disabled: action === "disable" });
-    await entry("user." + action, { disabled: Boolean(before.disabled) }, { disabled: after.disabled });
-    return ok({ message: action === "disable" ? "User disabled." : "User enabled." });
+    return run("user." + action, { disabled: Boolean(profile.disabled) }, { disabled: action === "disable" }, async () => {
+      await changeProfile(db, userId, { disabled: action === "disable" });
+      return ok({ message: action === "disable" ? "User disabled." : "User enabled." });
+    });
   }
   if (action === "make-admin" || action === "remove-admin") {
     const makeAdmin = action === "make-admin";
     if (!makeAdmin && self) return fail(400, "You can't remove your own admin role.");
     if (!makeAdmin && userRows(data).filter((u) => u.isAdmin).length <= 1) return fail(400, "There must always be at least one admin.");
-    const { before, after } = await changeProfile(db, userId, { role: makeAdmin ? "admin" : "user" });
-    await entry(makeAdmin ? "user.role.promote" : "user.role.demote", { isAdmin: isAdminProfile(before) }, { isAdmin: isAdminProfile(after) });
-    return ok({ message: makeAdmin ? "Now an admin." : "Admin role removed." });
+    return run(makeAdmin ? "user.role.promote" : "user.role.demote", { isAdmin: isAdminProfile(profile) }, { isAdmin: makeAdmin }, async () => {
+      await changeProfile(db, userId, { role: makeAdmin ? "admin" : "user" });
+      return ok({ message: makeAdmin ? "Now an admin." : "Admin role removed." });
+    });
   }
   if (action === "sign-out") {
-    await changeProfile(db, userId, { tokensValidAfter: new Date().toISOString() });
-    await entry("session.sign_out_all");
-    return ok({ message: "Signed out of every device." });
+    return run("session.sign_out_all", undefined, undefined, async () => {
+      await changeProfile(db, userId, { tokensValidAfter: new Date().toISOString() });
+      return ok({ message: "Signed out of every device." });
+    });
   }
   return fail(400, "Unknown action.");
 }

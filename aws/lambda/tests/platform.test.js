@@ -6,7 +6,7 @@ const test = require("node:test");
 const assert = require("node:assert");
 
 const { installFakeDynamoDB } = require("../local-server");
-installFakeDynamoDB();
+const fake = installFakeDynamoDB();
 process.env.TABLE_NAME = "Trades-test";
 process.env.ACCOUNTS_TABLE = "Accounts-test";
 process.env.GAMES_TABLE = "Games-test";
@@ -15,6 +15,7 @@ process.env.AUDIT_TABLE = "Audit-test";
 process.env.AWS_REGION = "us-east-1";
 
 const { handler } = require("../index");
+const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
 
 const now = () => Math.floor(Date.now() / 1000);
 const PLAYER = { sub: "p-1", email: "player@example.com", nickname: "Player One", iat: now() };
@@ -141,4 +142,90 @@ test("signing out everywhere rejects tokens issued before it", async () => {
   assert.strictEqual((await call("POST", "/api/me/sign-out-everywhere", undefined, old)).status, 200);
   assert.strictEqual((await call("GET", "/api/me", undefined, old)).status, 401);
   assert.strictEqual((await call("GET", "/api/me", undefined, { ...PLAYER, iat: now() + 1 })).status, 200);
+});
+
+const P2 = { sub: "p-2", email: "two@example.com", iat: now() };
+const P3 = { sub: "p-3", email: "three@example.com", iat: now() };
+const order = (extra) => ({ symbol: "AAPL", tradeType: "Buy", quantity: 1, orderType: "Market", ...extra });
+const cash = async (claims) => (await call("GET", "/api/account", undefined, claims)).body.account.cashCents;
+
+test("Rejected records are complete: completedAt always, price fields when a quote was obtained", async () => {
+  const noQuote = (await call("POST", "/api/trades", order({ symbol: "XYZ" }), P2)).body.trade;
+  assert.strictEqual(noQuote.completedAt, noQuote.validatedAt);
+  assert.strictEqual(noQuote.executionPrice, undefined);
+  const t = (await call("POST", "/api/trades", order({ quantity: 1000 }), P2)).body.trade;
+  assert.strictEqual(t.rejectionReason, "Insufficient cash.");
+  assert.strictEqual(t.completedAt, t.validatedAt);
+  assert.strictEqual(t.executionPrice, 185.5);
+  assert.strictEqual(t.transactionValue, 185500);
+  assert.ok(Number.isFinite(Date.parse(t.priceTimestamp)));
+});
+
+test("a failed commit is recorded as a System rejection and answered with 500", async () => {
+  fake.beforeCommit = async () => { throw new Error("commit failed"); };
+  const res = await call("POST", "/api/trades", order(), P2);
+  fake.beforeCommit = null;
+  assert.strictEqual(res.status, 500);
+  assert.strictEqual(res.body.status, "ERROR");
+  assert.strictEqual(res.body.reason, "The trade could not be saved. Please try again.");
+  assert.strictEqual(res.body.persisted, true);
+  const saved = (await call("GET", "/api/trades/" + res.body.transactionId, undefined, P2)).body.trade;
+  assert.strictEqual(saved.rejectionCategory, "System");
+  assert.strictEqual(saved.status, "Rejected");
+  fake.beforeCommit = async () => { fake.failNext = true; };
+  const both = await call("POST", "/api/trades", order(), P2);
+  fake.beforeCommit = null;
+  fake.failNext = false;
+  assert.strictEqual(both.status, 500);
+  assert.strictEqual(both.body.persisted, false);
+  assert.strictEqual(both.body.transactionId, undefined);
+});
+
+test("a retried requestId returns the first result and changes nothing (duplicate control)", async () => {
+  const requestId = "11111111-2222-4333-8444-555555555555";
+  const start = await cash(P3);
+  const first = await call("POST", "/api/trades", order({ requestId, transactionId: "browser-chosen" }), P3);
+  const second = await call("POST", "/api/trades", order({ requestId }), P3);
+  assert.strictEqual(first.status, 200);
+  assert.match(first.body.transactionId, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  assert.strictEqual(first.body.trade.requestId, requestId);
+  assert.strictEqual(second.status, 200);
+  assert.strictEqual(second.body.duplicate, true);
+  assert.strictEqual(second.body.transactionId, first.body.transactionId);
+  assert.strictEqual(await cash(P3), start - 18550);
+  const mine = (await call("GET", "/api/trades", undefined, P3)).body.trades.filter((t) => t.requestId === requestId);
+  assert.strictEqual(mine.length, 1);
+});
+
+test("a retried rejected order returns the saved rejection; other users get other IDs; bad requestId is a rule rejection", async () => {
+  const requestId = "99999999-2222-4333-8444-555555555555";
+  const a = await call("POST", "/api/trades", order({ requestId, quantity: 1000 }), P3);
+  const b = await call("POST", "/api/trades", order({ requestId, quantity: 1000 }), P3);
+  assert.strictEqual(b.status, 400);
+  assert.strictEqual(b.body.duplicate, true);
+  assert.strictEqual(b.body.transactionId, a.body.transactionId);
+  const other = await call("POST", "/api/trades", order({ requestId }), P2);
+  assert.notStrictEqual(other.body.transactionId, a.body.transactionId);
+  const bad = await call("POST", "/api/trades", order({ requestId: "nope" }), P3);
+  assert.strictEqual(bad.status, 400);
+  assert.strictEqual(bad.body.reason, "requestId must be a UUID.");
+  assert.strictEqual(bad.body.trade.rejectionCategory, "Rule");
+});
+
+test("an admin action is refused, and changes nothing, when its audit entry cannot be written", async () => {
+  const before = await cash(P2);
+  const send = DynamoDBDocumentClient.prototype.send;
+  DynamoDBDocumentClient.prototype.send = function (command) {
+    if (command instanceof PutCommand && command.input.TableName === process.env.AUDIT_TABLE) throw new Error("audit down");
+    return send.call(this, command);
+  };
+  let res;
+  try {
+    res = await call("POST", "/api/admin/users/p-2/actions", { action: "adjust-cash", amountCents: 5000 }, ADMIN);
+  } finally {
+    DynamoDBDocumentClient.prototype.send = send;
+  }
+  assert.strictEqual(res.status, 500);
+  assert.strictEqual(res.body.reason, "Nothing was changed. Please try again.");
+  assert.strictEqual(await cash(P2), before);
 });
