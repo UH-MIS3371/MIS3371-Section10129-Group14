@@ -3,15 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Scenarios – MarketStreet</title>
+    <title>Challenges – MarketStreet</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="scenarios.css" />
     <script src="auth.js" defer></script>
+    <script src="data.js" defer></script>
     <script src="data/scenarios.js" defer></script>
     <script src="app.js" defer></script>
+    <script src="layout.js" defer></script>
     <script src="game-core.js" defer></script>
     <script src="market-chart.js" defer></script>
     <script src="scenarios.js" defer></script>
@@ -20,13 +23,9 @@
     <script src="hero3d.js" defer></script>
   </head>
 
-  <body>
+  <body class="game-page" data-shell="app" data-nav="challenges">
     <header class="site-header game-header">
       <div class="inner">
-        <a class="logo" href="trade.html">MarketStreet</a>
-        <nav class="site-nav" aria-label="Main">
-          <a href="trade.html">Trade</a><a href="history.html">History</a><a href="scenarios.html" aria-current="page">Scenarios</a><a href="leaderboard.html">Leaderboard</a>
-        </nav>
         <div class="clock" id="clock" hidden>
           <p class="when"><strong id="simDate" class="mono"></strong> <span id="dayCount" class="mono muted"></span></p>
           <button type="button" class="primary" id="pauseButton" title="Space">Start the clock</button>

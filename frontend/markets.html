@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markets – MarketStreet</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="auth.js" defer></script>
+    <script src="data.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="layout.js" defer></script>
+    <script src="markets.js" defer></script>
+  </head>
+
+  <body data-shell="app" data-nav="markets">
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1>Markets</h1>
+          <p>Every stock you can trade, at simulated prices from the last close.</p>
+        </div>
+        <div class="segmented" role="group" aria-label="Sort by" id="sort">
+          <button type="button" data-sort="symbol" aria-pressed="true">A–Z</button>
+          <button type="button" data-sort="gainers" aria-pressed="false">Top gainers</button>
+          <button type="button" data-sort="losers" aria-pressed="false">Top losers</button>
+        </div>
+      </div>
+
+      <section class="panel flush">
+        <div class="table-wrap">
+          <table class="stack-sm clickable">
+            <thead>
+              <tr><th>Stock</th><th class="num">Price</th><th class="num">Today</th><th class="hide-sm">Last month</th><th class="num">Day range</th><th class="num">Volume</th><th class="num">You own</th><th><span class="visually-hidden">Trade</span></th></tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

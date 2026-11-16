@@ -1,20 +1,33 @@
 // MarketStreet sign-in with Amazon Cognito.
 // signin.html sends the email and password straight to Cognito over HTTPS; Cognito checks the password and
-// returns an ID token. MarketStreet's own servers never receive a password. The token is kept in
-// sessionStorage (cleared when the tab closes) and sent with every API request, and API Gateway checks it.
-// Every page except signin.html loads this file first and sends users who are not signed in to signin.html.
+// returns tokens. MarketStreet's own servers never receive a password. The tokens are kept in sessionStorage
+// (cleared when the tab closes). The ID token goes with every API request, and API Gateway checks it; the
+// access token is only sent to Cognito itself (change password, sign out everywhere).
+// Every page except the public ones (home, sign-in and help) sends users who are not signed in to sign in.
 
 const COGNITO = {
   url: "https://cognito-idp.us-east-1.amazonaws.com/",
   clientId: "39ufd4fucor0jpnhklpdqdo8lh"
 };
 const TOKEN_KEY = "marketstreet-id-token";
+const ACCESS_KEY = "marketstreet-access-token";
+const PUBLIC_PAGE = /\/(index\.html|signin\.html|help\.html)?$/.test(location.pathname);
 
 function storageGet(key) {
   try {
     return sessionStorage.getItem(key);
   } catch (e) {
     return null;
+  }
+}
+
+function storageClear() {
+  try {
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(ACCESS_KEY);
+    sessionStorage.removeItem("marketstreet-me");
+  } catch (e) {
+    // storage blocked: nothing to clear
   }
 }
 
@@ -32,8 +45,25 @@ function signedInUser() {
   }
 }
 
-function saveToken(idToken) {
+function accessToken() {
+  return storageGet(ACCESS_KEY);
+}
+
+function saveToken(idToken, access) {
   sessionStorage.setItem(TOKEN_KEY, idToken);
+  if (access) sessionStorage.setItem(ACCESS_KEY, access);
+}
+
+// One call to Cognito's public API. Errors come back as { __type: "...#NotAuthorizedException", message }.
+async function cognito(action, body) {
+  const response = await fetch(COGNITO.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-amz-json-1.1", "X-Amz-Target": "AWSCognitoIdentityProviderService." + action },
+    body: JSON.stringify({ ClientId: COGNITO.clientId, ...body })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw Object.assign(new Error(data.message), { code: String(data.__type || "").split("#").pop() });
+  return data;
 }
 
 // Goes to the sign-in page, which comes back to this page afterwards
@@ -42,8 +72,8 @@ function signIn() {
 }
 
 function signOut() {
-  sessionStorage.removeItem(TOKEN_KEY);
-  location.href = "signin.html";
+  storageClear();
+  location.href = "signin.html?signedOut=1";
 }
 
 // fetch() with the sign-in token. If there is no token, or the server answers 401, sign in again.
@@ -52,28 +82,10 @@ async function authFetch(url, options = {}) {
   if (user) {
     const response = await fetch(url, { ...options, headers: { ...options.headers, Authorization: "Bearer " + user.token } });
     if (response.status !== 401) return response;
-    sessionStorage.removeItem(TOKEN_KEY);
+    storageClear();
   }
   signIn();
   return new Promise(() => {}); // the page is leaving for the sign-in page
 }
 
-// Shows who is signed in, a Sign out button, and the Admin link for admins
-function showSignedInUser(user) {
-  const nav = document.querySelector(".site-nav");
-  if (!nav) return;
-  if (user.isAdmin) nav.append(Object.assign(document.createElement("a"), { href: "admin.html", textContent: "Admin" }));
-  let label = nav.querySelector(".account");
-  if (!label) label = nav.appendChild(Object.assign(document.createElement("span"), { className: "account" }));
-  label.textContent = user.name;
-  label.title = user.email;
-  const button = Object.assign(document.createElement("button"), { type: "button", className: "signout", textContent: "Sign out" });
-  button.addEventListener("click", signOut);
-  nav.append(button);
-}
-
-if (!location.pathname.endsWith("/signin.html")) {
-  const user = signedInUser();
-  if (user) document.addEventListener("DOMContentLoaded", () => showSignedInUser(user));
-  else signIn();
-}
+if (!PUBLIC_PAGE && !signedInUser()) signIn();

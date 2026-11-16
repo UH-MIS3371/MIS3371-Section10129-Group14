@@ -3,11 +3,84 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="refresh" content="0; url=trade.html" />
-    <title>MarketStreet</title>
+    <title>MarketStreet – Practice investing with paper money</title>
+    <meta name="description" content="Practice investing with $10,000 in paper money, replay real market crises, and compete on the leaderboard. No real money involved." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="auth.js" defer></script>
+    <script src="data.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="layout.js" defer></script>
+    <script src="chart.js" defer></script>
+    <script src="landing.js" defer></script>
   </head>
 
-  <body>
-    <p><a href="trade.html">Open MarketStreet</a></p>
+  <body data-shell="public">
+    <main>
+      <section class="landing-hero">
+        <div>
+          <h1>Learn the market with money that isn't yours.</h1>
+          <p class="lead">MarketStreet gives you $10,000 in paper money to buy and sell real companies at simulated prices. When you're ready, replay the 2008 crash or the COVID sell-off and see if you'd have kept your head.</p>
+          <div class="button-row" id="heroActions">
+            <a class="btn primary" href="signin.html?view=signUp">Create a free account</a>
+            <a class="btn" href="signin.html">Sign in</a>
+          </div>
+          <p class="note" style="margin-top: 16px">Free for students. No card, no brokerage account, no real money.</p>
+        </div>
+
+        <figure class="preview" aria-label="Example portfolio" style="margin: 0">
+          <p class="muted">Portfolio value</p>
+          <p class="figure">$11,284.60</p>
+          <p class="mono up">+$1,284.60 (▲ +12.85%) since you started</p>
+          <div class="chart up" id="previewChart" data-height="150" aria-hidden="true" style="margin-top: 12px"></div>
+          <table>
+            <thead><tr><th>Stock</th><th class="num">Shares</th><th class="num">Today</th><th class="num">Value</th></tr></thead>
+            <tbody id="previewRows"></tbody>
+          </table>
+        </figure>
+      </section>
+
+      <div class="tape" aria-label="Simulated prices"><div class="tape-track" id="tape"></div></div>
+
+      <section class="features" aria-label="What you can do">
+        <div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 6-6" /></svg>
+          <h2>Build a paper portfolio</h2>
+          <p>Search a stock, check its chart, review your order and buy. Every order is checked against your cash and shares, just like a real broker.</p>
+        </div>
+        <div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
+          <h2>Trade through history</h2>
+          <p>Five challenges drop you into a real crisis with $100,000. Headlines arrive on the day they happened. Beat the market and the bot to earn three stars.</p>
+        </div>
+        <div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" /></svg>
+          <h2>Compete with your class</h2>
+          <p>Your best finish in each challenge goes on the leaderboard under the display name you choose. Your email stays private.</p>
+        </div>
+      </section>
+
+      <section class="steps" aria-labelledby="stepsTitle">
+        <h2 id="stepsTitle">Getting started takes a minute</h2>
+        <ol>
+          <li><h3>Create your account</h3><p>Sign up with your email and pick a display name.</p></li>
+          <li><h3>Get $10,000 in paper money</h3><p>Your account opens with cash and no holdings.</p></li>
+          <li><h3>Place your first trade</h3><p>Pick a stock, review the order, and watch your portfolio update.</p></li>
+        </ol>
+      </section>
+
+      <section class="cta-band">
+        <div class="panel">
+          <div>
+            <h2>Ready when you are</h2>
+            <p class="muted" style="margin-top: 4px">Make your mistakes here, where they're free.</p>
+          </div>
+          <a class="btn primary" href="signin.html?view=signUp" id="ctaButton">Create a free account</a>
+        </div>
+      </section>
+    </main>
   </body>
 </html>

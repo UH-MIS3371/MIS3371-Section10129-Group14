@@ -12,6 +12,7 @@ const crypto = require("crypto");
 const { GetCommand, PutCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb");
 const core = require("./game-core");
 const SCENARIOS = require("./scenario-data.json");
+const { scanAll } = require("./store");
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ROUTE = /^\/api\/games(?:\/([^/]+)(?:\/(orders|close|advance))?)?\/?$/;
@@ -144,7 +145,7 @@ async function listGames(db, user) {
   do {
     const page = await db.send(new ScanCommand({
       TableName: process.env.GAMES_TABLE,
-      ProjectionExpression: "gameId, ownerEmail, scenarioId, #d, #s, #r, updatedAt",
+      ProjectionExpression: "gameId, ownerId, ownerEmail, ownerName, scenarioId, #d, #s, #r, createdAt, updatedAt",
       ExpressionAttributeNames: { "#d": "day", "#s": "status", "#r": "result" },
       ExclusiveStartKey
     }));
@@ -152,7 +153,8 @@ async function listGames(db, user) {
     ExclusiveStartKey = page.LastEvaluatedKey;
   } while (ExclusiveStartKey);
   const games = items.map((g) => ({
-    gameId: g.gameId, ownerEmail: g.ownerEmail, scenarioId: g.scenarioId, day: g.day, status: g.status,
+    gameId: g.gameId, ownerId: g.ownerId, ownerEmail: g.ownerEmail, ownerName: g.ownerName, createdAt: g.createdAt,
+    scenarioId: g.scenarioId, day: g.day, status: g.status,
     stars: g.result ? g.result.stars : null, returnPct: g.result ? g.result.mine : null, updatedAt: g.updatedAt
   })).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   return { statusCode: 200, body: { success: true, games } };
@@ -183,8 +185,10 @@ async function leaderboard(db, event, user) {
     const kept = best.get(g.ownerId);
     if (!kept || g.result.mine > kept.result.mine) best.set(g.ownerId, g);
   }
+  // Players can rename themselves, so the current display name comes from their profile
+  const names = new Map((await scanAll(db, process.env.USERS_TABLE)).map((p) => [p.userId, p.name]));
   const entries = [...best.values()].sort((a, b) => b.result.mine - a.result.mine).slice(0, LEADERBOARD_SIZE).map((g, i) => ({
-    rank: i + 1, name: g.ownerName || "Player", returnPct: g.result.mine, stars: g.result.stars, finishedAt: g.updatedAt, you: g.ownerId === user.userId
+    rank: i + 1, name: names.get(g.ownerId) || g.ownerName || "Player", returnPct: g.result.mine, stars: g.result.stars, finishedAt: g.updatedAt, you: g.ownerId === user.userId
   }));
   return { statusCode: 200, body: { success: true, scenarioId, entries } };
 }

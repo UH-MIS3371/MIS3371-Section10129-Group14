@@ -1,53 +1,51 @@
-// Page-specific behavior for result.html. The trade is loaded from the API.
-async function renderResult() {
-  const id = new URLSearchParams(location.search).get("id") || "";
-  const badge = document.getElementById("badge");
-  const title = document.getElementById("result-title");
-  const note = document.getElementById("result-note");
-  const details = document.getElementById("details");
+// Order receipt: one saved trade, Accepted or Rejected (with the reason), loaded from the API (FR-5).
 
-  badge.hidden = true;
-  title.textContent = "Loading…";
-
-  let response;
-  let result;
+async function renderReceipt() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get("id") || "";
+  const box = document.getElementById("receipt");
+  if (!id) {
+    box.replaceChildren(emptyState("No order selected", "Open an order from your activity.", el("a", { class: "btn primary", href: "activity.html" }, "View activity")));
+    return;
+  }
+  let t;
   try {
-    if (id) {
-      response = await authFetch(API_URL + "/" + encodeURIComponent(id));
-      result = await response.json();
-    }
+    t = (await api("/trades/" + encodeURIComponent(id))).trade;
   } catch (e) {
-    title.textContent = "Couldn't load this trade";
-    note.textContent = "Please check your connection and try again.";
+    box.replaceChildren(e.status === 404
+      ? emptyState("Order not found", "It may belong to another account, or the link is incomplete.", el("a", { class: "btn primary", href: "activity.html" }, "View activity"))
+      : errorState("This order could not be loaded. " + e.message, renderReceipt));
     return;
   }
 
-  if (!response || response.status === 404) {
-    title.textContent = "Trade not found";
-    note.textContent = "Check your transaction history for your saved trades.";
-    return;
-  }
-  if (!response.ok) {
-    title.textContent = "Couldn't load this trade";
-    note.textContent = "Please try again.";
-    return;
-  }
-
-  const record = result.trade;
-  badge.hidden = false;
-  badge.textContent = record.status;
-  badge.className = "badge accepted";
-  title.textContent = "Your trade was accepted";
-  document.getElementById("again").href = "trade.html?symbol=" + encodeURIComponent(record.stockSymbol);
+  const accepted = t.status === "Accepted";
+  const isNew = params.has("new");
+  document.title = (accepted ? "Order accepted" : "Order rejected") + " – MarketStreet";
+  if (isNew) toast(accepted ? orderText(t) + " accepted at " + money(cents(t.executionPrice)) + "." : "Order rejected: " + t.rejectionReason, accepted ? "" : "bad");
 
   const rows = [
-    ["Transaction ID", record.transactionId],
-    ["Order", record.tradeType + " " + record.shareQuantity + " " + record.stockSymbol + " · " + record.orderType],
-    ["Execution price", money(cents(record.executionPrice))],
-    ["Total", money(cents(record.transactionValue))],
-    ["Submitted", formatTime(record.submittedAt, true)],
+    ["Order", orderText(t)],
+    ["Order type", t.orderType || "—"],
+    ["Execution price", t.executionPrice ? money(cents(t.executionPrice)) : "—"],
+    [t.tradeType === "Sell" ? "Total credit" : "Total cost", t.transactionValue ? money(cents(t.transactionValue)) : "—"],
+    ["Reference", el("span", null, shortId(t.transactionId), el("button", { type: "button", class: "copy", onclick: () => navigator.clipboard.writeText(t.transactionId).then(() => toast("Order ID copied.")) }, "Copy ID"))],
+    ["Submitted", formatTime(t.submittedAt, true)]
   ];
-  for (const [name, value] of rows) details.append(el("dt", null, name), el("dd", null, value));
+  const steps = [["Submitted", t.submittedAt, ""], [accepted ? "Validated" : "Rejected", t.validatedAt, accepted ? "" : "bad"]];
+  if (accepted) steps.push(["Executed and saved", t.completedAt, ""]);
+
+  box.replaceChildren(
+    el("div", { class: "receipt-head" },
+      el("h1", null, accepted ? "Order accepted" : "Order rejected"), statusPill(t.status),
+      el("p", { class: "muted" }, accepted ? "Your cash and holdings have been updated." : "Nothing in your account changed.")),
+    accepted ? null : el("p", { class: "reason" }, el("strong", null, "Reason: "), t.rejectionReason || "Not given"),
+    el("dl", { class: "kv" }, rows.map(([k, v]) => el("div", null, el("dt", null, k), el("dd", null, v)))),
+    el("h2", { style: "margin: 28px 0 12px" }, "Timeline"),
+    el("ol", { class: "timeline" }, steps.map(([label, at, kind]) => el("li", { class: kind || null }, el("strong", null, label), formatTime(at, true)))),
+    el("div", { class: "button-row", style: "margin-top: 24px" },
+      t.stockSymbol && STOCKS[t.stockSymbol] ? el("a", { class: "btn primary", href: "trade.html?symbol=" + encodeURIComponent(t.stockSymbol) }, accepted ? "Trade " + t.stockSymbol + " again" : "Fix and try again") : null,
+      el("a", { class: "btn", href: "dashboard.html" }, "Go to portfolio"),
+      el("a", { class: "btn", href: "activity.html" }, "View activity")));
 }
 
-renderResult();
+renderReceipt();

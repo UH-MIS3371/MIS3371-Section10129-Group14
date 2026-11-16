@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Activity – MarketStreet</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="auth.js" defer></script>
+    <script src="data.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="layout.js" defer></script>
+    <script src="activity.js" defer></script>
+  </head>
+
+  <body data-shell="app" data-nav="activity">
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1>Activity</h1>
+          <p>Every order you've placed, Accepted or Rejected, newest first.</p>
+        </div>
+      </div>
+      <div id="resetNote"></div>
+
+      <!-- Every recorded trade, Accepted and Rejected (FR-6, D-7) -->
+      <section class="panel flush" style="margin-top: 12px">
+        <div class="filters">
+          <div class="segmented" role="group" aria-label="Status" id="statusFilter">
+            <button type="button" data-status="" aria-pressed="true">All</button>
+            <button type="button" data-status="Accepted" aria-pressed="false">Accepted</button>
+            <button type="button" data-status="Rejected" aria-pressed="false">Rejected</button>
+          </div>
+          <label for="symbolFilter" class="visually-hidden">Stock</label>
+          <select id="symbolFilter"><option value="">All stocks</option></select>
+          <span class="muted" id="count" style="margin-left: auto"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="stack-sm clickable">
+            <thead>
+              <tr><th>Order</th><th>Status</th><th class="num">Price</th><th class="num">Total</th><th>Reference</th><th class="num">Submitted</th></tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div id="state"></div>
+        <div class="pager" id="pager" hidden>
+          <span id="pageInfo"></span>
+          <div class="button-row">
+            <button type="button" class="btn sm" id="prev">Previous</button>
+            <button type="button" class="btn sm" id="next">Next</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

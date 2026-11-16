@@ -2,21 +2,27 @@
 // MarketStreet API Gateway HTTP API (Lambda proxy, payload format 2.0).
 // Runtime: Node.js 20.x or later    Handler: index.handler
 // Routes:  POST /api/trades                   validate a trade; if accepted, save it and update the account
+//          GET  /api/trades                   the signed-in user's trades, Accepted and Rejected, newest first
 //          GET  /api/trades/{transactionId}   read one saved trade
 //          GET  /api/account                  read the current cash and holdings
+//          /api/me, /api/account/reset        profile and account settings (see backend/users.js)
 //          /api/games...                      Scenario Mode games (see backend/games.js)
-//          GET  /api/admin/games              every saved game (admins only)
+//          /api/admin/...                     admin console (see backend/admin.js; games in backend/games.js)
 //          GET  /api/leaderboard?scenario=    best finished game of each player in one scenario
 // Every route needs a signed-in user: API Gateway checks the Amazon Cognito token (JWT authorizer).
-// Environment: TABLE_NAME (trades, key transactionId), ACCOUNTS_TABLE (accounts, key userId)
-//              and GAMES_TABLE (Scenario Mode games, key gameId).
+// Environment: TABLE_NAME (trades, key transactionId), ACCOUNTS_TABLE (accounts, key userId),
+//              GAMES_TABLE (Scenario Mode games, key gameId), USERS_TABLE (profiles, key userId)
+//              and AUDIT_TABLE (admin and account actions, key auditId).
 const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, GetCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, GetCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { validateOrder, checkAccount } = require("./backend/trades");
 const { getOrCreateAccount, commitTrade, publicAccount } = require("./backend/accounts");
 const { currentUser } = require("./backend/auth");
 const { handleGames } = require("./backend/games");
+const { resolveUser, handleMe } = require("./backend/users");
+const { handleAdmin } = require("./backend/admin");
+const { scanAll, audit } = require("./backend/store");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
@@ -24,9 +30,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const HEADERS = {
   "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*", // demo only; could be limited to the Amplify site
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
+  "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS"
 };
 
 function reply(statusCode, body) {
@@ -47,6 +53,36 @@ function tablesConfigured() {
   return false;
 }
 
+// A Rejected record (FR-4, BR-8): the order as sent, the reason and its category. It changes nothing else.
+// Only short, plain values from the request are kept.
+async function saveRejected(trade, user, reason, submittedAt) {
+  if (!process.env.TABLE_NAME) return rejected(reason);
+  const t = trade && typeof trade === "object" && !Array.isArray(trade) ? trade : {};
+  const text = (v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 12) : null);
+  const now = new Date().toISOString();
+  const record = {
+    transactionId: crypto.randomUUID(),
+    userId: user.userId,
+    stockSymbol: text(t.symbol) && text(t.symbol).toUpperCase(),
+    tradeType: text(t.tradeType),
+    shareQuantity: Number.isFinite(t.quantity) ? t.quantity : null,
+    orderType: text(t.orderType),
+    status: "Rejected",
+    rejectionReason: reason,
+    rejectionCategory: reason === "Price unavailable." ? "System" : "Rule",
+    submittedAt,
+    validatedAt: now,
+    updatedAt: now
+  };
+  try {
+    await db.send(new PutCommand({ TableName: process.env.TABLE_NAME, Item: record, ConditionExpression: "attribute_not_exists(transactionId)" }));
+    return { ...rejected(reason), persisted: true, transactionId: record.transactionId, trade: record };
+  } catch (e) {
+    console.log("Rejected record not saved:", e);
+    return rejected(reason);
+  }
+}
+
 // POST /api/trades: check the rules, then save an accepted trade and update the account together
 async function postTrade(event, user) {
   const submittedAt = new Date().toISOString();
@@ -55,19 +91,19 @@ async function postTrade(event, user) {
   let trade = event.body;
   if (typeof trade === "string") {
     if (event.isBase64Encoded) trade = Buffer.from(trade, "base64").toString("utf8");
-    if (!trade.trim()) return reply(400, rejected("A JSON request body is required."));
+    if (!trade.trim()) return reply(400, await saveRejected(null, user, "A JSON request body is required.", submittedAt));
     try {
       trade = JSON.parse(trade);
     } catch (e) {
-      return reply(400, rejected("Request body must be valid JSON."));
+      return reply(400, await saveRejected(null, user, "Request body must be valid JSON.", submittedAt));
     }
   } else if (trade === undefined || trade === null) {
-    return reply(400, rejected("A JSON request body is required."));
+    return reply(400, await saveRejected(null, user, "A JSON request body is required.", submittedAt));
   }
 
   // BR-1, BR-2, BR-3, BR-6, BR-9: these do not need the account
   const { quote, ...result } = validateOrder(trade);
-  if (!result.success) return reply(400, result); // rejected trades are never saved
+  if (!result.success) return reply(400, await saveRejected(trade, user, result.reason, submittedAt));
 
   if (!tablesConfigured()) return reply(500, serverError("The trade could not be saved. Please try again."));
 
@@ -81,7 +117,7 @@ async function postTrade(event, user) {
 
   // BR-4, BR-5 against the saved account (the browser's cash and shares are ignored)
   const accountProblem = checkAccount(trade, quote, account);
-  if (accountProblem) return reply(400, accountProblem);
+  if (accountProblem) return reply(400, await saveRejected(trade, user, accountProblem.reason, submittedAt));
   const validatedAt = new Date().toISOString();
 
   // The record is built from server values only, never from browser-supplied ID, price, status or time.
@@ -119,7 +155,7 @@ async function postTrade(event, user) {
   }
   if (outcome === "insufficient") {
     // The account changed after it was read (another order got there first); nothing was saved
-    return reply(400, rejected(trade.tradeType === "Buy" ? "Insufficient cash." : "Insufficient shares."));
+    return reply(400, await saveRejected(trade, user, trade.tradeType === "Buy" ? "Insufficient cash." : "Insufficient shares.", submittedAt));
   }
 
   const totalCents = quote.priceCents * trade.quantity;
@@ -180,6 +216,24 @@ async function getTrade(event, user) {
   }
 }
 
+// GET /api/trades: the signed-in user's own trades, newest first.
+// A Scan with a filter is fine at class scale; a larger site would add an index on userId + submittedAt.
+async function listTrades(user) {
+  if (!process.env.TABLE_NAME) return reply(500, { success: false, reason: "Your trades could not be loaded. Please try again." });
+  try {
+    const trades = (await scanAll(db, process.env.TABLE_NAME)).filter((t) => t.userId === user.userId)
+      .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+    return reply(200, { success: true, trades });
+  } catch (e) {
+    console.log("Trade list failed:", e);
+    return reply(500, { success: false, reason: "Your trades could not be loaded. Please try again." });
+  }
+}
+
+function isTradeListRoute(event) {
+  return event.routeKey === "GET /api/trades" || /\/api\/trades\/?$/.test(event.rawPath || "");
+}
+
 function isAccountRoute(event) {
   return event.routeKey === "GET /api/account" || /\/api\/account\/?$/.test(event.rawPath || "");
 }
@@ -188,13 +242,22 @@ async function route(event, method) {
   try {
     if (method === "OPTIONS") return { statusCode: 204, headers: HEADERS, body: "" };
     // Every route needs a signed-in user (Amazon Cognito); API Gateway has already checked the token
-    const user = currentUser(event);
-    if (!user) return reply(401, { success: false, reason: "Please sign in." });
-    // Game routes first: every other POST is a trade and every other GET a trade or account lookup
-    const game = await handleGames(db, event, method, user);
-    if (game) return reply(game.statusCode, game.body);
+    const signedIn = currentUser(event);
+    if (!signedIn) return reply(401, { success: false, reason: "Please sign in." });
+    // The profile can disable the user, end their sessions or change their role
+    const { user, error } = await resolveUser(db, signedIn);
+    if (error) return reply(error.statusCode, error.body);
+    // The role is checked on the server for every admin route; refusals are written to the audit log
+    if (/^\/api\/admin\//.test(event.rawPath || "") && !user.isAdmin) {
+      await audit(db, user, "authz.denied", { result: "failure", path: String(event.rawPath).slice(0, 100) });
+      return reply(403, { success: false, reason: "Admins only." });
+    }
+    // Profile, admin and game routes first: every other POST is a trade and every other GET a trade or account lookup
+    const handled = (await handleMe(db, event, method, user)) || (await handleAdmin(db, event, method, user)) || (await handleGames(db, event, method, user));
+    if (handled) return reply(handled.statusCode, handled.body);
     if (method === "POST") return await postTrade(event, user);
     if (method === "GET" && isAccountRoute(event)) return await getAccount(user);
+    if (method === "GET" && isTradeListRoute(event)) return await listTrades(user);
     if (method === "GET") return await getTrade(event, user);
     return reply(405, rejected("Use POST /api/trades, GET /api/trades/{transactionId} or GET /api/account."));
   } catch (e) {

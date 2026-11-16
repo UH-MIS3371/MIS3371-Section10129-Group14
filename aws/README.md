@@ -42,7 +42,27 @@ Account balances need these changes in the AWS account that hosts the backend, m
 3. **Lambda permissions:** the role (`LabRole`) must allow `dynamodb:GetItem`, `PutItem`, `UpdateItem` and `TransactWriteItems` (needed for the combined save) on both tables.
 4. **API Gateway → Routes:** add `GET /api/account` with the same Lambda integration. The frontend loads the balance from it.
 
-The account is created automatically with $10,000 and 10 AAPL, 2 MSFT, 1 IBM the first time it is used. To reset it, delete the `demo` item in `MarketStreetAccounts`.
+The account is created automatically with $10,000 and no holdings (D-10) the first time it is used. Users reset it themselves on the Account page; admins can reset any account from the admin console.
+
+## AWS setup for profiles, the admin console and the audit log
+
+These run entirely on DynamoDB, so no extra IAM permissions for Cognito are needed. Once, before uploading this version:
+
+1. **DynamoDB → Create tables** (on-demand): `MarketStreetUsers` (partition key `userId`, String) and `MarketStreetAudit` (partition key `auditId`, String).
+2. **Lambda → Environment variables:** add `USERS_TABLE = MarketStreetUsers` and `AUDIT_TABLE = MarketStreetAudit`.
+3. **Lambda permissions:** `LabRole` must allow `dynamodb:GetItem`, `PutItem` and `Scan` on both new tables, and `Scan` on the trades, accounts and games tables (the admin console and `GET /api/trades` read them).
+4. **API Gateway → Routes** (same Lambda integration and JWT authorizer): `GET /api/trades`, `GET /api/me`, `PATCH /api/me`, `POST /api/me/sign-out-everywhere`, `POST /api/account/reset`, `GET /api/admin/overview`, `GET /api/admin/users`, `GET /api/admin/users/{userId}`, `POST /api/admin/users/{userId}/actions`, `GET /api/admin/trades`, `GET /api/admin/audit`.
+5. **API Gateway → CORS:** allowed methods `GET, POST, PATCH`, headers `content-type, authorization`.
+
+How it works ([backend/users.js](lambda/backend/users.js), [backend/admin.js](lambda/backend/admin.js)):
+
+- Every request loads the user's profile. A **disabled** user gets 403 on everything; **sign out everywhere** refuses any token issued before it (401), even if the token hasn't expired.
+- A role set by an admin in the console wins over the Cognito `admins` group. The first admin still comes from the Cognito group.
+- Every `/api/admin/*` route checks the role on the server. A refusal is written to the audit log as `authz.denied`.
+- Admins can't disable or demote themselves, and the last admin can't be removed.
+- Rejected trades are now saved with `rejectionReason` and `rejectionCategory` (FR-4, BR-8). Nothing else changes.
+- Every account and admin action writes an audit entry: who, what, target, before → after and an optional reason. Entries are only ever added.
+- `GET /api/trades` and the admin views use `Scan`, which is fine at class scale. A larger site would add a GSI on `userId` + `submittedAt`.
 
 ## AWS setup for Scenario Mode games
 
@@ -94,7 +114,7 @@ To make someone an admin: they sign up first, then **Cognito → User pools → 
 
 **Leaderboard:** `GET /api/leaderboard?scenario=<id>` returns the best finished game of each player in one scenario, ranked by return. It shows display names only, never emails.
 
-On your computer, `local-server.js` reads the token from the `Authorization` header but does **not** check its signature (only API Gateway can). Sign in on `http://localhost:3000` with a real Cognito account.
+On your computer, `local-server.js` reads the token from the `Authorization` header but does **not** check its signature (only API Gateway can). Sign in on `http://localhost:3000` with a real Cognito account. All five tables are kept in memory, so they start empty each time the server starts.
 
 **Testing on the `cognito-login` branch:** the branch preview (`https://cognito-login.d2kb3xv6llewil.amplifyapp.com`) uses a separate test API (`MarketStreet-API-test`, `qedu5ta2jc`) and Lambda (`MarketStreet-ProcessTrade-test`), so the live site is not affected until the branch is merged. When merging, add the JWT authorizer and the `GET /api/leaderboard` route to the live API, deploy the Lambda, and remove the test API line from `frontend/app.js`.
 

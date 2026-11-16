@@ -26,8 +26,8 @@ function installFakeDynamoDB() {
     }
   };
 
-  // Each table has one key attribute: trades use transactionId, accounts userId, games gameId
-  const KEY_NAMES = ["transactionId", "userId", "gameId"];
+  // Each table has one key attribute: trades use transactionId, audit auditId, games gameId, accounts and users userId
+  const KEY_NAMES = ["transactionId", "auditId", "gameId", "userId"];
   const keyOf = (item) => item[KEY_NAMES.find((name) => item[name] !== undefined)];
 
   function conditionFailed(message) {
@@ -72,7 +72,7 @@ function installFakeDynamoDB() {
       if (condition && condition.startsWith("attribute_not_exists")) {
         if (table.has(key)) throw conditionFailed();
       } else if (condition === "#v = :read") {
-        // The version check from backend/games.js: the saved game must still have the version that was read
+        // A version check (games and profiles use version, accounts use updatedAt): the saved item must be unchanged
         const saved = table.get(key);
         if (!saved || saved[input.ExpressionAttributeNames["#v"]] !== input.ExpressionAttributeValues[":read"]) throw conditionFailed();
       } else if (condition) {
@@ -122,11 +122,13 @@ if (require.main !== module) return;
 const PORT = Number(process.env.PORT) || 3000;
 const FRONTEND = path.join(__dirname, "../../frontend");
 
-// Pretend DynamoDB (trades, accounts and games tables), kept in memory
+// Pretend DynamoDB (trades, accounts, games, users and audit tables), kept in memory
 installFakeDynamoDB();
 process.env.TABLE_NAME = process.env.TABLE_NAME || "MarketStreetTrades-local";
 process.env.ACCOUNTS_TABLE = process.env.ACCOUNTS_TABLE || "MarketStreetAccounts-local";
 process.env.GAMES_TABLE = process.env.GAMES_TABLE || "MarketStreetGames-local";
+process.env.USERS_TABLE = process.env.USERS_TABLE || "MarketStreetUsers-local";
+process.env.AUDIT_TABLE = process.env.AUDIT_TABLE || "MarketStreetAudit-local";
 process.env.AWS_REGION = process.env.AWS_REGION || "us-east-1";
 
 const { handler } = require("./index");
@@ -193,8 +195,8 @@ const server = http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url, "http://localhost");
     if (pathname === "/api/trades") return await callLambda(req, res, "/api/trades");
     if (pathname === "/api/account") return await callLambda(req, res, "/api/account");
-    if (pathname === "/api/admin/games") return await callLambda(req, res, "/api/admin/games");
     if (pathname === "/api/leaderboard") return await callLambda(req, res, "/api/leaderboard");
+    if (/^\/api\/(me|account\/reset|admin)(\/|$)/.test(pathname)) return await callLambda(req, res, pathname);
     const game = pathname.match(/^\/api\/games(?:\/([^/]+)(\/[a-z]+)?)?\/?$/);
     if (game) {
       const routeKey = "/api/games" + (game[1] ? "/{gameId}" + (game[2] || "") : "");
@@ -215,5 +217,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`MarketStreet running locally at http://localhost:${PORT}`);
-  console.log("Trades, the account and Scenario Mode games are kept in memory and reset when you stop the server (Ctrl+C).");
+  console.log("Trades, accounts, profiles, the audit log and Scenario Mode games are kept in memory and reset when you stop the server (Ctrl+C).");
 });

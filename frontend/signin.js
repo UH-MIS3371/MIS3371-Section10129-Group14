@@ -7,18 +7,7 @@ const $ = (id) => document.getElementById(id);
 const VIEWS = ["signIn", "signUp", "confirm", "forgot", "reset"];
 const back = new URLSearchParams(location.search).get("back");
 let pending = { email: "", password: "" }; // kept between "create account" and "confirm", only in memory
-
-// One call to Cognito. Errors come back as { __type: "...#NotAuthorizedException", message }.
-async function cognito(action, body) {
-  const response = await fetch(COGNITO.url, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-amz-json-1.1", "X-Amz-Target": "AWSCognitoIdentityProviderService." + action },
-    body: JSON.stringify({ ClientId: COGNITO.clientId, ...body })
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw Object.assign(new Error(data.message), { code: String(data.__type || "").split("#").pop() });
-  return data;
-}
+// cognito() is in auth.js
 
 // Cognito's messages, reworded where they would confuse a player
 function explain(error) {
@@ -65,8 +54,13 @@ async function busy(form, work) {
 async function signInWith(email, password) {
   const result = await cognito("InitiateAuth", { AuthFlow: "USER_PASSWORD_AUTH", AuthParameters: { USERNAME: email, PASSWORD: password } });
   if (!result.AuthenticationResult) throw Object.assign(new Error(), { code: "NotAuthorizedException" });
-  saveToken(result.AuthenticationResult.IdToken);
-  location.replace(back && back.startsWith("/") && !back.startsWith("//") ? back : "trade.html");
+  saveToken(result.AuthenticationResult.IdToken, result.AuthenticationResult.AccessToken);
+  location.replace(safeBack());
+}
+
+// Only a path on this site, never another address
+function safeBack() {
+  return back && back.startsWith("/") && !back.startsWith("//") && !/signin\.html/.test(back) ? back : "dashboard.html";
 }
 
 $("signIn").addEventListener("submit", (e) => {
@@ -144,5 +138,8 @@ $("reset").addEventListener("submit", (e) => {
 
 document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => show(button.dataset.view)));
 
+if (new URLSearchParams(location.search).has("signedOut")) say("You're signed out.");
+if (new URLSearchParams(location.search).get("view") === "signUp") show("signUp");
+
 // Already signed in: go straight back
-if (signedInUser()) location.replace(back || "trade.html");
+if (signedInUser()) location.replace(safeBack());

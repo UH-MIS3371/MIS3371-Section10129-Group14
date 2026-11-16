@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Help – MarketStreet</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="auth.js" defer></script>
+    <script src="data.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="layout.js" defer></script>
+  </head>
+
+  <body data-shell="app" data-nav="">
+    <main class="page narrow stack">
+      <div class="page-head" style="margin-bottom: 8px">
+        <div>
+          <h1>Help</h1>
+          <p>How MarketStreet works, and the rules every order follows.</p>
+        </div>
+      </div>
+
+      <section class="panel stack">
+        <h2>Getting started</h2>
+        <p>Every new account opens with <strong>$10,000 in cash and no holdings</strong>. Find a stock in <a href="markets.html">Markets</a> or with the search box, enter how many shares you want, review the order and submit it. The result appears as soon as the order is saved, and every order, Accepted or Rejected, stays in <a href="activity.html">Activity</a>.</p>
+        <p>Challenges are a separate game: you get $100,000 inside a historical crisis, and the result doesn't touch your paper account.</p>
+      </section>
+
+      <section class="panel stack" id="rules">
+        <h2>Trading rules</h2>
+        <ul class="stack" style="padding-left: 20px; margin: 0">
+          <li>Orders are Buy or Sell, at the market price only. Limit orders aren't available.</li>
+          <li>You can trade the stocks listed in Markets. Prices are simulated and quoted fresh for each order.</li>
+          <li>The number of shares must be a whole number of 1 or more.</li>
+          <li>A Buy needs enough cash for the whole order; exactly enough is fine. A Sell needs enough shares, because short selling isn't allowed.</li>
+          <li>An Accepted order updates your cash and holdings in a single step. A Rejected order changes nothing and shows the reason.</li>
+        </ul>
+      </section>
+
+      <section class="panel stack">
+        <h2>Common questions</h2>
+        <h3>Why was my order rejected?</h3>
+        <p>Open it in Activity to see the reason. The usual ones are not enough cash for a Buy or not enough shares for a Sell.</p>
+        <h3>Can I start over?</h3>
+        <p>Yes. In <a href="account.html">Account settings</a>, choose Reset account. Your cash goes back to $10,000, your holdings are cleared, and your order history is kept.</p>
+        <h3>How do I change my name on the leaderboard?</h3>
+        <p>Change your display name in Account settings. The leaderboard shows the new name right away.</p>
+        <h3>I forgot my password.</h3>
+        <p>On the sign-in page, choose "Forgot your password?" and we'll email you a code.</p>
+      </section>
+
+      <section class="panel stack" id="terms">
+        <h2>Terms</h2>
+        <p>MarketStreet is an educational simulation built for a university course. Nothing on it is an offer to buy or sell securities, and nothing is investment advice. Prices and results are simulated and don't reflect real trading. Accounts that misuse the service can be disabled by an administrator.</p>
+      </section>
+
+      <section class="panel stack" id="privacy">
+        <h2>Privacy</h2>
+        <p>We store your email, your display name, and your orders and challenge results. Your password goes straight to Amazon Cognito and MarketStreet never sees it. Leaderboards show only your display name. Administrators can see account details so they can support users and keep the platform fair, and every administrator action is recorded in an audit log.</p>
+      </section>
+    </main>
+  </body>
+</html>

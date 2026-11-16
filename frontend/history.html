@@ -2,67 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Transaction History – MarketStreet</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
-    <link rel="stylesheet" href="styles.css" />
-    <script src="auth.js" defer></script>
-    <script src="data.js" defer></script>
-    <script src="app.js" defer></script>
-    <script src="history.js" defer></script>
+    <meta http-equiv="refresh" content="0; url=activity.html" />
+    <title>Activity – MarketStreet</title>
   </head>
-
-  <body data-page="history">
-    <header class="site-header">
-      <div class="inner">
-        <a class="logo" href="trade.html">MarketStreet</a>
-        <form class="search" action="trade.html" role="search">
-          <label for="search" class="visually-hidden">Search stocks</label>
-          <input id="search" name="symbol" type="search" list="stocks" placeholder="Search stocks" autocomplete="off" />
-          <datalist id="stocks">
-            <option value="AAPL">Apple Inc.</option>
-            <option value="MSFT">Microsoft Corp.</option>
-            <option value="TSLA">Tesla Inc.</option>
-            <option value="AMZN">Amazon.com Inc.</option>
-            <option value="GOOGL">Alphabet Inc.</option>
-            <option value="NVDA">NVIDIA Corp.</option>
-            <option value="IBM">IBM Corp.</option>
-          </datalist>
-        </form>
-        <nav class="site-nav" aria-label="Main">
-          <a href="trade.html">Trade</a><a href="history.html" aria-current="page">History</a><a href="scenarios.html">Scenarios</a><a href="leaderboard.html">Leaderboard</a>
-          <span class="account">U10427</span>
-        </nav>
-      </div>
-    </header>
-
-    <main class="wide">
-      <h1>Transaction history</h1>
-
-      <!-- Every recorded trade, Accepted and Rejected (FR-6), newest first -->
-      <div class="card">
-        <p class="note" id="empty" hidden>No trades yet. <a href="trade.html">Place your first trade</a>.</p>
-        <table id="history-table">
-          <thead>
-            <tr>
-              <th scope="col">Transaction</th>
-              <th scope="col">Time</th>
-              <th scope="col">Order</th>
-              <th scope="col" class="num">Price</th>
-              <th scope="col" class="num">Total</th>
-              <th scope="col">Status</th>
-            </tr>
-          </thead>
-          <tbody id="history"></tbody>
-        </table>
-      </div>
-
-    </main>
-
-    <footer class="site-footer">
-      <p>MarketStreet · Simulated trading, no real money</p>
-    </footer>
+  <body>
+    <p>Transaction history has moved to <a href="activity.html">Activity</a>.</p>
   </body>
 </html>

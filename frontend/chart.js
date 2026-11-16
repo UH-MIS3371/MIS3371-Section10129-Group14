@@ -39,9 +39,11 @@
     const plotW = width - pad.left - pad.right;
     const plotH = height - pad.top - pad.bottom;
 
-    const step = niceStep(Math.max(...values) - Math.min(...values));
-    const min = Math.floor(Math.min(...values) / step) * step;
-    const max = Math.ceil(Math.max(...values) / step) * step;
+    const range = Math.max(...values) - Math.min(...values);
+    const step = niceStep(range || Math.max(...values) * 0.02 || 1);
+    let min = Math.floor(Math.min(...values) / step) * step;
+    let max = Math.ceil(Math.max(...values) / step) * step;
+    if (max === min) { min -= step; max += step; } // a flat line sits in the middle
     const x = (i) => pad.left + (i / (points.length - 1)) * plotW;
     const y = (v) => pad.top + (1 - (v - min) / (max - min)) * plotH;
 
@@ -108,6 +110,7 @@
     document.querySelectorAll(".chart").forEach(drawChart);
   }
 
+  window.drawCharts = drawAll; // pages call this after filling in data-points
   drawAll();
   window.addEventListener("resize", drawAll);
 })();
