@@ -54,12 +54,22 @@ async function getMe(db, user) {
   const trades = await queryAll(db, process.env.TABLE_NAME, process.env.TRADES_USER_INDEX || "userId-submittedAt-index", "userId", user.userId);
   const games = await queryAll(db, process.env.GAMES_TABLE, process.env.GAMES_OWNER_INDEX || "ownerId-updatedAt-index", "ownerId", user.userId);
   const p = user.profile || {};
+  const day = new Date().toISOString().slice(0, 10);
+  const valueCents = account.cashCents + holdingsValue(account.holdings);
+  const map = { ...p.valueHistory };
+  if (map[day] !== valueCents) {
+    map[day] = valueCents;
+    const keep = Object.keys(map).sort().slice(-365);
+    for (const k of Object.keys(map)) if (!keep.includes(k)) delete map[k];
+    if (user.profile) await updateProfile(db, user, { valueHistory: map });
+  }
+  const history = Object.keys(map).sort().map((date) => ({ date, valueCents: map[date] }));
   return {
     statusCode: 200,
     body: {
       success: true,
       user: { userId: user.userId, email: user.email, name: user.name, isAdmin: user.isAdmin, createdAt: p.createdAt || account.createdAt },
-      account: { ...publicAccount(account), holdingsValueCents: holdingsValue(account.holdings), startCashCents: START_CASH_CENTS, resetAt: account.resetAt || null },
+      account: { ...publicAccount(account), holdingsValueCents: holdingsValue(account.holdings), startCashCents: START_CASH_CENTS, resetAt: account.resetAt || null, history },
       stats: {
         trades: trades.filter((t) => t.status === "Accepted").length,
         rejected: trades.filter((t) => t.status === "Rejected").length,

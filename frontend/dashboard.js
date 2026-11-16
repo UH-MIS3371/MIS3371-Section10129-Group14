@@ -20,12 +20,15 @@ function renderValue(account, positions) {
 
   // Value of today's holdings on each of the last month's closes, plus cash
   const dates = STOCKS.AAPL.month.map((p) => p[0]);
-  const points = dates.map((d, i) => [d, (account.cashCents + positions.reduce((s, p) => s + cents(STOCKS[p.symbol].month[i][1]) * p.shares, 0)) / 100]);
+  let points = dates.map((d, i) => [d, (account.cashCents + positions.reduce((s, p) => s + cents(STOCKS[p.symbol].month[i][1]) * p.shares, 0)) / 100]);
+  const history = account.history || [];
+  const real = history.length >= 2;
+  if (real) points = history.map((h) => [new Date(h.date + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }), h.valueCents / 100]);
   const chart = document.getElementById("valueChart");
   chart.dataset.points = JSON.stringify(points);
   chart.setAttribute("aria-label", "Portfolio value over the last month, ending at " + money(value));
   drawCharts();
-  if (!positions.length) document.getElementById("chartNote").textContent = "You only hold cash right now, so your value is flat. Buy a stock to see it move.";
+  document.getElementById("chartNote").textContent = real ? "Your account value at the end of each day you visited." : "Your history starts today. Until then, this shows what you hold priced over the last month of simulated closes.";
   return value;
 }
 
