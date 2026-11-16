@@ -224,6 +224,14 @@ document.addEventListener("keydown", (e) => {
   search.focus();
 });
 
+// After the page settles, fetch what the other pages need so they open with data, not placeholders
+function warmCache() {
+  (window.requestIdleCallback || setTimeout)(() => {
+    loadQuotes();
+    if (!peek("/trades", 60000)) api("/trades").catch(() => {});
+  });
+}
+
 (function buildShell() {
   // A public page that uses the app shell (Help) shows the public header to visitors who aren't signed in
   const shell = document.body.dataset.shell === "app" && !signedInUser() ? "public" : document.body.dataset.shell;
@@ -231,6 +239,7 @@ document.addEventListener("keydown", (e) => {
   if (shell === "app") {
     appHeader(nav);
     footer();
+    warmCache();
   } else if (shell === "admin") {
     document.body.classList.add("admin");
     adminShell(nav);

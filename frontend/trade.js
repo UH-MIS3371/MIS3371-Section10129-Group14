@@ -217,10 +217,13 @@ if (!stock) {
   $("notFound").hidden = false;
   $("missingSymbol").textContent = symbol || "that stock";
 } else {
+  // Draw at once from the last known price; the fresh quote redraws it (the server always prices the order)
+  wireTicket();
+  renderQuote();
+  updateTicket();
+  loadAccount();
   loadQuotes().then(() => {
     renderQuote();
     updateTicket();
-    loadAccount();
   });
-  wireTicket();
 }
