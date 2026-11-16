@@ -370,7 +370,55 @@ function gamesTable(games, withPlayer = true) {
     { label: "Return", num: true, value: (g) => g.returnPct ?? -Infinity, render: (g) => (g.returnPct === null ? "—" : percent(g.returnPct, 1)) },
     { label: "Last move", value: (g) => g.updatedAt, render: (g) => timeEl(g.updatedAt) }
   ].filter(Boolean);
-  return dataTable({ rows: games, columns, sortIndex: columns.length - 1, empty: "No challenges played yet." });
+  return dataTable({ rows: games, columns, onRow: (g) => { if (g.gameId) location.href = "admin-game.html?id=" + encodeURIComponent(g.gameId); }, sortIndex: columns.length - 1, empty: "No challenges played yet." });
+}
+
+async function renderGame() {
+  const id = new URLSearchParams(location.search).get("id") || "";
+  setCrumbs([["Games", "admin-games.html"], ["Game"]]);
+  loading();
+  let g;
+  try {
+    g = (await api("/games/" + encodeURIComponent(id))).game;
+  } catch (e) {
+    if (e.status === 404) return content.replaceChildren(el("div", { class: "panel" }, emptyState("Game not found", null, el("a", { class: "btn primary", href: "admin-games.html" }, "Back to games"))));
+    return failed(e, renderGame);
+  }
+  const name = scenarioName(g.scenarioId);
+  const s = typeof SCENARIOS !== "undefined" && SCENARIOS.find((x) => x.id === g.scenarioId);
+  const r = g.result;
+  const over = g.status === "over";
+  setCrumbs([["Games", "admin-games.html"], [name]]);
+  document.title = name + " – MarketStreet Admin";
+  const last = g.closes.length ? g.closes[g.closes.length - 1].value : null;
+  const ret = (v) => (r ? percent(v, 1) : "—");
+  const points = g.closes.map((c) => [c.date, c.value / 100]);
+  content.replaceChildren(
+    head(name, el("span", null, g.ownerId ? userLink(g.ownerId, g.ownerName || g.ownerEmail) : g.ownerEmail || "—", " · started " + formatTime(g.createdAt) + " · ", gameProgress(g))),
+    el("dl", { class: "kpis" },
+      kpi(over ? "Final value" : "Current value", last === null ? "—" : money(last)),
+      kpi("You", ret(r && r.mine)),
+      kpi("Bot", ret(r && r.bot)),
+      kpi("Market", ret(r && r.market)),
+      kpi("Trades", String(g.log.filter((l) => l.who === "You").length)),
+      kpi("Stars", r ? r.stars + " / 3" : "—")),
+    el("section", { class: "panel" }, el("h2", null, "Value over the game"), el("div", { class: "chart", "data-height": "220", "data-points": JSON.stringify(points) })),
+    el("section", { class: "panel flush" }, el("h2", null, "Trade log"), dataTable({
+      rows: g.log,
+      empty: "No trades yet.",
+      columns: [
+        { label: "Day", render: (l) => (s && s.dates[l.day]) || "Day " + l.day },
+        { label: "Who", render: (l) => l.who },
+        { label: "Side", render: (l) => l.side },
+        { label: "Shares", num: true, render: (l) => l.qty },
+        { label: "Symbol", render: (l) => l.symbol },
+        { label: "Price", num: true, render: (l) => money(l.price) }
+      ]
+    })));
+  const badge = pill(over ? "Finished" : "In progress", over ? "ok" : "info");
+  content.querySelector(".page-head h1").after(badge);
+  window.drawCharts();
+  markUpdated();
 }
 
 async function renderGames() {
@@ -458,5 +506,5 @@ async function renderAudit() {
 
 // ======================= START =======================
 
-const RENDER = { overview: renderOverview, users: renderUsers, user: renderUser, trades: renderTrades, games: renderGames, audit: renderAudit };
+const RENDER = { overview: renderOverview, users: renderUsers, user: renderUser, trades: renderTrades, games: renderGames, game: renderGame, audit: renderAudit };
 requireAdmin().then((ok) => { if (ok) RENDER[PAGE](); });
