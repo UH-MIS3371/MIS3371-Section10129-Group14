@@ -739,3 +739,14 @@ td .btn { font-family: var(--sans); }
 @media (max-width: 660px) {
   #scenarioList:empty { min-height: 1518px; }
 }
+
+/* Home page: first-step card, leaderboard snapshot, next-step hint */
+.start-card { min-height: 260px; display: flex; flex-direction: column; justify-content: center; }
+.start-card p { margin: 6px 0 18px; color: var(--muted); }
+.start-card .suggest { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rank-list { min-height: 108px; margin: 0; padding: 0; list-style: none; }
+.rank-list li { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 36px; border-bottom: 1px solid var(--rule); }
+.rank-list li:last-child { border-bottom: 0; }
+.rank-list .you { box-shadow: inset 2px 0 0 var(--accent); padding-left: 8px; }
+.checklist .note { margin-top: 2px; }
+@media (max-width: 760px) { .start-card .suggest { grid-template-columns: 1fr; } }

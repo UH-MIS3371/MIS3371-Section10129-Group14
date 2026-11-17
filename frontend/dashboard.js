@@ -18,33 +18,93 @@ function renderValue(account, positions) {
     el("span", { class: "muted" }, "  ·  "),
     el("span", null, signedMoney(allTime) + " (" + percent(allTime / START_CASH_CENTS) + ") since you started with " + money(START_CASH_CENTS)));
 
-  // Value of today's holdings on each of the last month's closes, plus cash
-  const dates = STOCKS.AAPL.month.map((p) => p[0]);
-  let points = dates.map((d, i) => [d, (account.cashCents + positions.reduce((s, p) => s + cents(STOCKS[p.symbol].month[i][1]) * p.shares, 0)) / 100]);
+  renderHero(account, positions, value);
+  return value;
+}
+
+const dayPct = (s) => (priceCents(s) - cents(STOCKS[s].prev)) / cents(STOCKS[s].prev);
+
+function tile(s) {
+  return el("a", { href: "trade.html?symbol=" + s }, el("strong", null, s), el("span", null, STOCKS[s].name),
+    el("span", { class: "mono" }, money(priceCents(s)) + "  ", el("span", { class: trendClass(dayPct(s)) }, percent(dayPct(s)))));
+}
+
+// A chart once there is something to chart; before that, a clear first step in the same space
+function renderHero(account, positions, value) {
+  const slot = document.getElementById("heroSlot");
+  const note = document.getElementById("chartNote");
   const history = account.history || [];
   const real = history.length >= 2;
+  if (!positions.length && !real) {
+    slot.replaceChildren(el("div", { class: "panel start-card" },
+      el("h2", null, "You have " + money(account.cashCents) + " to invest"),
+      el("p", null, "Pick a stock to see its chart. You review every order before it is placed."),
+      el("div", { class: "suggest" }, SUGGESTED.slice(0, 3).map(tile))));
+    note.textContent = "";
+    return;
+  }
+  const dates = STOCKS.AAPL.month.map((p) => p[0]);
+  let points = dates.map((d, i) => [d, (account.cashCents + positions.reduce((s, p) => s + cents(STOCKS[p.symbol].month[i][1]) * p.shares, 0)) / 100]);
   if (real) points = history.map((h) => [new Date(h.date + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }), h.valueCents / 100]);
-  const chart = document.getElementById("valueChart");
-  chart.dataset.points = JSON.stringify(points);
-  chart.setAttribute("aria-label", "Portfolio value over the last month, ending at " + money(value));
-  drawCharts();
-  document.getElementById("chartNote").textContent = real ? "Your account value at the end of each day you visited." : "Your history starts today. Until then, this shows what you hold priced over the last month of simulated closes.";
-  return value;
+  let chart = document.getElementById("valueChart");
+  if (!chart) {
+    chart = el("div", { class: "chart", id: "valueChart", "data-height": "260", style: "min-height: 260px", role: "img" });
+    slot.replaceChildren(chart);
+  }
+  const json = JSON.stringify(points);
+  if (chart.dataset.points !== json) {
+    chart.dataset.points = json;
+    chart.setAttribute("aria-label", "Portfolio value over the last month, ending at " + money(value));
+    drawCharts();
+  }
+  note.textContent = real ? "Your account value at the end of each day you visited." : "Your history starts today. Until then, this shows what you hold priced over the last month of simulated closes.";
+}
+
+function renderMovers() {
+  const rows = Object.keys(STOCKS).map((s) => [s, dayPct(s)]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 6);
+  document.getElementById("movers").replaceChildren(...rows.map(([s, pct]) => el("tr", { onclick: () => (location.href = "trade.html?symbol=" + s) },
+    el("td", { "data-label": "Stock" }, el("a", { href: "trade.html?symbol=" + s }, stockCell(s, STOCKS[s].name))),
+    el("td", { class: "hide-sm" }, sparkline(STOCKS[s].month.map((p) => p[1]))),
+    el("td", { class: "num", "data-label": "Price" }, money(priceCents(s))),
+    el("td", { class: "num " + trendClass(pct), "data-label": "Today" }, percent(pct)),
+    el("td", { class: "num" }, el("a", { class: "btn sm", href: "trade.html?symbol=" + s }, "Trade")))));
+}
+
+// One challenge a day, so the home page is never the same two days running
+function renderFeatured() {
+  const s = SCENARIOS[new Date().getDate() % SCENARIOS.length];
+  const when = (i) => new Date(s.dates[i] + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+  document.getElementById("featured").replaceChildren(
+    el("h3", null, s.name),
+    el("p", { class: "muted", style: "margin-top: 4px" }, when(s.start) + " to " + when(s.dates.length - 1) + " · " + plural(s.dates.length - s.start, "trading day")),
+    el("p", { style: "margin: 10px 0 16px" }, s.blurb),
+    el("a", { class: "btn block", href: "scenarios.html" }, "Play this challenge"));
+}
+
+function drawRank(data) {
+  const top = data.entries.slice(0, 3);
+  const mine = data.entries.find((e) => e.you);
+  const rows = mine && !top.includes(mine) ? [...top, mine] : top;
+  document.getElementById("rankList").replaceChildren(...(rows.length
+    ? rows.map((r) => el("li", { class: r.you ? "you" : null }, el("span", { class: "mono muted" }, "#" + r.rank), el("span", null, r.name + (r.you ? " (you)" : "")), el("span", { class: "mono" }, percent(r.returnPct))))
+    : [el("li", { class: "muted" }, "No players are ranked yet.")]));
+}
+
+async function loadRank() {
+  const path = "/leaderboard?board=portfolio";
+  const cached = peek(path);
+  if (cached) drawRank(cached);
+  try {
+    drawRank(await api(path));
+  } catch (e) {
+    if (!cached) document.getElementById("rankList").replaceChildren(el("li", { class: "muted" }, "The leaderboard could not be loaded."));
+  }
 }
 
 function renderPositions(positions) {
   const body = document.getElementById("positions");
-  const empty = document.getElementById("positionsEmpty");
-  document.getElementById("positionsTable").hidden = !positions.length;
-  if (!positions.length) {
-    empty.replaceChildren(el("div", { class: "empty" },
-      el("strong", null, "You have $10,000 ready to invest"),
-      el("p", null, "Pick a stock to see its chart and place your first order."),
-      el("div", { class: "suggest", style: "margin-top: 16px; text-align: left" }, SUGGESTED.map((s) =>
-        el("a", { href: "trade.html?symbol=" + s }, el("strong", null, s), el("span", null, STOCKS[s].name), el("span", { class: "mono" }, money(priceCents(s))))))));
-    return;
-  }
-  empty.replaceChildren();
+  document.getElementById("positionsPanel").hidden = !positions.length;
+  if (!positions.length) return;
   body.replaceChildren(...positions.map((p) => el("tr", { onclick: () => (location.href = "trade.html?symbol=" + p.symbol) },
     el("td", { "data-label": "Stock" }, el("a", { href: "trade.html?symbol=" + p.symbol }, stockCell(p.symbol, p.name))),
     el("td", { class: "num", "data-label": "Shares" }, p.shares.toLocaleString("en-US")),
@@ -82,22 +142,22 @@ function renderChecklist(me) {
     ["Check the leaderboard", me.stats.finishedGames > 0, "leaderboard.html"]
   ];
   const done = steps.filter((s) => s[1]).length;
+  document.getElementById("checklistPanel").hidden = done === steps.length;
   if (done === steps.length) return;
-  document.getElementById("checklistPanel").hidden = false;
   document.getElementById("checklistCount").textContent = done + " of " + steps.length;
   document.getElementById("checklistBar").style.width = (done / steps.length) * 100 + "%";
-  document.getElementById("checklist").replaceChildren(...steps.map(([label, isDone, href]) => el("li", { class: isDone ? "done" : null },
+  const hints = { "Place your first trade": "Buy one share of any stock.", "Start a challenge": "Replay a real market crisis with $100,000.", "Finish a challenge": "Reach the last trading day to earn stars.", "Check the leaderboard": "See how you rank against other players." };
+  const next = steps.findIndex((s) => !s[1]);
+  document.getElementById("checklist").replaceChildren(...steps.map(([label, isDone, href], i) => el("li", { class: isDone ? "done" : null },
     el("span", { class: "tick", "aria-hidden": "true" }),
-    isDone || !href ? el("span", null, label) : el("a", { href }, label),
+    isDone || !href ? el("span", null, label) : el("div", null, el("a", { href }, label), i === next ? el("p", { class: "note" }, hints[label]) : null),
     el("span", { class: "visually-hidden" }, isDone ? " (done)" : " (to do)"))));
 }
 
 function renderRecent(trades) {
   const body = document.getElementById("recent");
-  if (!trades.length) {
-    body.replaceChildren(el("tr", null, el("td", null, el("p", { class: "muted" }, "Your orders will show up here."))));
-    return;
-  }
+  document.getElementById("recentPanel").hidden = !trades.length;
+  if (!trades.length) return;
   body.replaceChildren(...trades.slice(0, 5).map((t) => el("tr", { onclick: () => (location.href = "result.html?id=" + t.transactionId) },
     el("td", { "data-label": "Order" }, el("a", { href: "result.html?id=" + t.transactionId }, orderText(t))),
     el("td", { "data-label": "Status" }, statusPill(t.status)),
@@ -112,6 +172,7 @@ function drawDashboard(me, trades) {
   renderBalances(me.account, positions, value);
   renderChecklist(me);
   renderRecent(trades);
+  renderMovers();
 }
 
 // Draws the last known portfolio at once, then refreshes it from the server
@@ -132,4 +193,6 @@ async function renderDashboard() {
   }
 }
 
+renderFeatured();
+loadRank();
 renderDashboard();

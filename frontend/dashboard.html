@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="auth.js" defer blocking="render"></script>
     <script src="data.js" defer blocking="render"></script>
+    <script src="data/scenarios.js" defer blocking="render"></script>
     <script src="app.js" defer blocking="render"></script>
     <script src="layout.js" defer blocking="render"></script>
     <script src="chart.js" defer blocking="render"></script>
@@ -29,11 +30,11 @@
               <span class="figure" id="totalValue"><span class="skeleton tall" style="width: 260px"></span></span>
               <span class="change" id="totalChange"></span>
             </div>
-            <div class="chart" id="valueChart" data-height="260" style="min-height: 260px" role="img" aria-label="Portfolio value over the last month"><span class="skeleton" style="height: 260px"></span></div>
-            <p class="note" id="chartNote">Your history starts today. Until then, this shows what you hold priced over the last month of simulated closes.</p>
+            <div id="heroSlot" style="min-height: 260px"><span class="skeleton" style="height: 260px"></span></div>
+            <p class="note" id="chartNote" style="min-height: 20px"></p>
           </section>
 
-          <section class="panel flush" aria-labelledby="positionsTitle" style="margin-top: 28px">
+          <section class="panel flush" id="positionsPanel" aria-labelledby="positionsTitle" style="margin-top: 28px">
             <div class="panel-head">
               <h2 id="positionsTitle">Positions</h2>
               <a class="btn sm" href="markets.html">Browse markets</a>
@@ -49,7 +50,20 @@
             <div id="positionsEmpty"></div>
           </section>
 
-          <section class="panel flush" aria-labelledby="recentTitle">
+          <section class="panel flush" aria-labelledby="moversTitle">
+            <div class="panel-head">
+              <h2 id="moversTitle">Biggest moves today</h2>
+              <a class="btn sm" href="markets.html">All markets</a>
+            </div>
+            <div class="table-wrap">
+              <table class="stack-sm clickable">
+                <thead><tr><th>Stock</th><th class="hide-sm">Last month</th><th class="num">Price</th><th class="num">Today</th><th><span class="visually-hidden">Trade</span></th></tr></thead>
+                <tbody id="movers"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel flush" id="recentPanel" aria-labelledby="recentTitle">
             <div class="panel-head">
               <h2 id="recentTitle">Recent activity</h2>
               <a class="btn sm" href="activity.html">View all</a>
@@ -77,13 +91,28 @@
             </div>
           </section>
 
-          <section class="panel" id="checklistPanel" aria-labelledby="checklistTitle" hidden>
+          <section class="panel" id="checklistPanel" aria-labelledby="checklistTitle">
             <div class="panel-head">
               <h2 id="checklistTitle">Get started</h2>
               <span class="muted" id="checklistCount"></span>
             </div>
             <div class="progress-line"><span id="checklistBar"></span></div>
-            <ul class="checklist" id="checklist"></ul>
+            <ul class="checklist" id="checklist">
+              <li><span class="skeleton" style="width: 60%"></span></li><li><span class="skeleton" style="width: 50%"></span></li><li><span class="skeleton" style="width: 55%"></span></li><li><span class="skeleton" style="width: 45%"></span></li><li><span class="skeleton" style="width: 58%"></span></li>
+            </ul>
+          </section>
+
+          <section class="panel" aria-labelledby="featuredTitle">
+            <div class="panel-head"><h2 id="featuredTitle">Try a challenge</h2></div>
+            <div id="featured"></div>
+          </section>
+
+          <section class="panel" aria-labelledby="boardTitle">
+            <div class="panel-head">
+              <h2 id="boardTitle">Leaderboard</h2>
+              <a class="btn sm" href="leaderboard.html">View all</a>
+            </div>
+            <ol class="rank-list" id="rankList"><li><span class="skeleton" style="width: 70%"></span></li><li><span class="skeleton" style="width: 55%"></span></li><li><span class="skeleton" style="width: 62%"></span></li></ol>
           </section>
 
           <section class="panel" aria-labelledby="allocTitle" id="allocPanel" hidden>
