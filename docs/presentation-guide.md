@@ -31,3 +31,9 @@ The grade is individual and rewards understanding over speaking time. Every memb
 ## Be honest about scope
 
 The admin console, audit log, portfolio history and leaderboards go beyond the core transaction. Know which files implement them (`backend/admin.js`, `backend/users.js`, `backend/games.js`), or keep them out of the demo and answer only if asked.
+
+## Presenting with the Demo page and the QR code
+
+- **Demo** (header link) walks one real order through all seven layers with a Next step button: browser JSON, API Gateway and the token, Lambda, the business rules (each marked Passed, Failed or Not checked), the DynamoDB record, the GET retrieval, and the result. The presets cover a valid order, quantity 0, not enough cash, and selling shares you don't own, so it also shows the server enforcing the rules on its own. A valid order really changes your paper account.
+- The rule step needs the latest Lambda deployed (it returns `trace` when the request asks for it). Without it the step says so instead of failing.
+- **QR code** (header button) shows a large code for the audience. Paste the final site address into its Link box before you present; it is remembered in that browser.

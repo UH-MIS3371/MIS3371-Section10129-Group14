@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transaction demo – MarketStreet</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="auth.js" defer blocking="render"></script>
+    <script src="data.js" defer blocking="render"></script>
+    <script src="app.js" defer blocking="render"></script>
+    <script src="layout.js" defer blocking="render"></script>
+    <script src="demo.js" defer blocking="render"></script>
+  </head>
+
+  <body data-shell="app" data-nav="demo">
+    <main class="page narrow">
+      <div class="page-head">
+        <div>
+          <h1>Transaction demo</h1>
+          <p>Follow one order through every layer: browser, API Gateway, Lambda, business rules, DynamoDB and back. Each step makes the real call and shows what happened.</p>
+        </div>
+      </div>
+
+      <section class="panel" aria-labelledby="setupTitle">
+        <h2 id="setupTitle" style="margin-bottom: 12px">Choose an order</h2>
+        <div class="segmented" role="group" aria-label="Example orders" id="presets"></div>
+        <div class="demo-fields">
+          <div class="field"><label for="demoSymbol">Stock</label><select id="demoSymbol"></select></div>
+          <div class="field"><label for="demoSide">Buy or sell</label><select id="demoSide"><option>Buy</option><option>Sell</option></select></div>
+          <div class="field"><label for="demoQty">Shares</label><input id="demoQty" type="number" step="any" inputmode="decimal" /></div>
+        </div>
+        <p class="note">The demo places a real order on your paper account, so a valid order changes your cash and holdings. Rejected examples change nothing.</p>
+        <div class="button-row" style="margin-top: 14px">
+          <button type="button" class="btn primary" id="demoNext">Start demo</button>
+          <button type="button" class="btn" id="demoAll">Show all steps</button>
+          <button type="button" class="btn" id="demoReset" hidden>Reset</button>
+          <span class="muted" id="demoProgress" style="align-self: center"></span>
+        </div>
+      </section>
+
+      <ol class="demo-steps" id="steps" aria-live="polite"></ol>
+    </main>
+  </body>
+</html>

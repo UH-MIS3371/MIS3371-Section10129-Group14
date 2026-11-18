@@ -24,6 +24,7 @@ const { currentUser } = require("./backend/auth");
 const { handleGames } = require("./backend/games");
 const { resolveUser, handleMe } = require("./backend/users");
 const { handleAdmin } = require("./backend/admin");
+const { withTrace } = require("./backend/trace");
 const { queryAll, audit } = require("./backend/store");
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -300,7 +301,10 @@ async function route(event, method) {
     if (method === "GET" && /\/api\/quotes\/?$/.test(event.rawPath || "")) {
       return reply(200, { success: true, quotes: Object.fromEntries(Object.keys(PRICE_CENTS).map((s) => [s, getQuote(s)])) });
     }
-    if (method === "POST") return await postTrade(event, user);
+    if (method === "POST") {
+      const startedAt = Date.now();
+      return withTrace(event, await postTrade(event, user), startedAt);
+    }
     if (method === "GET" && isAccountRoute(event)) return await getAccount(user);
     if (method === "GET" && isTradeListRoute(event)) return await listTrades(user);
     if (method === "GET") return await getTrade(event, user);

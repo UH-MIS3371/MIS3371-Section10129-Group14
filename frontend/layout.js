@@ -9,7 +9,8 @@ const APP_NAV = [
   ["markets", "Markets", "markets.html"],
   ["activity", "Activity", "activity.html"],
   ["challenges", "Challenges", "scenarios.html"],
-  ["leaderboard", "Leaderboard", "leaderboard.html", "Leaders"]
+  ["leaderboard", "Leaderboard", "leaderboard.html", "Leaders"],
+  ["demo", "Demo", "demo.html"]
 ];
 
 const ICONS = {
@@ -90,7 +91,7 @@ function appHeader(current) {
   const nav = el("nav", { class: "site-nav", "aria-label": "Main" },
     APP_NAV.map(([key, label, href, short]) => el("a", { href, "aria-current": key === current ? "page" : null, title: short ? label : null },
       short ? [el("span", { class: "nav-long" }, label), el("span", { class: "nav-short" }, short)] : label)));
-  const tools = el("div", { class: "header-tools" }, searchForm(), el("span", { class: "paper-badge", title: "Simulated money and prices" }, "Paper trading"));
+  const tools = el("div", { class: "header-tools" }, searchForm(), el("button", { type: "button", class: "btn sm qr-btn", "aria-haspopup": "dialog", onclick: openQr }, "QR code"), el("span", { class: "paper-badge", title: "Simulated money and prices" }, "Paper trading"));
   inner.prepend(logo, nav);
   // Scenario Mode keeps its clock in the header; the tools go after it
   inner.append(tools);
@@ -204,6 +205,77 @@ function confirmAction({ title, message, confirmLabel, danger, typeToConfirm, re
     document.body.append(dialog);
     dialog.showModal();
   });
+}
+
+// ======================= QR CODE =======================
+
+// The address people scan: this site when it is online, otherwise the link below (editable in the dialog, remembered here)
+const LIVE_URL = "https://main.dpq307ec2nc5x.amplifyapp.com";
+
+function qrTarget() {
+  try {
+    const saved = localStorage.getItem("marketstreet-qr-url");
+    if (saved) return saved;
+  } catch (e) {
+    // storage blocked: use the default
+  }
+  return /^(localhost|127\.|192\.168\.)/.test(location.hostname) ? LIVE_URL : location.origin;
+}
+
+let qrLibrary;
+function loadQrLibrary() {
+  if (window.qrcode) return Promise.resolve();
+  qrLibrary = qrLibrary || new Promise((resolve, reject) => {
+    const s = el("script", { src: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" });
+    s.onload = resolve;
+    s.onerror = () => { qrLibrary = null; reject(new Error("QR library failed to load")); };
+    document.head.append(s);
+  });
+  return qrLibrary;
+}
+
+// A large QR code for the audience: scan it to open the site on a phone and follow along
+async function openQr() {
+  const box = el("div", { class: "qr-box", role: "img", "aria-label": "QR code for the MarketStreet link" }, el("span", { class: "skeleton", style: "height: 232px" }));
+  const input = el("input", { type: "text", id: "qrUrl", value: qrTarget(), spellcheck: "false", autocomplete: "off" });
+  const draw = () => {
+    const url = input.value.trim();
+    try {
+      const qr = window.qrcode(0, "M");
+      qr.addData(url);
+      qr.make();
+      box.innerHTML = qr.createSvgTag(6, 0);
+    } catch (e) {
+      box.textContent = url ? "That link is too long for a QR code." : "Enter a link.";
+    }
+  };
+  const dialog = el("dialog", { class: "modal qr-dialog" },
+    el("form", { method: "dialog" },
+      el("h2", null, "Follow along on your phone"),
+      el("p", null, "Scan this code with your camera to open MarketStreet."),
+      box,
+      el("div", { class: "field" }, el("label", { for: "qrUrl" }, "Link"), input,
+        el("p", { class: "help" }, "Paste the final site address here before presenting. It is remembered in this browser.")),
+      el("div", { class: "button-row" },
+        el("button", { type: "button", class: "btn", onclick: () => navigator.clipboard.writeText(input.value.trim()).then(() => toast("Link copied.")) }, "Copy link"),
+        el("button", { type: "submit", class: "btn primary" }, "Close"))));
+  dialog.addEventListener("close", () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+  try {
+    await loadQrLibrary();
+    draw();
+    input.addEventListener("input", () => {
+      try {
+        localStorage.setItem("marketstreet-qr-url", input.value.trim());
+      } catch (e) {
+        // storage blocked: the code still updates
+      }
+      draw();
+    });
+  } catch (e) {
+    box.replaceChildren(el("p", { class: "note", style: "padding: 8px" }, "The QR code could not be made. Check the internet connection and try again."));
+  }
 }
 
 // ======================= BUILD THE SHELL =======================

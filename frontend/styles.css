@@ -735,9 +735,9 @@ td .btn { font-family: var(--sans); }
 #position { min-height: 106px; }
 :where(body:not(.game-page)) .quote-head { min-height: 62px; }
 /* Scenario cards are drawn by script; their space is held until then */
-#scenarioList:empty { min-height: 917px; }
+#scenarioList:empty { min-height: 1100px; }
 @media (max-width: 660px) {
-  #scenarioList:empty { min-height: 1518px; }
+  #scenarioList:empty { min-height: 3300px; }
 }
 
 /* Home page: first-step card, leaderboard snapshot, next-step hint */
@@ -750,3 +750,32 @@ td .btn { font-family: var(--sans); }
 .rank-list .you { box-shadow: inset 2px 0 0 var(--accent); padding-left: 8px; }
 .checklist .note { margin-top: 2px; }
 @media (max-width: 760px) { .start-card .suggest { grid-template-columns: 1fr; } }
+
+/* Transaction demo */
+.demo-fields { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-top: 16px; }
+.demo-steps { margin: 20px 0 0; padding: 0; list-style: none; display: grid; gap: 16px; }
+.demo-step { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.demo-step > p { margin: 12px 0; }
+.demo-step-head { display: flex; align-items: center; gap: 12px; }
+.demo-step-head h2 { font-size: 17px; }
+.demo-step-head p { font-size: 13px; }
+.demo-num { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border: 1px solid var(--control); border-radius: 50%; font: 500 13px var(--mono); }
+.code { margin: 0; padding: 12px; border-radius: var(--radius-chip); background: var(--ground); font: 12px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto; max-height: 320px; }
+.where { margin-top: 12px; color: var(--muted); font: 12px var(--mono); overflow-wrap: anywhere; }
+.demo-facts { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 12px; color: var(--muted); }
+.demo-facts strong { color: var(--text); font-weight: 500; }
+.demo-rules td { height: 38px; }
+.demo-rules td:last-child { text-align: right; }
+.demo-result { padding: 14px 16px; border-radius: var(--radius); }
+.demo-result.ok { background: var(--buy-bg); }
+.demo-result.bad { background: var(--sell-bg); }
+@media (max-width: 760px) { .demo-fields { grid-template-columns: 1fr; } .demo-step { padding: 16px; } }
+
+/* QR code dialog */
+.qr-btn { white-space: nowrap; }
+.qr-dialog { width: min(420px, calc(100vw - 32px)); text-align: center; }
+.qr-dialog .field { text-align: left; }
+.qr-box { width: 260px; max-width: 100%; margin: 16px auto 0; padding: 14px; background: #fff; border-radius: var(--radius); color: #000; }
+.qr-box svg { display: block; width: 100%; height: auto; }
+.clock:not([hidden]) ~ .header-tools .qr-btn { display: none; }
+@media (max-width: 760px) { .qr-btn { display: none; } }
