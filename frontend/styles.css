@@ -779,3 +779,26 @@ td .btn { font-family: var(--sans); }
 .qr-box svg { display: block; width: 100%; height: auto; }
 .clock:not([hidden]) ~ .header-tools .qr-btn { display: none; }
 @media (max-width: 760px) { .qr-btn { display: none; } }
+
+/* Transaction demo, presenter layout: one step at a time, controls fixed at the bottom */
+.demo-page { padding-bottom: 110px; }
+.pipeline { position: sticky; top: 53px; z-index: 10; display: flex; gap: 4px; padding: 6px 0 0; margin-bottom: 12px; background: var(--ground); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.pipeline button { flex: 1 1 0; min-width: 88px; padding: 10px 6px; margin-bottom: -1px; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--faint); font: inherit; font-size: 13px; white-space: nowrap; cursor: default; }
+.pipeline button.done { color: var(--muted); cursor: pointer; }
+.pipeline button.done:hover { color: var(--text); }
+.pipeline button[aria-current="step"] { color: var(--text); border-bottom-color: var(--accent); }
+.pipeline .n { margin-right: 6px; font-family: var(--mono); }
+.order-line { margin: 0 0 12px; color: var(--muted); font: 13px var(--mono); }
+.demo-steps { margin-top: 0; }
+.demo-step .say { margin: 14px 0 6px; font-size: 18px; line-height: 1.45; }
+.demo-step .cue { margin: 0 0 14px; color: var(--muted); }
+.demo-step .cue b { color: var(--accent); font-weight: 600; }
+.demo-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px 24px; background: var(--ground); border-top: 1px solid var(--border); }
+.demo-bar .btn { height: 44px; padding: 0 22px; font-size: 15px; }
+.demo-bar .btn.primary { min-width: 190px; }
+.demo-progress { min-width: 96px; }
+@media (max-width: 900px) { .demo-bar { bottom: 56px; padding: 10px 16px; } }
+@media (max-width: 760px) { .demo-bar .btn { padding: 0 16px; } .demo-bar .btn.primary { min-width: 0; flex: 1; } .demo-progress { display: none; } }
+.pipeline { overflow-y: hidden; scrollbar-width: none; }
+.pipeline::-webkit-scrollbar { display: none; }
+.pipeline button { margin-bottom: 0; }

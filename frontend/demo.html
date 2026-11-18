@@ -17,15 +17,15 @@
   </head>
 
   <body data-shell="app" data-nav="demo">
-    <main class="page narrow">
-      <div class="page-head">
+    <main class="page narrow demo-page">
+      <div class="page-head" id="demoHead">
         <div>
           <h1>Transaction demo</h1>
           <p>Follow one order through every layer: browser, API Gateway, Lambda, business rules, DynamoDB and back. Each step makes the real call and shows what happened.</p>
         </div>
       </div>
 
-      <section class="panel" aria-labelledby="setupTitle">
+      <section class="panel" id="setup" aria-labelledby="setupTitle">
         <h2 id="setupTitle" style="margin-bottom: 12px">Choose an order</h2>
         <div class="segmented" role="group" aria-label="Example orders" id="presets"></div>
         <div class="demo-fields">
@@ -33,16 +33,19 @@
           <div class="field"><label for="demoSide">Buy or sell</label><select id="demoSide"><option>Buy</option><option>Sell</option></select></div>
           <div class="field"><label for="demoQty">Shares</label><input id="demoQty" type="number" step="any" inputmode="decimal" /></div>
         </div>
-        <p class="note">The demo places a real order on your paper account, so a valid order changes your cash and holdings. Rejected examples change nothing.</p>
-        <div class="button-row" style="margin-top: 14px">
-          <button type="button" class="btn primary" id="demoNext">Start demo</button>
-          <button type="button" class="btn" id="demoAll">Show all steps</button>
-          <button type="button" class="btn" id="demoReset" hidden>Reset</button>
-          <span class="muted" id="demoProgress" style="align-self: center"></span>
-        </div>
+        <p class="note">The demo places a real order on your paper account, so a valid order changes your cash and holdings. Rejected examples change nothing. Press Start demo below, then Next step (or the right arrow key) for each layer.</p>
       </section>
 
+      <nav class="pipeline" id="pipeline" aria-label="Demo steps" hidden></nav>
+      <p class="order-line" id="orderLine" hidden></p>
       <ol class="demo-steps" id="steps" aria-live="polite"></ol>
     </main>
+
+    <div class="demo-bar" role="toolbar" aria-label="Demo controls">
+      <button type="button" class="btn" id="demoBack" disabled>Back</button>
+      <button type="button" class="btn primary" id="demoNext">Start demo</button>
+      <button type="button" class="btn" id="demoReset" hidden>Reset</button>
+      <span class="muted demo-progress" id="demoProgress"></span>
+    </div>
   </body>
 </html>
