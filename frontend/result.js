@@ -28,7 +28,7 @@ async function renderReceipt() {
     ["Order type", t.orderType || "—"],
     ["Execution price", t.executionPrice ? money(cents(t.executionPrice)) : "—"],
     [t.tradeType === "Sell" ? "Total credit" : "Total cost", t.transactionValue ? money(cents(t.transactionValue)) : "—"],
-    ["Reference", el("span", null, shortId(t.transactionId), el("button", { type: "button", class: "copy", onclick: () => navigator.clipboard.writeText(t.transactionId).then(() => toast("Order ID copied.")) }, "Copy ID"))],
+    ["Confirmation number", el("span", null, t.transactionId, el("button", { type: "button", class: "copy", onclick: () => navigator.clipboard.writeText(t.transactionId).then(() => toast("Confirmation number copied.")) }, "Copy"))],
     ["Submitted", formatTime(t.submittedAt, true)]
   ];
   const steps = [["Submitted", t.submittedAt, ""], [accepted ? "Validated" : "Rejected", t.validatedAt, accepted ? "" : "bad"]];
@@ -45,6 +45,7 @@ async function renderReceipt() {
     el("div", { class: "button-row", style: "margin-top: 24px" },
       t.stockSymbol && STOCKS[t.stockSymbol] ? el("a", { class: "btn primary", href: "trade.html?symbol=" + encodeURIComponent(t.stockSymbol) }, accepted ? "Trade " + t.stockSymbol + " again" : "Fix and try again") : null,
       el("a", { class: "btn", href: "dashboard.html" }, "Go to portfolio"),
+      el("a", { class: "btn", href: "activity.html#status" }, "Check status"),
       el("a", { class: "btn", href: "activity.html" }, "View activity")));
 }
 

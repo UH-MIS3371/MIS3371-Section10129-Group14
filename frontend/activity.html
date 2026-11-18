@@ -27,7 +27,18 @@
       <div id="resetNote"></div>
 
       <!-- Every recorded trade, Accepted and Rejected (FR-6, D-7) -->
-      <section class="panel flush" style="margin-top: 12px">
+      <section class="panel" id="status" aria-labelledby="statusTitle" style="margin-top: 12px">
+        <h2 id="statusTitle">Check transaction status</h2>
+        <p class="muted" style="margin: 4px 0 14px">Enter the confirmation number from your receipt to retrieve the saved transaction.</p>
+        <form class="inline-form" id="statusForm" novalidate style="max-width: 640px">
+          <label for="confirmationNumber" class="visually-hidden">Confirmation number</label>
+          <input id="confirmationNumber" type="text" autocomplete="off" spellcheck="false" placeholder="Paste your confirmation number" />
+          <button type="submit" class="btn primary" id="statusButton">View status</button>
+        </form>
+        <div id="statusResult" aria-live="polite"></div>
+      </section>
+
+      <section class="panel flush" style="margin-top: 20px">
         <div class="filters">
           <div class="segmented" role="group" aria-label="Status" id="statusFilter">
             <button type="button" data-status="" aria-pressed="true">All</button>

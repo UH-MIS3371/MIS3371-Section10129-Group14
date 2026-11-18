@@ -84,4 +84,52 @@ document.getElementById("symbolFilter").addEventListener("change", () => { page 
 document.getElementById("prev").addEventListener("click", () => { page--; renderRows(); });
 document.getElementById("next").addEventListener("click", () => { page++; renderRows(); });
 
+// Check transaction status: the record is fetched from DynamoDB through GET /api/trades/{id}
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function showStatus(...nodes) {
+  document.getElementById("statusResult").replaceChildren(el("div", { style: "margin-top: 16px" }, nodes));
+}
+
+async function lookupTransaction(raw) {
+  const code = raw.trim();
+  if (!code) return showStatus(el("p", { class: "error" }, "Enter a confirmation number."));
+  let id = code;
+  // The short reference shown in lists (MS-1A2B3C4D) is matched against your own saved orders first
+  if (/^MS-[0-9a-f]{8}$/i.test(code)) {
+    const hit = allTrades.find((t) => shortId(t.transactionId) === code.toUpperCase());
+    id = hit ? hit.transactionId : "";
+  }
+  const missing = () => showStatus(el("p", { class: "error" }, "No transaction was found with that confirmation number. Check the number on your receipt and try again."));
+  if (!UUID_RE.test(id)) return missing();
+  const button = document.getElementById("statusButton");
+  button.disabled = true;
+  showStatus(el("span", { class: "skeleton", style: "width: 60%" }));
+  try {
+    const { trade: t } = await api("/trades/" + encodeURIComponent(id));
+    const accepted = t.status === "Accepted";
+    showStatus(
+      el("div", { class: "receipt-head", style: "margin-bottom: 12px" }, el("h3", null, orderText(t)), statusPill(t.status)),
+      el("dl", { class: "kv" },
+        [["Confirmation number", t.transactionId],
+         ["Outcome", accepted ? "Saved, and your cash and holdings were updated." : "Not processed. " + (t.rejectionReason || "")],
+         ["Execution price", t.executionPrice ? money(cents(t.executionPrice)) : "—"],
+         ["Total", t.transactionValue ? money(cents(t.transactionValue)) : "—"],
+         ["Submitted", formatTime(t.submittedAt, true)],
+         ["Completed", formatTime(t.completedAt || t.validatedAt, true)]].map(([k, v]) => el("div", null, el("dt", null, k), el("dd", null, v)))),
+      el("a", { class: "btn sm", href: "result.html?id=" + encodeURIComponent(t.transactionId), style: "margin-top: 14px" }, "Open receipt"));
+  } catch (e) {
+    if (e.status === 404) missing();
+    else showStatus(errorState("The transaction could not be retrieved. " + e.message, () => lookupTransaction(code)));
+  }
+  button.disabled = false;
+}
+
+document.getElementById("statusForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  lookupTransaction(document.getElementById("confirmationNumber").value);
+});
+if (location.hash === "#status") document.getElementById("confirmationNumber").focus();
+
 loadActivity();
+
