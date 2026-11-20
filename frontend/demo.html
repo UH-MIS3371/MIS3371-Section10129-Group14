@@ -21,22 +21,25 @@
       <div class="page-head" id="demoHead">
         <div>
           <h1>Transaction demo</h1>
-          <p>Follow one order through every layer: browser, API Gateway, Lambda, business rules, DynamoDB and back. Each step makes the real call and shows what happened.</p>
+          <p>Watch one order travel through every layer: browser, API Gateway, Lambda, business rules, DynamoDB and back. Every step makes the real call.</p>
         </div>
       </div>
 
       <section class="panel" id="setup" aria-labelledby="setupTitle">
-        <h2 id="setupTitle" style="margin-bottom: 12px">Choose an order</h2>
-        <div class="segmented" role="group" aria-label="Example orders" id="presets"></div>
+        <div class="setup-row">
+          <h2 id="setupTitle">Pick an order</h2>
+          <button type="button" class="btn" id="surprise">Let the audience pick</button>
+        </div>
+        <div class="preset-cards" role="group" aria-label="Example orders" id="presets"></div>
         <div class="demo-fields">
           <div class="field"><label for="demoSymbol">Stock</label><select id="demoSymbol"></select></div>
           <div class="field"><label for="demoSide">Buy or sell</label><select id="demoSide"><option>Buy</option><option>Sell</option></select></div>
           <div class="field"><label for="demoQty">Shares</label><input id="demoQty" type="number" step="any" inputmode="decimal" /></div>
         </div>
-        <p class="note">The demo places a real order on your paper account, so a valid order changes your cash and holdings. Rejected examples change nothing. Press Start demo below, then Next step (or the right arrow key) for each layer.</p>
+        <p class="note">A valid order really changes your paper account's cash and holdings. The other examples are rejected and change nothing. Press Start demo, then Next step or the right arrow key.</p>
       </section>
 
-      <nav class="pipeline" id="pipeline" aria-label="Demo steps" hidden></nav>
+      <nav class="journey" id="pipeline" aria-label="Demo steps" hidden></nav>
       <p class="order-line" id="orderLine" hidden></p>
       <ol class="demo-steps" id="steps" aria-live="polite"></ol>
     </main>
@@ -46,6 +49,7 @@
       <button type="button" class="btn primary" id="demoNext">Start demo</button>
       <button type="button" class="btn" id="demoReset" hidden>Reset</button>
       <span class="muted demo-progress" id="demoProgress"></span>
+      <span class="demo-score" id="demoScore" hidden></span>
     </div>
   </body>
 </html>
