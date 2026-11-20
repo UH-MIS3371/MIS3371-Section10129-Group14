@@ -292,7 +292,9 @@ async function startGame(s) {
     enterGame(res.data.game);
     return true;
   } catch (e) {
-    $("pickerMessage").textContent = "The game could not be started. Please try again.";
+    $("pickerMessage").textContent = isGuest()
+      ? "Scenario Mode saves games to an account, so it isn't available in guest mode. Create a free account to play it."
+      : "The game could not be started. Please try again.";
     $("picker").hidden = false;
     return false;
   }

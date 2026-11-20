@@ -141,5 +141,11 @@ document.querySelectorAll("[data-view]").forEach((button) => button.addEventList
 if (new URLSearchParams(location.search).has("signedOut")) say("You're signed out.");
 if (new URLSearchParams(location.search).get("view") === "signUp") show("signUp");
 
-// Already signed in: go straight back
-if (signedInUser()) location.replace(safeBack());
+// Guest mode: a pretend account that lives only in this tab (see auth.js and guest.js)
+$("guestStart").addEventListener("click", () => {
+  if (!startGuest()) return say("Guest mode needs browser storage, which looks blocked. Allow site data for this page and try again.", true);
+  location.replace(safeBack());
+});
+
+// Already signed in: go straight back (a guest can still sign in or create an account from here)
+if (signedInUser() && !isGuest()) location.replace(safeBack());

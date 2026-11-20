@@ -26,9 +26,38 @@ const presetButtons = [];
 
 const presetLabel = (p) => p.side + " " + p.qty + " " + p.symbol;
 
-function code(value) {
-  return el("pre", { class: "code" }, typeof value === "string" ? value : JSON.stringify(value, null, 2));
+// Only the values that say good or bad get a colour (green or red); the rest of the code stays plain, so the eye
+// goes straight to what matters: the outcome, whether it was saved, and the reason for a refusal
+const MARKS = /("(?:status|persisted|success|reason|rejectionReason)":\s*)("(?:[^"\\]|\\.)*"|true|false)/g;
+
+function verdictOf(key, value) {
+  const v = value.replace(/^"|"$/g, "");
+  if (key === "reason" || key === "rejectionReason") return "bad";
+  if (key === "persisted" || key === "success") return v === "true" ? "ok" : "bad";
+  if (/^(ACCEPTED|Accepted|FOUND)$/.test(v)) return "ok";
+  return /^(REJECTED|Rejected|ERROR)$/.test(v) ? "bad" : null;
 }
+
+function marked(text) {
+  const parts = [];
+  let last = 0;
+  for (const m of text.matchAll(MARKS)) {
+    const kind = verdictOf(m[1].match(/"(\w+)"/)[1], m[2]);
+    parts.push(text.slice(last, m.index + m[1].length), kind ? el("span", { class: "hl " + kind }, m[2]) : m[2]);
+    last = m.index + m[0].length;
+  }
+  parts.push(text.slice(last));
+  return parts;
+}
+
+function code(value) {
+  return el("pre", { class: "code" }, marked(typeof value === "string" ? value : JSON.stringify(value, null, 2)));
+}
+
+// An HTTP status: 2xx is green, anything else is red
+const httpStatus = (n) => el("strong", { class: "mono hl " + (n >= 200 && n < 300 ? "ok" : "bad") }, String(n));
+
+const legend = () => el("p", { class: "hl-key" }, el("span", { class: "hl ok" }, "Green"), " is good   ", el("span", { class: "hl bad" }, "Red"), " is a problem");
 
 function where(text) {
   return el("p", { class: "where" }, text);
@@ -52,6 +81,7 @@ async function timed(method, path, body) {
 
 function claims() {
   const user = signedInUser();
+  if (user.isGuest) return { user, claims: { email: "guest (no sign-in token)", "cognito:groups": [], note: "Guest mode runs in your browser. Nothing is sent to AWS." } };
   const c = JSON.parse(atob(user.token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
   return { user, claims: { email: c.email, sub: c.sub, "cognito:groups": c["cognito:groups"] || [], "expires in": Math.max(0, Math.round((c.exp * 1000 - Date.now()) / 60000)) + " min" } };
 }
@@ -159,9 +189,10 @@ const STEPS = [
     return card(2, "Amazon API Gateway · HTTP API", "The request reaches the front door",
       "API Gateway checks your sign-in token before any of our code runs. No valid token means a 401 and Lambda never starts.",
       "the Authorization header, and who the token says you are.",
-      code("POST " + ctx.url + "\nContent-Type: application/json\nAuthorization: Bearer " + user.token.slice(0, 18) + "…"),
+      code("POST " + ctx.url + "\nContent-Type: application/json\nAuthorization: " + (user.token ? "Bearer " + user.token.slice(0, 18) + "…" : "(none: guest mode)")),
       el("div", { style: "height: 10px" }), code(c),
-      el("p", { class: "note", style: "margin-top: 8px" }, API_BASE.startsWith("/") ? "This copy runs on your computer, so a local server stands in for API Gateway." : "This is the live API."),
+      el("p", { class: "note", style: "margin-top: 8px" }, user.isGuest ? "Guest mode: this request is answered inside your browser, so nothing is sent to AWS."
+        : API_BASE.startsWith("/") ? "This copy runs on your computer, so a local server stands in for API Gateway." : "This is the live API."),
       where("API Gateway → authorizer CognitoLogin · aws/README.md"));
   },
   async function lambda() {
@@ -175,9 +206,11 @@ const STEPS = [
       "the HTTP status and how long it took.",
       verdict(),
       el("div", { class: "demo-facts" },
-        el("span", null, "HTTP status ", el("strong", { class: "mono" }, String(ctx.res.status))),
+        el("span", null, "HTTP status ", httpStatus(ctx.res.status)),
         el("span", null, "Round trip ", el("strong", { class: "mono" }, ctx.res.ms + " ms")),
         el("span", null, "Inside Lambda ", el("strong", { class: "mono" }, serverMs === undefined ? "n/a" : serverMs + " ms"))),
+      legend(),
+      signedInUser().isGuest ? el("p", { class: "note", style: "margin-bottom: 10px" }, "Guest mode: the same rules run in your browser instead of Lambda, so nothing is saved on the server.") : null,
       code(pick(ctx.res.data, ["status", "message", "reason", "persisted", "transactionId", "account"])),
       where("aws/lambda/index.js → handler() → route() → postTrade()"));
   },
@@ -214,12 +247,12 @@ const STEPS = [
     const button = el("button", { type: "button", class: "btn sm", style: "margin-top: 12px", onclick: async () => {
       button.disabled = true;
       const r = await timed("GET", "/trades/00000000-0000-4000-8000-000000000000");
-      miss.replaceChildren(el("p", { class: "note", style: "margin-top: 10px" }, "HTTP " + r.status + " · " + r.ms + " ms"), code(r.data));
+      miss.replaceChildren(el("p", { class: "note", style: "margin-top: 10px" }, "HTTP ", httpStatus(r.status), " · " + r.ms + " ms"), code(r.data));
     } }, "Try a number that doesn't exist");
     return card(6, "Amazon DynamoDB · GET", "The saved record can be read back",
       "A second request reads the record from DynamoDB using only the confirmation number. This is what the Check transaction status panel does.",
       "the same transactionId and status as the last step.",
-      el("div", { class: "demo-facts" }, el("span", null, "HTTP status ", el("strong", { class: "mono" }, String(got.status))), el("span", null, "Round trip ", el("strong", { class: "mono" }, got.ms + " ms"))),
+      el("div", { class: "demo-facts" }, el("span", null, "HTTP status ", httpStatus(got.status)), el("span", null, "Round trip ", el("strong", { class: "mono" }, got.ms + " ms"))),
       code(pick(got.data.trade || {}, ["transactionId", "status", "tradeType", "stockSymbol", "shareQuantity", "executionPrice", "transactionValue", "submittedAt", "completedAt", "rejectionReason"])),
       button, miss,
       where("aws/lambda/index.js → getTrade() · frontend/activity.js → lookupTransaction()"));

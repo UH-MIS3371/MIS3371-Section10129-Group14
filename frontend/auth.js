@@ -4,6 +4,10 @@
 // (cleared when the tab closes). The ID token goes with every API request, and API Gateway checks it; the
 // access token is only sent to Cognito itself (change password, sign out everywhere).
 // Every page except the public ones (home, sign-in and help) sends users who are not signed in to sign in.
+//
+// Guest mode: "Continue as guest" on the sign-in page sets a flag in sessionStorage. While it is set,
+// authFetch() never calls the network; guest.js answers every request inside the browser and keeps the guest's
+// account in sessionStorage, so nothing is sent to or saved on MarketStreet's servers, and it is gone when the tab closes.
 
 const COGNITO = {
   url: "https://cognito-idp.us-east-1.amazonaws.com/",
@@ -12,6 +16,8 @@ const COGNITO = {
 const TOKEN_KEY = "marketstreet-id-token";
 const ACCESS_KEY = "marketstreet-access-token";
 const REFRESH_KEY = "marketstreet-refresh-token";
+const GUEST_KEY = "marketstreet-guest";
+const GUEST_STATE_KEY = "marketstreet-guest-state";
 const PUBLIC_PAGE = /\/(index\.html|signin\.html|help\.html)?$/.test(location.pathname);
 
 function storageGet(key) {
@@ -37,14 +43,31 @@ function storageClear() {
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(ACCESS_KEY);
     sessionStorage.removeItem(REFRESH_KEY);
+    sessionStorage.removeItem(GUEST_KEY);
+    sessionStorage.removeItem(GUEST_STATE_KEY);
   } catch (e) {
     // storage blocked: nothing to clear
   }
 }
 
+const isGuest = () => storageGet(GUEST_KEY) === "1";
+
+// Starts a guest session: a fresh pretend account that lives only in this tab
+function startGuest() {
+  storageClear();
+  try {
+    sessionStorage.setItem(GUEST_KEY, "1");
+  } catch (e) {
+    return false; // storage blocked: a guest session cannot be kept
+  }
+  return true;
+}
+
 // The signed-in user from the saved token, or null if there is none or it expires within a minute.
 // Reading the token here is only for display; the server trusts the token only after API Gateway checks it.
+// A guest has no token; isGuest tells the pages to say so.
 function signedInUser() {
+  if (isGuest()) return { token: null, email: "guest", name: "Guest", isAdmin: false, isGuest: true };
   const token = storageGet(TOKEN_KEY);
   if (!token) return null;
   try {
@@ -63,6 +86,8 @@ function accessToken() {
 function saveToken(idToken, access, refresh) {
   clearCache();
   try {
+    sessionStorage.removeItem(GUEST_KEY); // signing in for real ends any guest session
+    sessionStorage.removeItem(GUEST_STATE_KEY);
     sessionStorage.setItem(TOKEN_KEY, idToken);
     if (access) sessionStorage.setItem(ACCESS_KEY, access);
     if (refresh) sessionStorage.setItem(REFRESH_KEY, refresh);
@@ -110,8 +135,26 @@ function signOut() {
   location.href = "signin.html?signedOut=1";
 }
 
+// guest.js is loaded only when a guest first needs it
+let guestScript = null;
+function loadGuestScript() {
+  guestScript ||= new Promise((resolve, reject) => {
+    const tag = document.createElement("script");
+    tag.src = "guest.js";
+    tag.onload = resolve;
+    tag.onerror = () => reject(new Error("Guest mode could not load."));
+    document.head.append(tag);
+  });
+  return guestScript;
+}
+
 // fetch() with the sign-in token. If there is no token, or the server answers 401, sign in again.
+// A guest's request is answered inside the browser by guest.js and never reaches the network.
 async function authFetch(url, options = {}) {
+  if (isGuest()) {
+    await loadGuestScript();
+    return guestRespond(url, options);
+  }
   if (!signedInUser() && storageGet(REFRESH_KEY)) await refreshSession();
   const send = (user) => fetch(url, { ...options, headers: { ...options.headers, Authorization: "Bearer " + user.token } });
   let user = signedInUser();

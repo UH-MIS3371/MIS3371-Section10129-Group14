@@ -101,6 +101,15 @@ function appHeader(current) {
   loadMe().then((me) => slot.replaceWith(accountMenu(me))).catch(() => slot.replaceWith(el("button", { type: "button", class: "btn sm", onclick: signOut }, "Sign out")));
 }
 
+// Shown on every app page while browsing as a guest
+function guestBanner() {
+  const header = document.querySelector(".site-header");
+  if (!header) return;
+  header.after(el("div", { class: "guest-banner", role: "status" },
+    el("span", null, el("strong", null, "Guest mode."), " Nothing you do here is saved on MarketStreet's servers, and it disappears when you close this tab."),
+    el("a", { class: "btn sm", href: "signin.html?view=signUp" }, "Create a free account")));
+}
+
 function publicHeader() {
   const user = signedInUser();
   const logo = el("a", { class: "logo", href: "index.html" });
@@ -310,6 +319,7 @@ function warmCache() {
   const nav = document.body.dataset.nav;
   if (shell === "app") {
     appHeader(nav);
+    if (isGuest()) guestBanner();
     footer();
     warmCache();
   } else if (shell === "admin") {

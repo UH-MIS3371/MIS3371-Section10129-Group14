@@ -51,6 +51,7 @@ $("passwordForm").addEventListener("submit", async (e) => {
   const current = $("currentPassword").value;
   const next = $("newPassword").value;
   if (!current || !next) return fieldError("passwordError", "Enter your current password and a new one.");
+  if (isGuest()) return fieldError("passwordError", "A guest has no password. Create an account to set one.");
   if (!accessToken()) return fieldError("passwordError", "Sign out and sign in again, then change your password.");
   fieldError("passwordError", "");
   const button = e.target.querySelector("button[type=submit]");
