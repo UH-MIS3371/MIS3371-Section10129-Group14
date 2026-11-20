@@ -19,7 +19,7 @@ function renderMarkets() {
       el("td", { "data-label": "Stock" }, el("div", { class: "sym" }, el("div", null, el("a", { href: link }, el("strong", null, s.symbol)), el("span", null, s.name)))),
       el("td", { class: "num", "data-label": "Price" }, money(priceCents(s.symbol))),
       el("td", { class: "num " + trendClass(s.pct), "data-label": "Today" }, percent(s.pct)),
-      el("td", { class: "hide-sm" }, sparkline(s.month.map((p) => p[1]))),
+      el("td", { class: "spark-cell" }, sparkline(s.month.map((p) => p[1]))),
       el("td", { class: "num muted hide-sm", "data-label": "Day range" }, money(cents(s.low)) + " – " + money(cents(s.high))),
       el("td", { class: "num muted hide-sm", "data-label": "Volume" }, s.volume),
       el("td", { class: "num" + (owned ? "" : " hide-sm"), "data-label": "You own" }, owned ? plural(owned, "share") : "—"),

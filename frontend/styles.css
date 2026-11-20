@@ -978,3 +978,89 @@ td .btn { font-family: var(--sans); }
 @media (max-width: 900px) {
   .toasts { left: 16px; right: 16px; bottom: calc(68px + env(safe-area-inset-bottom)); }
 }
+
+/* ---------- Trading-app layout on a phone ---------- */
+
+/* Five tabs, like the trading apps; Demo moves into the account menu */
+@media (max-width: 900px) { .site-nav a[href="demo.html"] { display: none; } }
+@media (min-width: 901px) { .menu-demo { display: none; } }
+
+/* Lists: the stock on the left, a small sparkline, then the price over a change pill (colour, arrow and sign together) */
+@media (max-width: 760px) {
+  #rows tr, #movers tr { grid-template-columns: minmax(0, 1fr) auto auto; }
+  #positions tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; min-height: 68px; cursor: pointer; }
+  #movers tr { display: grid; column-gap: 12px; align-items: center; min-height: 68px; cursor: pointer; }
+  :is(#rows, #movers) td[data-label="Stock"] { grid-column: 1; grid-row: 1 / span 2; }
+  :is(#rows, #movers) td.spark-cell { grid-column: 2; grid-row: 1 / span 2; justify-content: center; }
+  :is(#rows, #movers) td.spark-cell svg { width: 72px; height: 26px; }
+  :is(#rows, #movers) svg.spark.up path { stroke: var(--buy); }
+  :is(#rows, #movers) svg.spark.down path { stroke: var(--sell); }
+  :is(#rows, #movers) td[data-label="Price"] { grid-column: 3; grid-row: 1; }
+  :is(#rows, #movers) td[data-label="Today"] { grid-column: 3; grid-row: 2; }
+  :is(#movers) td[data-label="Stock"]::before, :is(#movers) td[data-label="Price"]::before, :is(#movers) td[data-label="Today"]::before { display: none; }
+  :is(#movers) td[data-label="Price"], :is(#movers) td[data-label="Today"] { justify-content: flex-end; }
+
+  /* holdings: name and shares on the left, value over total return on the right */
+  #positions td[data-label="Price"], #positions td[data-label="Today"], #positions td[data-label="Avg cost"] { display: none; }
+  #positions td[data-label="Stock"] { grid-column: 1; grid-row: 1; justify-content: flex-start; text-align: left; }
+  #positions td[data-label="Stock"]::before { display: none; }
+  #positions td[data-label="Shares"] { grid-column: 1; grid-row: 2; justify-content: flex-start; gap: 6px; font-size: 13px; color: var(--muted); }
+  #positions td[data-label="Market value"] { grid-column: 2; grid-row: 1; justify-content: flex-end; font-weight: 600; }
+  #positions td[data-label="Market value"]::before { display: none; }
+  #positions td[data-label="Total return"] { grid-column: 2; grid-row: 2; justify-content: flex-end; }
+  #positions td[data-label="Total return"]::before { display: none; }
+
+  :is(#rows, #movers, #positions) td.up, :is(#rows, #movers, #positions) td.down { justify-self: end; width: fit-content; justify-content: center; padding: 2px 8px !important; border-radius: 6px; font-size: 13px; font-weight: 600; }
+  :is(#rows, #movers, #positions) td.up { background: var(--buy-bg); }
+  :is(#rows, #movers, #positions) td.down { background: var(--sell-bg); }
+}
+
+/* Stock page: range chips beside the chart */
+.range-chips { display: flex; gap: 8px; margin: 12px 0 4px; }
+.range-chips button { min-width: 44px; padding: 6px 12px; border: 1px solid var(--control); border-radius: 999px; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.range-chips button[aria-pressed="true"] { border-color: var(--accent); background: var(--info-bg); color: var(--text); }
+@media (max-width: 900px) { .range-chips button { min-height: 40px; } }
+
+/* Stock page on a phone: Buy and Sell stay at the bottom; the ticket is a sheet that slides up over the page */
+.trade-bar, .sheet-scrim, .sheet-head, .qty-stepper .step { display: none; }
+@media (max-width: 900px) {
+  .trade-bar { position: fixed; left: 0; right: 0; bottom: calc(56px + env(safe-area-inset-bottom)); z-index: 29; display: flex; gap: 12px; padding: 10px 16px; background: var(--ground); border-top: 1px solid var(--border); }
+  .trade-bar .btn { flex: 1; min-height: 48px; font-size: 16px; font-weight: 600; }
+  .trade-bar .buy { background: var(--buy); border-color: var(--buy); color: #04140d; }
+  .trade-bar .sell { border: 1.5px solid var(--sell); color: var(--text); }
+  body.has-trade-bar:not(.admin):not(:has(.clock:not([hidden]))) { padding-bottom: calc(132px + env(safe-area-inset-bottom)); }
+  html:has(.trade-bar) { scroll-padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
+
+  body.sheet-open { overflow: hidden; }
+  .sheet-scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(0, 0, 0, 0.6); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  body.sheet-open .sheet-scrim { opacity: 1; pointer-events: auto; }
+  #stock > aside { position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 60; margin: 0; max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px calc(16px + env(safe-area-inset-bottom)); background: var(--surface); border-radius: 16px 16px 0 0; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.55); transform: translateY(110%); visibility: hidden; transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s 0.28s; }
+  body.sheet-open #stock > aside { transform: none; visibility: visible; transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s; }
+  #stock > aside:focus { outline: none; }
+  #stock > aside .panel.ticket { padding: 0; border: 0; background: none; }
+  .sheet-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: center; padding: 12px 0 8px; margin: 0 -16px; background: var(--surface); border-radius: 16px 16px 0 0; touch-action: none; }
+  .sheet-grab { width: 40px; height: 4px; border-radius: 2px; background: var(--control); }
+  .sheet-close { position: absolute; right: 4px; top: 0; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: none; color: var(--muted); cursor: pointer; }
+  .sheet-close svg { width: 22px; height: 22px; }
+  .qty-stepper { display: flex; gap: 8px; align-items: stretch; }
+  .qty-stepper input { flex: 1; min-width: 0; text-align: center; font-size: 22px; font-weight: 600; }
+  .qty-stepper .step { display: grid; place-items: center; width: 56px; min-height: 48px; padding: 0; border: 1px solid var(--control); border-radius: var(--radius); background: none; color: var(--text); font-size: 26px; line-height: 1; cursor: pointer; }
+  .qty-stepper .step:active { background: var(--raised); }
+}
+
+/* Receipt: a short success mark and one clear primary action */
+.receipt-head { position: relative; }
+.done-mark { display: block; position: relative; width: 48px; height: 48px; margin-bottom: 14px; border: 2px solid var(--buy); border-radius: 50%; background: var(--buy-bg); animation: demo-pop 0.4s ease both; }
+.done-mark::after { content: ""; position: absolute; left: 16px; top: 7px; width: 10px; height: 20px; border: solid var(--buy); border-width: 0 3px 3px 0; transform: rotate(45deg); }
+@media (max-width: 760px) {
+  #receipt .button-row { display: grid; grid-template-columns: 1fr 1fr; }
+  #receipt .button-row .btn { width: 100%; }
+  #receipt .button-row .btn.primary { grid-column: 1 / -1; }
+}
+
+/* Review step: once the order is being reviewed, the entry fields give way to the summary so Submit stays in view */
+@media (max-width: 900px) {
+  .ticket:has(#review:not([hidden])) > fieldset, .ticket:has(#review:not([hidden])) > .field,
+  .ticket:has(#review:not([hidden])) > .kv, .ticket:has(#review:not([hidden])) > .estimate { display: none; }
+}
+@media (max-width: 760px) { #marketFilter { width: 100%; max-width: none; } }

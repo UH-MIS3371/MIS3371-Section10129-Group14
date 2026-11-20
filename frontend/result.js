@@ -21,6 +21,7 @@ async function renderReceipt() {
   const accepted = t.status === "Accepted";
   const isNew = params.has("new");
   document.title = (accepted ? "Order accepted" : "Order rejected") + " – MarketStreet";
+  if (isNew && accepted && navigator.vibrate) navigator.vibrate(15);
   if (isNew) toast(accepted ? orderText(t) + " accepted at " + money(cents(t.executionPrice)) + "." : "Order rejected: " + t.rejectionReason, accepted ? "" : "bad");
 
   const rows = [
@@ -36,6 +37,7 @@ async function renderReceipt() {
 
   box.replaceChildren(
     el("div", { class: "receipt-head" },
+      accepted && isNew ? el("span", { class: "done-mark", "aria-hidden": "true" }) : null,
       el("h1", null, accepted ? "Order accepted" : "Order rejected"), statusPill(t.status),
       el("p", { class: "muted" }, accepted ? "Your cash and holdings have been updated." : "Nothing in your account changed.")),
     // replaceChildren() would print a null argument as the word "null", so the reason is spread in only when there is one

@@ -64,10 +64,10 @@ function renderMovers() {
   const rows = Object.keys(STOCKS).map((s) => [s, dayPct(s)]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 6);
   document.getElementById("movers").replaceChildren(...rows.map(([s, pct]) => el("tr", { onclick: () => (location.href = "trade.html?symbol=" + s) },
     el("td", { "data-label": "Stock" }, el("a", { href: "trade.html?symbol=" + s }, stockCell(s, STOCKS[s].name))),
-    el("td", { class: "hide-sm" }, sparkline(STOCKS[s].month.map((p) => p[1]))),
+    el("td", { class: "spark-cell" }, sparkline(STOCKS[s].month.map((p) => p[1]))),
     el("td", { class: "num", "data-label": "Price" }, money(priceCents(s))),
     el("td", { class: "num " + trendClass(pct), "data-label": "Today" }, percent(pct)),
-    el("td", { class: "num" }, el("a", { class: "btn sm", href: "trade.html?symbol=" + s }, "Trade")))));
+    el("td", { class: "num hide-sm" }, el("a", { class: "btn sm", href: "trade.html?symbol=" + s }, "Trade")))));
 }
 
 // One challenge a day, so the home page is never the same two days running

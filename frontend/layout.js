@@ -72,6 +72,7 @@ function accountMenu(me) {
     el("a", { href: "dashboard.html" }, "Portfolio"),
     el("a", { href: "account.html" }, "Account settings"),
     user.isAdmin ? el("a", { href: "admin.html" }, "Admin console", pill("Admin", "admin")) : null,
+    el("a", { href: "demo.html", class: "menu-demo" }, "Transaction demo"),
     el("a", { href: "help.html" }, "Help"),
     el("button", { type: "button", onclick: signOut }, "Sign out"));
   const button = el("button", { type: "button", "aria-expanded": "false", "aria-controls": "accountMenu", title: user.name },

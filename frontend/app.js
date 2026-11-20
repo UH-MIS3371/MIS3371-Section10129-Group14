@@ -174,6 +174,7 @@ function sparkline(values, width = 96, height = 28) {
   svg.setAttribute("class", "spark " + (values[values.length - 1] >= values[0] ? "up" : "down"));
   svg.setAttribute("width", width);
   svg.setAttribute("height", height);
+  svg.setAttribute("viewBox", "0 0 " + width + " " + height); // so a stylesheet can resize it without cropping
   svg.setAttribute("aria-hidden", "true");
   const path = document.createElementNS(ns, "path");
   path.setAttribute("d", d);
