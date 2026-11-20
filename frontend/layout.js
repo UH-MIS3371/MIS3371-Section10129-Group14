@@ -14,6 +14,12 @@ const APP_NAV = [
 ];
 
 const ICONS = {
+  dashboard: "M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10",
+  markets: "M5 20v-8m7 8V4m7 16v-5",
+  activity: "M4 6h16M4 12h16M4 18h10",
+  challenges: "M5 21V4m0 0h11l-2 4 2 4H5",
+  leaderboard: "M3 20h18M4 20v-6h5v6M9 20V8h6v12M15 20v-9h5v9",
+  demo: "M7 4l13 8-13 8z",
   overview: "M3 13h8V3H3zm0 8h8v-6H3zm10 0h8V11h-8zm0-18v6h8V3z",
   users: "M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21a8 8 0 0 1 16 0",
   trades: "M4 7h13l-3-3m6 13H7l3 3",
@@ -53,7 +59,8 @@ function searchForm() {
   if (typeof STOCKS !== "undefined") for (const s in STOCKS) list.append(el("option", { value: s }, STOCKS[s].name));
   const form = el("form", { class: "search", action: "trade.html", role: "search" },
     el("label", { for: "headerSearch", class: "visually-hidden" }, "Search stocks"),
-    el("input", { id: "headerSearch", name: "symbol", type: "search", list: "stockList", placeholder: "Search stocks", autocomplete: "off", "aria-keyshortcuts": "/" }),
+    // Suggestions are for wide screens: on a phone the datalist's picker fights the expanding search field
+    el("input", { id: "headerSearch", name: "symbol", type: "search", list: matchMedia("(max-width: 760px)").matches ? null : "stockList", placeholder: "Search stocks", autocomplete: "off", "aria-keyshortcuts": "/" }),
     list);
   return form;
 }
@@ -81,6 +88,13 @@ function accountMenu(me) {
   return menu;
 }
 
+// The icon above each label in the phone's bottom bar (hidden on wide screens)
+function navIcon(key) {
+  const span = el("span", { class: "nav-icon" });
+  span.innerHTML = icon(key);
+  return span;
+}
+
 function appHeader(current) {
   let header = document.querySelector(".site-header");
   if (!header) header = document.body.insertBefore(el("header", { class: "site-header" }, el("div", { class: "inner" })), document.body.firstChild);
@@ -90,7 +104,8 @@ function appHeader(current) {
   logo.innerHTML = LOGO_SVG + "<span>MarketStreet</span>";
   const nav = el("nav", { class: "site-nav", "aria-label": "Main" },
     APP_NAV.map(([key, label, href, short]) => el("a", { href, "aria-current": key === current ? "page" : null, title: short ? label : null },
-      short ? [el("span", { class: "nav-long" }, label), el("span", { class: "nav-short" }, short)] : label)));
+      navIcon(key),
+      el("span", { class: "nav-label" }, short ? [el("span", { class: "nav-long" }, label), el("span", { class: "nav-short" }, short)] : label))));
   const tools = el("div", { class: "header-tools" }, searchForm(), el("button", { type: "button", class: "btn sm qr-btn", "aria-haspopup": "dialog", onclick: openQr }, "QR code"), el("span", { class: "paper-badge", title: "Simulated money and prices" }, "Paper trading"));
   inner.prepend(logo, nav);
   // Scenario Mode keeps its clock in the header; the tools go after it
@@ -106,8 +121,10 @@ function guestBanner() {
   const header = document.querySelector(".site-header");
   if (!header) return;
   header.after(el("div", { class: "guest-banner", role: "status" },
-    el("span", null, el("strong", null, "Guest mode."), " Nothing you do here is saved on MarketStreet's servers, and it disappears when you close this tab."),
-    el("a", { class: "btn sm", href: "signin.html?view=signUp" }, "Create a free account")));
+    el("span", null, el("strong", null, "Guest mode."),
+      el("span", { class: "long" }, " Nothing you do here is saved on MarketStreet's servers, and it disappears when you close this tab."),
+      el("span", { class: "short" }, " Nothing is saved.")),
+    el("a", { class: "btn sm", href: "signin.html?view=signUp" }, el("span", { class: "long" }, "Create a free account"), el("span", { class: "short" }, "Create account"))));
 }
 
 function publicHeader() {
@@ -314,6 +331,9 @@ function warmCache() {
 }
 
 (function buildShell() {
+  // Lets the bottom bar clear the home indicator on phones (see env(safe-area-inset-bottom) in styles.css)
+  const viewport = document.querySelector('meta[name="viewport"]');
+  if (viewport && !/viewport-fit/.test(viewport.content)) viewport.content += ", viewport-fit=cover";
   // A public page that uses the app shell (Help) shows the public header to visitors who aren't signed in
   const shell = document.body.dataset.shell === "app" && !signedInUser() ? "public" : document.body.dataset.shell;
   const nav = document.body.dataset.nav;

@@ -38,7 +38,8 @@ async function renderReceipt() {
     el("div", { class: "receipt-head" },
       el("h1", null, accepted ? "Order accepted" : "Order rejected"), statusPill(t.status),
       el("p", { class: "muted" }, accepted ? "Your cash and holdings have been updated." : "Nothing in your account changed.")),
-    accepted ? null : el("p", { class: "reason" }, el("strong", null, "Reason: "), t.rejectionReason || "Not given"),
+    // replaceChildren() would print a null argument as the word "null", so the reason is spread in only when there is one
+    ...(accepted ? [] : [el("p", { class: "reason" }, el("strong", null, "Reason: "), t.rejectionReason || "Not given")]),
     el("dl", { class: "kv" }, rows.map(([k, v]) => el("div", null, el("dt", null, k), el("dd", null, v)))),
     el("h2", { style: "margin: 28px 0 12px" }, "Timeline"),
     el("ol", { class: "timeline" }, steps.map(([label, at, kind]) => el("li", { class: kind || null }, el("strong", null, label), formatTime(at, true)))),

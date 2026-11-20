@@ -878,3 +878,103 @@ td .btn { font-family: var(--sans); }
 .demo-facts strong.hl.ok { color: var(--buy); }
 .demo-facts strong.hl.bad { color: var(--sell); }
 .hl-key { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+
+/* ---------- Phones and touch screens ---------- */
+
+/* iOS zooms the page when a focused field's text is under 16px, and fingers need 44px, so both hold here */
+@media (max-width: 760px), (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; }
+  input:not([type="checkbox"]):not([type="radio"]), select, .filters select { min-height: 44px; }
+  .btn, .button { min-height: 44px; }
+  .btn.sm { height: auto; min-height: 44px; padding: 0 14px; }
+  .segmented button, .auth-tabs button { min-height: 44px; }
+  .logo { min-height: 44px; }
+  .menu > button { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
+}
+
+/* Header: the search is an icon until it is tapped, then it takes the whole bar */
+@media (max-width: 760px) {
+  .search input { width: 44px; height: 44px; padding: 0; color: transparent; background-color: transparent; background-position: center; background-repeat: no-repeat; border-color: transparent; cursor: pointer; }
+  .search input::placeholder { color: transparent; }
+  .search:focus-within { position: fixed; z-index: 40; top: 0; left: 0; right: 0; height: 53px; padding: 4px 12px; background: var(--ground); border-bottom: 1px solid var(--border); }
+  .search:focus-within input { width: 100%; padding-left: 40px; color: var(--text); background-color: var(--surface); background-position: 12px 50%; border-color: var(--control); cursor: text; }
+  .search:focus-within input::placeholder { color: var(--muted); }
+}
+
+/* Bottom bar: an icon over each label, six equal columns, clear of the home indicator */
+.nav-icon svg { display: block; width: 22px; height: 22px; }
+@media (min-width: 901px) { .nav-icon { display: none; } }
+@media (max-width: 900px) {
+  body:not(.admin):not(:has(.clock:not([hidden]))) { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+  .site-header:not(:has(.clock:not([hidden]))) .site-nav { height: calc(56px + env(safe-area-inset-bottom)); padding: 0 4px env(safe-area-inset-bottom); }
+  .site-header:not(:has(.clock:not([hidden]))) .site-nav a { flex-direction: column; gap: 2px; min-width: 0; font-size: 12px; }
+}
+
+/* Guest banner: one line on a phone */
+.guest-banner .short { display: none; }
+@media (max-width: 760px) {
+  .guest-banner { flex-wrap: nowrap; justify-content: space-between; gap: 10px; padding: 6px 12px; text-align: left; }
+  .guest-banner .long { display: none; }
+  .guest-banner .short { display: inline; }
+  .guest-banner .btn.sm { flex: none; min-height: 40px; padding: 0 12px; }
+}
+
+/* Trade: the ticket comes right after the chart, not after four panels */
+@media (max-width: 1000px) {
+  #stock { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+  #stock > div:first-child { display: contents; }
+  #stock > div:first-child > .panel { order: 3; }
+  #stock > aside { order: 2; margin-top: 24px; }
+}
+
+/* Markets: a short tappable row (stock on the left, price and move on the right) instead of a table per stock */
+@media (max-width: 760px) {
+  .stack-sm td.hide-sm { display: none; }
+  #rows tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-content: center; min-height: 68px; cursor: pointer; }
+  #rows td[data-label="Stock"] { grid-row: 1 / span 2; align-self: center; justify-content: flex-start; text-align: left; }
+  #rows td[data-label="Stock"]::before, #rows td[data-label="Price"]::before, #rows td[data-label="Today"]::before { display: none; }
+  #rows td[data-label="Price"], #rows td[data-label="Today"] { justify-content: flex-end; }
+  #rows td[data-label="You own"] { grid-column: 1 / -1; }
+}
+
+/* Activity: the confirmation-number field and its button stack, so the placeholder is not cut off */
+@media (max-width: 520px) {
+  .inline-form { flex-direction: column; align-items: stretch; max-width: none; }
+  .inline-form .btn { height: auto; }
+}
+
+/* Demo: the spoken sentence gets the width, the track and bars take less height */
+@media (max-width: 760px) {
+  .demo-page { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+  .demo-bar { bottom: calc(56px + env(safe-area-inset-bottom)); }
+  .demo-step .say { flex-direction: column; gap: 8px; font-size: 17px; }
+  .demo-step-head h2 { font-size: 16px; }
+  .demo-step .code { font-size: 13px; overflow-x: auto; }
+  .journey { padding: 10px 0 8px; margin-bottom: 10px; }
+  .journey .track { top: 24px; }
+  .journey .packet { top: 25px; }
+  .journey .dot { width: 28px; height: 28px; }
+}
+
+/* Phones and touch screens, continued: the smaller controls that were still under a finger's size */
+@media (max-width: 760px), (pointer: coarse) {
+  input[type="search"]:not(.search input) { font-size: 16px; min-height: 44px; }
+  .segmented button { min-width: 44px; text-align: center; }
+  .qty-chips .btn.sm { min-width: 44px; }
+  .toggle label { display: grid; place-items: center; min-height: 44px; padding: 0 4px; }
+  .link-button { min-height: 44px; }
+  .site-footer nav a { display: inline-flex; align-items: center; min-height: 44px; }
+  .seg button { min-height: 40px; padding: 0 14px; font-size: 13px; }
+  #movers td a, #rows td a, table.clickable td a { display: inline-block; padding: 8px 0; }
+}
+
+/* The fixed bars never hide what the browser scrolls to (a tapped field, an anchor, scrollIntoView) */
+@media (max-width: 900px) {
+  html { scroll-padding-top: 64px; scroll-padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  html:has(.demo-page) { scroll-padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
+}
+
+/* Toasts sit above the bottom bar, not on top of it */
+@media (max-width: 900px) {
+  .toasts { left: 16px; right: 16px; bottom: calc(68px + env(safe-area-inset-bottom)); }
+}
