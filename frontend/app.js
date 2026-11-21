@@ -5,7 +5,7 @@
 // On localhost (npm start in aws/lambda) the local server answers /api/trades; everywhere else, AWS does.
 const API_URL = location.hostname === "localhost" || location.hostname === "127.0.0.1"
   ? "/api/trades"
-  : "https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades";
+  : "https://ixkiwxjqxl.execute-api.us-east-1.amazonaws.com/api/trades";
 // GET /api/account returns the saved cash and holdings (BR-7)
 const ACCOUNT_URL = API_URL.replace(/\/trades$/, "/account");
 const STORAGE_KEY = "marketstreet-demo";
