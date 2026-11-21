@@ -3,115 +3,138 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stock – MarketStreet</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <title>Trade – MarketStreet</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="styles.css" />
-    <script src="auth.js" defer blocking="render"></script>
-    <script src="data.js" defer blocking="render"></script>
-    <script src="app.js" defer blocking="render"></script>
-    <script src="layout.js" defer blocking="render"></script>
-    <script src="chart.js" defer blocking="render"></script>
-    <script src="trade.js" defer blocking="render"></script>
-    <script src="trade-sheet.js" defer blocking="render"></script>
+    <script src="data.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="trade.js" defer></script>
+    <script src="chart.js" defer></script>
   </head>
 
-  <body data-shell="app" data-nav="markets">
-    <main class="page">
-      <section class="panel" id="notFound" hidden>
-        <div class="empty">
-          <strong>We couldn't find <span id="missingSymbol"></span></strong>
-          <p>MarketStreet supports a fixed list of stocks. Pick one from Markets.</p>
-          <a class="btn primary" href="markets.html">Browse markets</a>
-        </div>
+  <body data-page="trade">
+    <header class="site-header">
+      <div class="inner">
+        <a class="logo" href="trade.html">MarketStreet</a>
+        <form class="search" action="trade.html" role="search">
+          <label for="search" class="visually-hidden">Search stocks</label>
+          <input id="search" name="symbol" type="search" list="stocks" placeholder="Search stocks" autocomplete="off" />
+          <datalist id="stocks">
+            <option value="AAPL">Apple Inc.</option>
+            <option value="MSFT">Microsoft Corp.</option>
+            <option value="TSLA">Tesla Inc.</option>
+            <option value="AMZN">Amazon.com Inc.</option>
+            <option value="GOOGL">Alphabet Inc.</option>
+            <option value="NVDA">NVIDIA Corp.</option>
+            <option value="IBM">IBM Corp.</option>
+          </datalist>
+        </form>
+        <nav class="site-nav" aria-label="Main">
+          <a href="trade.html" aria-current="page">Trade</a><a href="history.html">History</a><a href="scenarios.html">Scenarios</a>
+          <span class="account">U10427</span>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wide">
+      <section class="card" id="not-found" hidden>
+        <h1>Stock not found</h1>
+        <p><strong id="missing-symbol"></strong> isn't available. Use the search box to pick one of the supported stocks, or go back to <a href="trade.html">AAPL</a>.</p>
       </section>
 
-      <div class="grid-2" id="stock">
+      <div class="layout" id="stock">
         <div>
-          <p class="note"><a href="markets.html">Markets</a> / <span id="crumbSymbol"></span></p>
-          <section aria-labelledby="symbolTitle" style="margin-top: 12px">
-            <div class="quote-head">
-              <div>
-                <h1 id="symbolTitle"></h1>
-                <p class="company" id="company"></p>
-              </div>
-              <div class="right">
-                <p class="price" id="price"></p>
-                <p class="mono" id="change"></p>
-              </div>
-            </div>
-            <div class="chart" id="stockChart" data-height="300" style="min-height: 300px" role="img"></div>
-            <p class="note">Simulated closing prices for the last month. Orders fill at the current simulated price.</p>
+          <section class="card quote" aria-labelledby="stock-title">
+            <h1 id="stock-title"></h1>
+            <p class="company" id="company"></p>
+            <p class="price" id="price"></p>
+            <p id="change"></p>
+            <div class="chart" id="stock-chart" data-height="300" role="img"></div>
           </section>
 
-          <section class="panel" aria-labelledby="positionTitle" style="margin-top: 24px" id="positionPanel">
-            <h2 id="positionTitle" style="margin-bottom: 14px">Your position</h2>
-            <dl class="stats" id="position"></dl>
-          </section>
-
-          <section class="panel" aria-labelledby="statsTitle">
-            <h2 id="statsTitle" style="margin-bottom: 14px">Key stats</h2>
+          <section class="card" aria-labelledby="stats-title">
+            <h2 id="stats-title">Key stats</h2>
             <dl class="stats" id="stats"></dl>
-          </section>
-
-          <section class="panel flush" aria-labelledby="historyTitle">
-            <div class="panel-head"><h2 id="historyTitle"></h2></div>
-            <div class="table-wrap">
-              <table class="stack-sm clickable"><tbody id="history"></tbody></table>
-            </div>
           </section>
         </div>
 
-        <!-- Order ticket (FR-1, FR-8). Market orders only (BR-9). -->
-        <aside class="sticky">
-          <form class="panel ticket" id="orderForm" novalidate>
-            <h2 id="orderTitle"></h2>
-            <fieldset>
-              <legend class="visually-hidden">Buy or sell</legend>
-              <div class="toggle">
-                <input type="radio" id="buy" name="tradeType" value="Buy" checked />
-                <label for="buy">Buy</label>
-                <input type="radio" id="sell" name="tradeType" value="Sell" />
-                <label for="sell">Sell</label>
-              </div>
-            </fieldset>
+        <!-- Order panel (FR-1, FR-8). Market orders only (BR-9). -->
+        <form class="card side" id="order-form" novalidate>
+          <h2 id="order-title"></h2>
+          <input type="hidden" id="stockSymbol" name="stockSymbol" />
+          <input type="hidden" id="orderType" name="orderType" value="Market" />
 
-            <div class="field">
-              <label for="shareQuantity">Shares</label>
-              <input id="shareQuantity" name="shareQuantity" type="number" min="1" step="1" value="1" inputmode="numeric" required aria-describedby="quantityHint quantityError" />
-              <div class="button-row qty-chips" role="group" aria-label="Quick quantity" id="qtyChips">
-                <button type="button" class="btn sm" data-qty="1">1</button>
-                <button type="button" class="btn sm" data-qty="5">5</button>
-                <button type="button" class="btn sm" data-qty="10">10</button>
-                <button type="button" class="btn sm" data-qty="max">Max</button>
-              </div>
-              <p id="quantityHint" class="help"></p>
-              <p id="quantityError" class="error help" hidden></p>
+          <fieldset id="tradeType">
+            <legend class="visually-hidden">Buy or sell</legend>
+            <div class="toggle">
+              <input type="radio" id="buy" name="tradeType" value="Buy" checked />
+              <label for="buy">Buy</label>
+              <input type="radio" id="sell" name="tradeType" value="Sell" />
+              <label for="sell">Sell</label>
             </div>
+          </fieldset>
 
-            <dl class="kv">
-              <div><dt>Order type</dt><dd>Market</dd></div>
-              <div><dt>Market price</dt><dd id="orderPrice"></dd></div>
-              <div><dt>Buying power</dt><dd id="cash"><span class="skeleton" style="width: 80px"></span></dd></div>
-              <div><dt>You own</dt><dd id="owned"><span class="skeleton" style="width: 60px"></span></dd></div>
-            </dl>
+          <p class="position"><span>You own</span> <strong id="owned"></strong></p>
+          <p class="position"><span>Cash available</span> <strong id="cash"></strong></p>
 
-            <div class="estimate" aria-live="polite"><span id="estimateText"></span><strong id="estimateTotal"></strong></div>
+          <div class="field">
+            <label for="shareQuantity">Shares</label>
+            <input id="shareQuantity" name="shareQuantity" type="number" min="1" step="1" value="1" inputmode="numeric" required aria-describedby="quantity-hint quantity-error" />
+            <p id="quantity-hint" class="help"></p>
+            <p id="quantity-error" class="error" hidden></p>
+          </div>
 
-            <div class="review" id="review" hidden>
-              <h3>Review your order</h3>
-              <dl class="kv" id="reviewList"></dl>
-            </div>
+          <p class="order-type"><span>Order type</span> <span id="order-price"></span></p>
 
-            <p id="serverMessage" class="error" role="alert" hidden></p>
-            <button type="submit" class="btn block primary" id="submit">Review buy order</button>
-            <button type="button" class="btn block" id="edit" hidden style="margin-top: 8px">Edit order</button>
-            <p class="note" style="margin-top: 14px">Market orders fill right away at the simulated price. MarketStreet checks your cash and shares again before saving.</p>
-          </form>
-        </aside>
+          <p class="estimate" aria-live="polite"><span id="estimate-text"></span> <strong class="big" id="estimate-total"></strong></p>
+
+          <button type="submit" class="button buy" id="submit"></button>
+          <p id="server-message" role="status" aria-live="polite"></p>
+          <p class="note">Market orders are checked by the backend using simulated prices. Accepted trades are saved.</p>
+        </form>
       </div>
+
+         <section class="card status-lookup" aria-labelledby="status-heading">
+         <h2 id="status-heading">View Trade Status</h2>
+         <p>Enter your confirmation number to check your saved trade.</p>
+
+
+    <!-- Week 11 Session 2: Saved transaction confirmation -->
+      <div id="confirmationPanel" class="confirmation-panel" hidden>
+       <p>Your trade was successfully saved!</p>
+       <p>
+       <strong>Confirmation Number:</strong>
+       <code id="confirmationNumber"></code>
+       </p>
+    </div>
+
+
+         <form id="statusLookupForm">
+    <div class="field">
+        <label for="statusTransactionId">Confirmation Number</label>
+        <input
+        type="text"
+        id="statusTransactionId"
+        placeholder="Enter your transaction ID"
+        required
+      />
+    </div>
+
+    <button type="submit" class="button" id="viewStatusButton">
+      View Status
+    </button>
+  </form>
+
+  <p id="statusMessage" role="status" aria-live="polite"></p>
+  <div id="statusResult" hidden></div>
+</section>
+
     </main>
+
+    <footer class="site-footer">
+      <p>MarketStreet · Simulated trading, no real money</p>
+    </footer>
   </body>
 </html>

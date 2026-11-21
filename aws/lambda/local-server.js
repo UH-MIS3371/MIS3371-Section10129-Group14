@@ -12,7 +12,7 @@ const path = require("path");
 // Supports exactly the commands the Lambda sends (Get, Put, and the TransactWrite
 // from backend/accounts.js) and follows the same rules: conditions are checked, and a
 // transaction saves everything or nothing.
-const { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, ScanCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, GetCommand, PutCommand, TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
 
 function installFakeDynamoDB() {
   const tables = new Map(); // table name -> Map(key -> item)
@@ -26,8 +26,8 @@ function installFakeDynamoDB() {
     }
   };
 
-  // Each table has one key attribute: trades use transactionId, audit auditId, games gameId, accounts and users userId
-  const KEY_NAMES = ["transactionId", "auditId", "gameId", "userId"];
+  // Each table has one key attribute: trades use transactionId, accounts userId, games gameId
+  const KEY_NAMES = ["transactionId", "userId", "gameId"];
   const keyOf = (item) => item[KEY_NAMES.find((name) => item[name] !== undefined)];
 
   function conditionFailed(message) {
@@ -72,7 +72,7 @@ function installFakeDynamoDB() {
       if (condition && condition.startsWith("attribute_not_exists")) {
         if (table.has(key)) throw conditionFailed();
       } else if (condition === "#v = :read") {
-        // A version check (games and profiles use version, accounts use updatedAt): the saved item must be unchanged
+        // The version check from backend/games.js: the saved game must still have the version that was read
         const saved = table.get(key);
         if (!saved || saved[input.ExpressionAttributeNames["#v"]] !== input.ExpressionAttributeValues[":read"]) throw conditionFailed();
       } else if (condition) {
@@ -103,20 +103,6 @@ function installFakeDynamoDB() {
       return {};
     }
 
-    // Returns every item in one page (the Lambda picks the fields it needs)
-    if (command instanceof ScanCommand) {
-      return { Items: [...fake.table(input.TableName).values()].map((item) => structuredClone(item)) };
-    }
-
-    if (command instanceof QueryCommand) {
-      const keyName = input.ExpressionAttributeNames["#k"];
-      const value = input.ExpressionAttributeValues[":v"];
-      const sortKey = input.IndexName.slice(input.IndexName.indexOf("-") + 1, input.IndexName.lastIndexOf("-index"));
-      const Items = [...fake.table(input.TableName).values()].filter((item) => item[keyName] === value).map((item) => structuredClone(item))
-        .sort((a, b) => String(a[sortKey]).localeCompare(String(b[sortKey])) * (input.ScanIndexForward === false ? -1 : 1));
-      return { Items };
-    }
-
     throw new Error("Unexpected command: " + command.constructor.name);
   };
 
@@ -131,13 +117,11 @@ if (require.main !== module) return;
 const PORT = Number(process.env.PORT) || 3000;
 const FRONTEND = path.join(__dirname, "../../frontend");
 
-// Pretend DynamoDB (trades, accounts, games, users and audit tables), kept in memory
+// Pretend DynamoDB (trades, accounts and games tables), kept in memory
 installFakeDynamoDB();
 process.env.TABLE_NAME = process.env.TABLE_NAME || "MarketStreetTrades-local";
 process.env.ACCOUNTS_TABLE = process.env.ACCOUNTS_TABLE || "MarketStreetAccounts-local";
 process.env.GAMES_TABLE = process.env.GAMES_TABLE || "MarketStreetGames-local";
-process.env.USERS_TABLE = process.env.USERS_TABLE || "MarketStreetUsers-local";
-process.env.AUDIT_TABLE = process.env.AUDIT_TABLE || "MarketStreetAudit-local";
 process.env.AWS_REGION = process.env.AWS_REGION || "us-east-1";
 
 const { handler } = require("./index");
@@ -151,19 +135,6 @@ const TYPES = {
   ".svg": "image/svg+xml"
 };
 
-// Reads the Cognito ID token from the Authorization header and passes its claims the way API Gateway does.
-// LOCAL ONLY: this does not check the token's signature. On AWS, API Gateway's JWT authorizer does.
-function claimsFrom(req) {
-  const token = (req.headers.authorization || "").replace(/^Bearer /, "");
-  try {
-    const claims = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
-    if (Array.isArray(claims["cognito:groups"])) claims["cognito:groups"] = "[" + claims["cognito:groups"].join(" ") + "]";
-    return { jwt: { claims } };
-  } catch (e) {
-    return undefined;
-  }
-}
-
 // Build the same event API Gateway (HTTP API, payload 2.0) sends to the Lambda
 async function callLambda(req, res, routeKey, transactionId, gameId) {
   const chunks = [];
@@ -171,8 +142,7 @@ async function callLambda(req, res, routeKey, transactionId, gameId) {
   const event = {
     routeKey: req.method + " " + routeKey,
     rawPath: new URL(req.url, "http://localhost").pathname,
-    queryStringParameters: Object.fromEntries(new URL(req.url, "http://localhost").searchParams),
-    requestContext: { http: { method: req.method }, authorizer: claimsFrom(req) },
+    requestContext: { http: { method: req.method } },
     pathParameters: transactionId !== undefined ? { transactionId } : gameId !== undefined ? { gameId } : undefined,
     body: chunks.length ? Buffer.concat(chunks).toString("utf8") : undefined,
     isBase64Encoded: false
@@ -193,8 +163,7 @@ function serveFile(req, res, pathname) {
       res.writeHead(404, { "Content-Type": "text/plain" }).end("Not found");
       return;
     }
-    // no-store: a refresh always shows the latest files while developing
-    res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream", "Cache-Control": "no-store" });
+    res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream" });
     res.end(data);
   });
 }
@@ -204,9 +173,6 @@ const server = http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url, "http://localhost");
     if (pathname === "/api/trades") return await callLambda(req, res, "/api/trades");
     if (pathname === "/api/account") return await callLambda(req, res, "/api/account");
-    if (pathname === "/api/quotes") return await callLambda(req, res, "/api/quotes");
-    if (pathname === "/api/leaderboard") return await callLambda(req, res, "/api/leaderboard");
-    if (/^\/api\/(me|account\/reset|admin)(\/|$)/.test(pathname)) return await callLambda(req, res, pathname);
     const game = pathname.match(/^\/api\/games(?:\/([^/]+)(\/[a-z]+)?)?\/?$/);
     if (game) {
       const routeKey = "/api/games" + (game[1] ? "/{gameId}" + (game[2] || "") : "");
@@ -227,5 +193,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`MarketStreet running locally at http://localhost:${PORT}`);
-  console.log("Trades, accounts, profiles, the audit log and Scenario Mode games are kept in memory and reset when you stop the server (Ctrl+C).");
+  console.log("Trades, the account and Scenario Mode games are kept in memory and reset when you stop the server (Ctrl+C).");
 });

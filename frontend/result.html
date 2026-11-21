@@ -3,29 +3,57 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Order – MarketStreet</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <title>Trade Result – MarketStreet</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="styles.css" />
-    <script src="auth.js" defer blocking="render"></script>
-    <script src="data.js" defer blocking="render"></script>
-    <script src="app.js" defer blocking="render"></script>
-    <script src="layout.js" defer blocking="render"></script>
-    <script src="result.js" defer blocking="render"></script>
+    <script src="data.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="result.js" defer></script>
   </head>
 
-  <body data-shell="app" data-nav="activity">
-    <main class="page narrow">
-      <p class="note"><a href="activity.html">Activity</a> / Order</p>
+  <body data-page="result">
+    <header class="site-header">
+      <div class="inner">
+        <a class="logo" href="trade.html">MarketStreet</a>
+        <form class="search" action="trade.html" role="search">
+          <label for="search" class="visually-hidden">Search stocks</label>
+          <input id="search" name="symbol" type="search" list="stocks" placeholder="Search stocks" autocomplete="off" />
+          <datalist id="stocks">
+            <option value="AAPL">Apple Inc.</option>
+            <option value="MSFT">Microsoft Corp.</option>
+            <option value="TSLA">Tesla Inc.</option>
+            <option value="AMZN">Amazon.com Inc.</option>
+            <option value="GOOGL">Alphabet Inc.</option>
+            <option value="NVDA">NVIDIA Corp.</option>
+            <option value="IBM">IBM Corp.</option>
+          </datalist>
+        </form>
+        <nav class="site-nav" aria-label="Main">
+          <a href="trade.html">Trade</a><a href="history.html">History</a><a href="scenarios.html">Scenarios</a>
+          <span class="account">U10427</span>
+        </nav>
+      </div>
+    </header>
+
+    <main>
       <!-- Shown only after the record is saved (FR-5) -->
-      <section class="panel" id="receipt" style="margin-top: 12px" aria-live="polite">
-        <span class="skeleton tall" style="width: 60%"></span>
-        <span class="skeleton" style="margin-top: 20px"></span>
-        <span class="skeleton" style="margin-top: 10px"></span>
-        <span class="skeleton" style="margin-top: 10px; width: 70%"></span>
+      <section class="card result" id="result">
+        <span class="badge" id="badge"></span>
+        <h1 id="result-title"></h1>
+        <p class="reason" id="reason" hidden></p>
+        <dl class="details" id="details"></dl>
+        <p class="note" id="result-note"></p>
+        <div class="button-row">
+          <a class="button" id="again" href="trade.html">Place another trade</a>
+          <a class="button secondary" href="history.html">View history</a>
+        </div>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <p>MarketStreet · Simulated trading, no real money</p>
+    </footer>
   </body>
 </html>

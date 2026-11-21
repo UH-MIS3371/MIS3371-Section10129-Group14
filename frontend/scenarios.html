@@ -3,30 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Challenges – MarketStreet</title>
+    <title>Scenarios – MarketStreet</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" />
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="scenarios.css" />
-    <script src="auth.js" defer blocking="render"></script>
-    <script src="data.js" defer blocking="render"></script>
-    <script src="data/scenarios.js" defer blocking="render"></script>
-    <script src="app.js" defer blocking="render"></script>
-    <script src="layout.js" defer blocking="render"></script>
-    <script src="game-core.js" defer blocking="render"></script>
-    <script src="market-chart.js" defer blocking="render"></script>
-    <script src="challenge-art.js" defer blocking="render"></script>
-    <script src="scenarios.js" defer blocking="render"></script>
-    <script src="leaderboard.js" defer blocking="render"></script>
+    <script src="data/scenarios.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="game-core.js" defer></script>
+    <script src="market-chart.js" defer></script>
+    <script src="scenarios.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
     <script src="hero3d.js" defer></script>
   </head>
 
-  <body class="game-page" data-shell="app" data-nav="challenges">
+  <body>
     <header class="site-header game-header">
       <div class="inner">
+        <a class="logo" href="trade.html">MarketStreet</a>
+        <nav class="site-nav" aria-label="Main">
+          <a href="trade.html">Trade</a><a href="history.html">History</a><a href="scenarios.html" aria-current="page">Scenarios</a>
+        </nav>
         <div class="clock" id="clock" hidden>
           <p class="when"><strong id="simDate" class="mono"></strong> <span id="dayCount" class="mono muted"></span></p>
           <button type="button" class="primary" id="pauseButton" title="Space">Start the clock</button>
@@ -56,17 +54,6 @@
       </div>
       <p id="pickerMessage" class="error" role="alert"></p>
       <div class="scenarios" id="scenarioList"></div>
-      <section class="board" aria-labelledby="boardTitle">
-        <div class="board-head">
-          <h2 id="boardTitle">Leaderboard</h2>
-          <div class="seg" role="group" aria-label="Scenario" id="boardTabs"></div>
-        </div>
-        <table>
-          <thead><tr><th>Rank</th><th>Player</th><th class="right">Return</th><th class="right">Stars</th><th class="right">Finished</th></tr></thead>
-          <tbody id="boardRows"></tbody>
-        </table>
-        <p id="boardMessage" class="empty"></p>
-      </section>
     </main>
 
     <main id="game" class="game" hidden>

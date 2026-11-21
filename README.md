@@ -44,14 +44,6 @@ Each interactive page loads its own script (`trade.js`, `history.js`, or `result
 
 Week 9 API and integration tests are documented in [Testing/Week-9-Integration-Tests.md](Testing/Week-9-Integration-Tests.md). The [Week 8 backend test results](Testing/Week-8-Backend/test-results%20week%208%20backend) are in `Testing/`, and the business rules are in [docs/02-requirements/business-rules.md](docs/02-requirements/business-rules.md). Testing evidence lives in `Testing/`; the former `docs/04-testing/` location is obsolete.
 
-## Git Workflow
-
-Work on a feature branch (never directly on `main`), commit, push, open a pull request, get a teammate's review, then merge. Branch protection on `main` requires the pull request and review.
-
-## Documentation
-
-[Requirements](docs/02-requirements/requirements.md) · [Business rules and internal controls](docs/02-requirements/business-rules.md) · [User stories](docs/02-requirements/user-stories-acceptance.md) · [Architecture](docs/03-system-design/architecture.md) · [Data dictionary](docs/03-system-design/data-dictionary.md) · [Decision log](docs/decisions.md) · [Week 13 platform test plan](Testing/Week-13-Platform/README.md)
-
 ## Project Purpose
 
 The purpose of this project is to demonstrate the complete processing of a stock trading transaction from user input through validation, business rules, system processing, and record creation.

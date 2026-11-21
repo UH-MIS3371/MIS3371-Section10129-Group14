@@ -7,19 +7,13 @@
 // - Each action carries a requestId. A retried click with the same requestId is applied once.
 // - Each save only succeeds if the game still has the version that was read (no lost or doubled updates).
 // - Errors say what to fix, or that nothing was saved; internal details stay in CloudWatch.
-// - Each game belongs to the user who started it. Only that user may play it; an admin may also look at it.
 const crypto = require("crypto");
-const { GetCommand, PutCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb");
+const { GetCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
 const core = require("./game-core");
 const SCENARIOS = require("./scenario-data.json");
-const { scanAll } = require("./store");
-const { PRICE_CENTS, START_CASH_CENTS } = require("./market-data");
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ROUTE = /^\/api\/games(?:\/([^/]+)(?:\/(orders|close|advance))?)?\/?$/;
-const ADMIN_ROUTE = /^\/api\/admin\/games\/?$/;
-const LEADERBOARD_ROUTE = /^\/api\/leaderboard\/?$/;
-const LEADERBOARD_SIZE = 10;
 const MAX_ORDERS = 1000;     // per game; keeps the saved game far below DynamoDB's 400 KB item limit
 const RECENT_REQUESTS = 20;  // requestIds remembered per game
 
@@ -63,15 +57,12 @@ async function save(db, game, readVersion) {
   await db.send(new PutCommand(params));
 }
 
-// POST /api/games {scenarioId}. The owner comes from the login token, never from the request body.
-async function createGame(db, body, user) {
+// POST /api/games {scenarioId}
+async function createGame(db, body) {
   const s = body && SCENARIOS.find((x) => x.id === body.scenarioId);
   if (!s) return fail(400, "Choose one of the scenarios.");
   const now = new Date().toISOString();
-  const game = {
-    gameId: crypto.randomUUID(), version: 1, ownerId: user.userId, ownerEmail: user.email, ownerName: user.name,
-    createdAt: now, updatedAt: now, recentRequests: [], ...core.newGame(s)
-  };
+  const game = { gameId: crypto.randomUUID(), version: 1, createdAt: now, updatedAt: now, recentRequests: [], ...core.newGame(s) };
   await save(db, game);
   return ok(201, game);
 }
@@ -114,12 +105,11 @@ const ACTIONS = {
 
 // Runs one action. The same requestId twice returns the game without applying the action again.
 // If another request saved the game in between, it reloads and tries once more.
-async function act(db, gameId, body, apply, user) {
+async function act(db, gameId, body, apply) {
   if (typeof body.requestId !== "string" || !UUID.test(body.requestId)) return fail(400, "A requestId is required.");
   for (let attempt = 0; attempt < 2; attempt++) {
     const game = await load(db, gameId);
     if (!game) return fail(404, "Game not found.");
-    if (game.ownerId !== user.userId) return fail(403, "This game belongs to another player.");
     if (game.recentRequests.includes(body.requestId)) return ok(200, game, { duplicate: true });
     const readVersion = game.version;
     const outcome = apply(SCENARIOS.find((s) => s.id === game.scenarioId), game);
@@ -137,116 +127,27 @@ async function act(db, gameId, body, apply, user) {
   return fail(409, "This game was changed somewhere else. Reload the game to continue.");
 }
 
-// GET /api/admin/games: a short summary of every game, newest first. The role is checked here on the
-// server; hiding the admin page from other users would not be protection on its own.
-async function listGames(db, user) {
-  if (!user.isAdmin) return fail(403, "Only admins can see every game.");
-  const items = [];
-  let ExclusiveStartKey;
-  do {
-    const page = await db.send(new ScanCommand({
-      TableName: process.env.GAMES_TABLE,
-      ProjectionExpression: "gameId, ownerId, ownerEmail, ownerName, scenarioId, #d, #s, #r, createdAt, updatedAt",
-      ExpressionAttributeNames: { "#d": "day", "#s": "status", "#r": "result" },
-      ExclusiveStartKey
-    }));
-    items.push(...page.Items);
-    ExclusiveStartKey = page.LastEvaluatedKey;
-  } while (ExclusiveStartKey);
-  const games = items.map((g) => ({
-    gameId: g.gameId, ownerId: g.ownerId, ownerEmail: g.ownerEmail, ownerName: g.ownerName, createdAt: g.createdAt,
-    scenarioId: g.scenarioId, day: g.day, status: g.status,
-    stars: g.result ? g.result.stars : null, returnPct: g.result ? g.result.mine : null, updatedAt: g.updatedAt
-  })).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  return { statusCode: 200, body: { success: true, games } };
-}
-
-// GET /api/leaderboard?scenario=<id>: the best finished game of each player in one scenario, highest return
-// first. The ranking uses the results the server saved; only display names are shown, never emails.
-async function portfolioBoard(db, user) {
-  const profiles = new Map((await scanAll(db, process.env.USERS_TABLE)).map((p) => [p.userId, p]));
-  const entries = (await scanAll(db, process.env.ACCOUNTS_TABLE)).filter((a) => !(profiles.get(a.userId) || {}).disabled).map((a) => {
-    const held = Object.entries(a.holdings || {}).filter(([, n]) => n > 0);
-    const valueCents = a.cashCents + held.reduce((sum, [symbol, n]) => sum + n * (PRICE_CENTS[symbol] || 0), 0);
-    return { name: (profiles.get(a.userId) || {}).name || "Player", returnPct: (valueCents - START_CASH_CENTS) / START_CASH_CENTS, valueCents, holdings: held.length, you: a.userId === user.userId };
-  }).sort((a, b) => b.returnPct - a.returnPct || b.valueCents - a.valueCents).slice(0, LEADERBOARD_SIZE).map((e, i) => ({ rank: i + 1, ...e }));
-  return { statusCode: 200, body: { success: true, board: "portfolio", entries } };
-}
-
-async function leaderboard(db, event, user) {
-  const query = event.queryStringParameters || {};
-  if (query.board === "portfolio") return portfolioBoard(db, user);
-  const scenarioId = query.scenario;
-  if (!SCENARIOS.some((s) => s.id === scenarioId)) return fail(400, "Choose one of the scenarios.");
-  const items = [];
-  let ExclusiveStartKey;
-  do {
-    const page = await db.send(new ScanCommand({
-      TableName: process.env.GAMES_TABLE,
-      FilterExpression: "scenarioId = :s AND #st = :over",
-      ProjectionExpression: "ownerId, ownerName, #r, updatedAt, scenarioId, #st",
-      ExpressionAttributeNames: { "#r": "result", "#st": "status" },
-      ExpressionAttributeValues: { ":s": scenarioId, ":over": "over" },
-      ExclusiveStartKey
-    }));
-    items.push(...page.Items);
-    ExclusiveStartKey = page.LastEvaluatedKey;
-  } while (ExclusiveStartKey);
-  const best = new Map();
-  for (const g of items) {
-    if (g.scenarioId !== scenarioId || g.status !== "over" || !g.result || !g.ownerId) continue;
-    const kept = best.get(g.ownerId);
-    if (!kept || g.result.mine > kept.result.mine) best.set(g.ownerId, g);
-  }
-  // Players can rename themselves, so the current display name comes from their profile
-  const names = new Map((await scanAll(db, process.env.USERS_TABLE)).map((p) => [p.userId, p.name]));
-  const entries = [...best.values()].sort((a, b) => b.result.mine - a.result.mine).slice(0, LEADERBOARD_SIZE).map((g, i) => ({
-    rank: i + 1, name: names.get(g.ownerId) || g.ownerName || "Player", returnPct: g.result.mine, stars: g.result.stars, finishedAt: g.updatedAt, you: g.ownerId === user.userId
-  }));
-  return { statusCode: 200, body: { success: true, scenarioId, entries } };
-}
-
 // Returns null when the request is not for /api/games, so index.js can route it elsewhere
-async function handleGames(db, event, method, user) {
-  const path = event.rawPath || "";
-  const match = path.match(ROUTE);
-  const board = LEADERBOARD_ROUTE.test(path);
-  if (!match && !board && !ADMIN_ROUTE.test(path)) return null;
+async function handleGames(db, event, method) {
+  const match = (event.rawPath || "").match(ROUTE);
+  if (!match) return null;
   if (!process.env.GAMES_TABLE) {
     console.log("GAMES_TABLE environment variable is not set.");
     return fail(500, "The game could not be saved. Please try again.");
   }
-  if (board) {
-    try {
-      return method === "GET" ? await leaderboard(db, event, user) : fail(405, "Use GET on /api/leaderboard.");
-    } catch (e) {
-      console.log("Leaderboard failed:", e);
-      return fail(500, "The leaderboard could not be loaded. Please try again.");
-    }
-  }
-  if (!match) {
-    try {
-      return method === "GET" ? await listGames(db, user) : fail(405, "Use GET on /api/admin/games.");
-    } catch (e) {
-      console.log("Game list failed:", e);
-      return fail(500, "The games could not be loaded. Please try again.");
-    }
-  }
   const action = match[2];
   const gameId = (event.pathParameters && event.pathParameters.gameId) || match[1];
   try {
-    if (method === "POST" && !gameId) return await createGame(db, parseBody(event), user);
+    if (method === "POST" && !gameId) return await createGame(db, parseBody(event));
     if (!gameId || !UUID.test(gameId)) return fail(404, "Game not found.");
     if (method === "GET" && !action) {
       const game = await load(db, gameId);
-      if (!game) return fail(404, "Game not found.");
-      if (game.ownerId !== user.userId && !user.isAdmin) return fail(403, "This game belongs to another player.");
-      return ok(200, game);
+      return game ? ok(200, game) : fail(404, "Game not found.");
     }
     if (method === "POST" && action) {
       const body = parseBody(event);
       if (!body) return fail(400, "A JSON request body is required.");
-      return await act(db, gameId, body, ACTIONS[action](body), user);
+      return await act(db, gameId, body, ACTIONS[action](body));
     }
     return fail(405, "Use GET or POST on /api/games.");
   } catch (e) {

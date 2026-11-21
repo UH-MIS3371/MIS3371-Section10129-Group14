@@ -24,10 +24,11 @@ function getQuote(symbol, now = Date.now()) {
   return { priceCents: PRICE_CENTS[symbol], quotedAt: now };
 }
 
-// Starting account for a new user: $10,000 cash and no holdings (D-10). It is saved in the
-// accounts table the first time the user signs in; after that, every accepted trade updates
-// the saved account (BR-7). The browser's cash and sharesOwned are never trusted.
+// Starting account for a new user, same as START in frontend/app.js ($10,000 cash
+// and 10 AAPL, 2 MSFT, 1 IBM). It is saved in the accounts table the first time the
+// user trades; after that, every accepted trade updates the saved account (BR-7).
+// The browser's cash and sharesOwned are never trusted.
 const START_CASH_CENTS = 1000000;
-const START_SHARES = Object.freeze({});
+const START_SHARES = Object.freeze({ "AAPL": 10, "MSFT": 2, "IBM": 1 });
 
 module.exports = { PRICE_CENTS, MAX_PRICE_AGE_MS, getQuote, START_CASH_CENTS, START_SHARES };

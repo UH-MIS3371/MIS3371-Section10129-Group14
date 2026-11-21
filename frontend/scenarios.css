@@ -167,7 +167,7 @@ button:disabled {
 /* ---------- Picker ---------- */
 
 .picker {
-  max-width: 1240px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 48px 24px;
 }
@@ -1040,97 +1040,3 @@ dialog.info {
 #pickerMessage:empty {
   display: none;
 }
-
-/* ---------- Leaderboard ---------- */
-
-.board {
-  margin-top: 40px;
-  padding: 20px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-}
-
-.board-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.board-head h2 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.board th {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.board td,
-.board th {
-  padding: 8px 6px;
-  border-bottom: 1px solid rgb(255 255 255 / 0.05);
-}
-
-.board .you-row td {
-  background: var(--raised);
-  font-weight: 600;
-}
-
-.stars-cell {
-  color: var(--warning);
-  letter-spacing: 2px;
-}
-
-.board .empty:empty {
-  display: none;
-}
-
-.board-foot {
-  margin-top: 14px;
-  font-size: 13px;
-}
-
-.stars-cell .no-star {
-  color: var(--control);
-}
-
-/* Challenge cards: three across, then two wide; art on top with a meme-style caption */
-.scenarios { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
-.scenario { grid-column: span 2; padding: 0 20px 20px; overflow: hidden; }
-.scenario:nth-child(n + 4) { grid-column: span 3; }
-.scenario .art { display: block; position: relative; height: 150px; margin: 0 -20px 6px; overflow: hidden; color: var(--hue); }
-.scenario .art svg { display: block; width: 100%; height: 100%; }
-.scenario .meme { position: absolute; left: 10px; right: 10px; text-align: center; font: 800 13px/1.1 "Public Sans", system-ui, sans-serif; color: #fff; text-transform: uppercase; -webkit-text-stroke: 3px #000; paint-order: stroke fill; }
-.scenario .meme.top { top: 8px; }
-.scenario .meme.bottom { bottom: 8px; }
-.scenario .meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.scenario .level { padding: 1px 8px; border-radius: 4px; background: color-mix(in srgb, var(--hue) 16%, transparent); color: var(--hue); font-size: 12px; font-weight: 600; }
-.scenario .tagline { color: var(--text); font-weight: 600; }
-.scenario .context { color: var(--muted); font-size: 13px; }
-.scenario .mission { color: var(--text); font-size: 13px; }
-.scenario .mission b { color: var(--hue); font-weight: 600; }
-.scenario .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.scenario .chips span { padding: 1px 8px; border: 1px solid var(--control); border-radius: 4px; color: var(--muted); font-size: 12px; }
-@media (max-width: 1000px) {
-  .scenarios { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .scenario, .scenario:nth-child(n + 4) { grid-column: span 1; }
-  .scenario:last-child { grid-column: span 2; }
-}
-@media (max-width: 660px) {
-  .scenarios { grid-template-columns: 1fr; }
-  .scenario:last-child { grid-column: span 1; }
-}
-/* The 3D bars sit on the right; the intro text stays clear of them */
-@media (min-width: 900px) { .hero h1, .hero .lead { max-width: min(560px, 55%); } }
-
-/* The art sits in a padded frame: captions stay clear of it, and wide cards never crop it */
-.scenario .art { box-sizing: border-box; padding: 26px 0; background: color-mix(in srgb, var(--hue) 13%, var(--surface)); }
-.scenario .art svg { height: 100%; }

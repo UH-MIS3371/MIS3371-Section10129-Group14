@@ -1,229 +1,276 @@
-// Stock page: quote, chart, the user's position and history in this stock, and the order ticket.
-// The ticket has two steps: Review order (checks in the browser, FR-2), then Submit (the server decides).
+// Page-specific behavior for trade.html.
 
-const symbol = (new URLSearchParams(location.search).get("symbol") || "AAPL").trim().toUpperCase();
-const stock = STOCKS[symbol];
-let account = null;
-let myTrades = [];
-let reviewing = false;
-let requestId = crypto.randomUUID();
+function renderTrade() {
+  const params = new URLSearchParams(location.search);
+  const symbol = (params.get("symbol") || "AAPL").trim().toUpperCase();
 
-const $ = (id) => document.getElementById(id);
-const form = $("orderForm");
-const quantityInput = $("shareQuantity");
-
-function tradeType() {
-  return form.querySelector("input[name=tradeType]:checked").value;
-}
-
-// BR-3 in the browser: a positive whole number
-function quantityError() {
-  const raw = quantityInput.value.trim();
-  if (!/^\d+$/.test(raw) || Number(raw) < 1) return "Enter a whole number of shares, 1 or more.";
-  return "";
-}
-
-function renderQuote() {
-  const price = priceCents(symbol);
-  const prev = cents(stock.prev);
-  document.title = symbol + " · " + stock.name + " – MarketStreet";
-  $("crumbSymbol").textContent = symbol;
-  $("symbolTitle").textContent = symbol;
-  $("company").textContent = stock.name;
-  $("price").textContent = money(price);
-  $("change").textContent = signedMoney(price - prev) + " (" + percent((price - prev) / prev) + ") today";
-  $("change").className = "mono " + trendClass(price - prev);
-  const chart = $("stockChart");
-  chart.dataset.points = JSON.stringify(stock.month);
-  chart.setAttribute("aria-label", symbol + " price over the last month, ending at " + money(price));
-  drawCharts();
-  $("stats").replaceChildren(...[
-    ["Open", money(cents(stock.open))], ["Day high", money(cents(stock.high))], ["Day low", money(cents(stock.low))],
-    ["Previous close", money(prev)], ["Volume", stock.volume], ["52-week range", money(cents(stock.low52)) + " – " + money(cents(stock.high52))]
-  ].map(([k, v]) => el("div", null, el("dt", null, k), el("dd", null, v))));
-  $("orderTitle").textContent = "Trade " + symbol;
-  $("orderPrice").textContent = money(price);
-  $("historyTitle").textContent = "Your " + symbol + " orders";
-}
-
-function renderPosition() {
-  const p = buildPositions(account.holdings, myTrades, account.resetAt).find((x) => x.symbol === symbol);
-  const total = account.cashCents + holdingsValue(account.holdings);
-  if (!p) {
-    $("position").replaceChildren(el("div", { style: "grid-column: 1 / -1" }, el("dt", null, "You don't own any " + symbol + " yet."), el("dd", { class: "muted", style: "font-family: var(--sans)" }, "Buy shares with the ticket to start a position.")));
+  if (!STOCKS[symbol]) {
+    // BR-2 in the browser: unknown symbols never reach the order form
+    document.getElementById("stock").hidden = true;
+    document.getElementById("not-found").hidden = false;
+    document.getElementById("missing-symbol").textContent = symbol || "That stock";
     return;
   }
-  $("position").replaceChildren(...[
-    ["Shares", p.shares.toLocaleString("en-US")], ["Market value", money(p.value)], ["Average cost", p.avg === null ? "—" : money(p.avg)],
-    ["Today's return", signedMoney(p.dayChange)], ["Total return", p.gain === null ? "—" : signedMoney(p.gain) + " " + percent(p.gainPct)],
-    ["Portfolio share", ((p.value / total) * 100).toFixed(1) + "%"]
-  ].map(([k, v]) => el("div", null, el("dt", null, k), el("dd", null, v))));
-}
 
-function renderHistory() {
-  const mine = myTrades.filter((t) => t.stockSymbol === symbol);
-  $("history").replaceChildren(...(mine.length ? mine.slice(0, 8).map((t) => el("tr", { onclick: () => (location.href = "result.html?id=" + t.transactionId) },
-    el("td", { "data-label": "Order" }, el("a", { href: "result.html?id=" + t.transactionId }, orderText(t))),
-    el("td", { "data-label": "Status" }, statusPill(t.status)),
-    el("td", { class: "num", "data-label": "Price" }, t.executionPrice ? money(cents(t.executionPrice)) : "—"),
-    el("td", { class: "num muted", "data-label": "When" }, timeEl(t.submittedAt))))
-    : [el("tr", null, el("td", { class: "muted" }, "No orders for " + symbol + " yet."))]));
-}
+  const stock = STOCKS[symbol];
+  const price = cents(stock.price);
+  document.title = symbol + " – MarketStreet";
+  document.getElementById("stock-title").textContent = symbol;
+  document.getElementById("company").textContent = stock.name;
+  document.getElementById("price").textContent = money(price);
+  setChange(document.getElementById("change"), price - cents(stock.prev), cents(stock.prev));
 
-function setReviewing(on) {
-  reviewing = on;
-  requestId = crypto.randomUUID();
-  $("review").hidden = !on;
-  $("edit").hidden = !on;
-  quantityInput.disabled = on;
-  form.querySelectorAll("input[name=tradeType]").forEach((i) => (i.disabled = on));
-  updateTicket();
-}
+  const chart = document.getElementById("stock-chart");
+  chart.dataset.points = JSON.stringify(stock.month);
+  chart.setAttribute("aria-label", symbol + " price over the last month, ending at " + money(price));
 
-function updateTicket() {
-  const price = priceCents(symbol);
-  const type = tradeType();
-  const qty = Number(quantityInput.value);
-  const valid = !quantityError();
-  const submit = $("submit");
-  submit.className = "btn block primary";
-  submit.textContent = reviewing ? "Submit " + type.toLowerCase() + " order" : "Review " + type.toLowerCase() + " order";
-  $("estimateText").textContent = type === "Buy" ? "Estimated cost" : "Estimated credit";
-  $("estimateTotal").textContent = valid ? money(price * qty) : "—";
-  if (!account) return;
+  const stats = [
+    ["Open", money(cents(stock.open))],
+    ["Day high", money(cents(stock.high))],
+    ["Day low", money(cents(stock.low))],
+    ["Previous close", money(cents(stock.prev))],
+    ["Volume", stock.volume],
+    ["52-week range", money(cents(stock.low52)) + " – " + money(cents(stock.high52))],
+  ];
+  const statsList = document.getElementById("stats");
+  for (const [name, value] of stats) statsList.append(el("div", null, el("dt", null, name), el("dd", null, value)));
 
-  const owned = account.holdings[symbol] || 0;
-  $("cash").textContent = money(account.cashCents);
-  $("owned").textContent = plural(owned, "share");
-  // Warn early; the server still makes the final decision (BR-4, BR-5)
-  const hint = $("quantityHint");
-  hint.className = "help";
-  const maxBuy = Math.floor(account.cashCents / price);
-  if (type === "Sell") {
-    hint.textContent = owned ? "You can sell up to " + plural(owned, "share") + "." : "You don't own any " + symbol + " to sell.";
-    if (valid && qty > owned) {
-      hint.textContent = "You only own " + plural(owned, "share") + ". MarketStreet will reject this order.";
-      hint.className = "help warning";
+  document.getElementById("order-title").textContent = "Trade " + symbol;
+  document.getElementById("order-price").textContent = "Market · " + money(price);
+
+  const form = document.getElementById("order-form");
+  form.elements.stockSymbol.value = symbol;
+  const quantityInput = document.getElementById("shareQuantity");
+  const hint = document.getElementById("quantity-hint");
+  const error = document.getElementById("quantity-error");
+  const submit = document.getElementById("submit");
+
+  function tradeType() {
+    return form.querySelector("input[name=tradeType]:checked").value;
+  }
+
+  // BR-3 in the browser: a positive whole number
+  function quantityError() {
+    const raw = quantityInput.value.trim();
+    if (!/^\d+$/.test(raw) || Number(raw) < 1) return "Enter a whole number of 1 or more.";
+    return "";
+  }
+
+  function update() {
+    const state = loadState();
+    const owned = state.holdings[symbol] || 0;
+    const type = tradeType();
+    const qty = Number(quantityInput.value);
+    const valid = !quantityError();
+
+    document.getElementById("owned").textContent = plural(owned, "share") + " · " + money(price * owned);
+    document.getElementById("cash").textContent = money(state.cash);
+
+    submit.textContent = "Place " + type + " order";
+    submit.className = "button " + type.toLowerCase();
+
+    if (valid) {
+      document.getElementById("estimate-text").textContent = type + " " + qty + " " + symbol + " at " + money(price);
+      document.getElementById("estimate-total").textContent = money(price * qty);
+    } else {
+      document.getElementById("estimate-text").textContent = "Enter the number of shares to see your total.";
+      document.getElementById("estimate-total").textContent = "—";
     }
-  } else {
-    hint.textContent = "Your buying power covers up to " + plural(maxBuy, "share") + ".";
-    if (valid && qty > maxBuy) {
-      hint.textContent = "This costs more than your buying power (" + money(account.cashCents) + "). MarketStreet will reject this order.";
-      hint.className = "help warning";
+
+    // Warn early; the application still makes the final decision (BR-4, BR-5)
+    const maxBuy = Math.floor(state.cash / price);
+    hint.className = "help";
+    if (type === "Sell") {
+      hint.textContent = "You own " + plural(owned, "share") + " of " + symbol + ".";
+      if (valid && qty > owned) {
+        hint.textContent = "You only own " + plural(owned, "share") + ", so this order will be rejected.";
+        hint.className = "help warning";
+      }
+    } else {
+      hint.textContent = "With your cash you can buy up to " + plural(maxBuy, "share") + ".";
+      if (valid && qty > maxBuy) {
+        hint.textContent = "This costs more than your cash (" + money(state.cash) + "), so this order will be rejected.";
+        hint.className = "help warning";
+      }
     }
   }
-}
 
-function showFieldError(message) {
-  const error = $("quantityError");
-  error.textContent = message;
-  error.hidden = !message;
+  quantityInput.addEventListener("input", () => {
+    if (!error.hidden && !quantityError()) {
+      error.hidden = true;
+      quantityInput.removeAttribute("aria-invalid");
+    }
+    update();
+  });
+  form.querySelectorAll("input[name=tradeType]").forEach((input) => {
+    input.addEventListener("change", update);
+  });
+  form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const message = quantityError();
+  const serverMessage = document.getElementById("server-message");
+
+  serverMessage.textContent = "";
+
   if (message) {
+    error.textContent = message;
+    error.hidden = false;
     quantityInput.setAttribute("aria-invalid", "true");
     quantityInput.focus();
-  } else {
-    quantityInput.removeAttribute("aria-invalid");
+    return;
   }
-}
 
-async function submitOrder() {
-  const submit = $("submit");
-  const message = $("serverMessage");
+  // Form IDs/names follow the data dictionary. The API uses symbol and
+  // quantity, so translate those names only at this boundary.
+  const state = loadState();
+
+  const trade = {
+    symbol: form.elements.stockSymbol.value,
+    tradeType: tradeType(),
+    quantity: Number(quantityInput.value),
+    orderType: form.elements.orderType.value,
+    price: stock.price,
+    cash: state.cash / 100,
+    sharesOwned: state.holdings[symbol] || 0
+  };
+
   submit.disabled = true;
-  $("edit").disabled = true;
-  submit.textContent = "Submitting…";
+
   try {
-    // Only the order goes to the server; it uses its own price, cash and shares
-    const result = await api("/trades", { method: "POST", body: { symbol, tradeType: tradeType(), quantity: Number(quantityInput.value), orderType: "Market", requestId } })
-      .catch((e) => (e.data && e.data.status ? e.data : Promise.reject(e)));
-    requestId = crypto.randomUUID();
-    // FR-5: show the outcome only once the record is saved
-    if (result.transactionId) {
-      location.href = "result.html?id=" + encodeURIComponent(result.transactionId) + "&new=1";
+    // Send the trade to the AWS API Gateway endpoint
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(trade)
+    });
+
+    const result = await response.json();
+   
+  if (
+    !response.ok ||
+    result.status !== "ACCEPTED" ||
+    result.success !== true ||
+    result.persisted !== true ||
+    !result.transactionId ||
+    !result.trade
+  ) {
+
+      serverMessage.textContent =
+        (result.status === "ERROR" ? "Trade not saved: " : "Trade rejected: ") + (result.reason || result.message || "Validation failed.");
+      serverMessage.className = "error";
       return;
     }
-    message.textContent = (result.status === "REJECTED" ? "Order rejected: " : "Order not saved: ") + (result.reason || "Please try again.");
-    message.hidden = false;
-  } catch (e) {
-    message.textContent = e.message;
-    message.hidden = false;
+   
+  saveTrade(result.trade, result.account);
+  update(); // show the new cash and shares
+
+// Show confirmation only after DynamoDB confirms the save
+   document.getElementById("confirmationNumber").textContent =
+   result.transactionId;
+
+   document.getElementById("confirmationPanel").hidden = false;
+
+// Automatically fill the View Status input
+   document.getElementById("statusTransactionId").value =
+   result.transactionId;
+
+// Clear previous lookup results
+   document.getElementById("statusResult").hidden = true;
+
+  document.getElementById("statusMessage").textContent =
+  "Trade saved! Click View Status to retrieve your transaction.";
+
+// Scroll to the confirmation section
+  document.getElementById("confirmationPanel").scrollIntoView({
+  behavior: "smooth",
+  block: "center"
+});
+
+
+  } catch (error) {
+    serverMessage.textContent =
+      "Could not reach the trade server. Please check your connection and try again.";
+    serverMessage.className = "error";
+
+  } finally {
+    submit.disabled = false;
   }
-  submit.disabled = false;
-  $("edit").disabled = false;
-  updateTicket();
+});
+update();
+// Show the saved account from the server once it loads
+syncAccount().then((ok) => { if (ok) update(); });
 }
 
-function wireTicket() {
-  quantityInput.addEventListener("input", () => {
-    if (!$("quantityError").hidden && !quantityError()) showFieldError("");
-    $("serverMessage").hidden = true;
-    updateTicket();
-  });
-  form.querySelectorAll("input[name=tradeType]").forEach((i) => i.addEventListener("change", () => { $("serverMessage").hidden = true; updateTicket(); }));
-  $("edit").addEventListener("click", () => setReviewing(false));
-  // Quick quantities; Max is everything your buying power covers (Buy) or every share you own (Sell)
-  $("qtyChips").addEventListener("click", (e) => {
-    const button = e.target.closest("button");
-    if (!button || reviewing) return;
-    const max = !account ? 1 : tradeType() === "Buy" ? Math.floor(account.cashCents / priceCents(symbol)) : account.holdings[symbol] || 0;
-    quantityInput.value = String(button.dataset.qty === "max" ? Math.max(max, 1) : button.dataset.qty);
-    quantityInput.dispatchEvent(new Event("input"));
-  });
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    if (reviewing) return submitOrder();
-    const problem = quantityError();
-    showFieldError(problem);
-    if (problem) return;
-    const qty = Number(quantityInput.value);
-    const price = priceCents(symbol);
-    const type = tradeType();
-    const cashAfter = account ? account.cashCents + (type === "Buy" ? -1 : 1) * price * qty : null;
-    $("reviewList").replaceChildren(...[
-      ["Order", type + " " + plural(qty, "share") + " of " + symbol], ["Order type", "Market"], ["Price", money(price)],
-      [type === "Buy" ? "Estimated cost" : "Estimated credit", money(price * qty)],
-      ["Buying power after", cashAfter === null ? "—" : money(cashAfter)]
-    ].map(([k, v]) => el("div", null, el("dt", null, k), el("dd", null, v))));
-    setReviewing(true);
-  });
-  if (new URLSearchParams(location.search).get("side") === "Sell") $("sell").checked = true;
-}
+renderTrade();
 
-function useAccount(me, trades) {
-  account = me.account;
-  myTrades = trades;
-  renderPosition();
-  renderHistory();
-  updateTicket();
-}
+ // Week 11 Session 2: View saved trade status
+const statusForm = document.getElementById("statusLookupForm");
+const statusInput = document.getElementById("statusTransactionId");
+const statusMessage = document.getElementById("statusMessage");
+const statusResult = document.getElementById("statusResult");
+const viewStatusButton = document.getElementById("viewStatusButton");
 
-// Shows the last known position at once; the fresh account replaces it before an order can be reviewed
-async function loadAccount() {
-  const me = peek("/me");
-  const cached = peek("/trades");
-  if (me && cached) useAccount(me, cached.trades);
+statusForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const id = statusInput.value.trim();
+  if (!id) return;
+
+  statusMessage.textContent = "Looking up your trade...";
+  statusResult.hidden = true;
+  statusResult.replaceChildren();
+  viewStatusButton.disabled = true;
+
   try {
-    const [fresh, { trades }] = await Promise.all([loadMe(true), api("/trades")]);
-    useAccount(fresh, trades);
-  } catch (e) {
-    $("serverMessage").textContent = "Your account could not be loaded. " + e.message;
-    $("serverMessage").hidden = false;
-  }
-}
+    const response = await fetch(
+      API_URL + "/" + encodeURIComponent(id),
+      { method: "GET" }
+    );
 
-if (!stock) {
-  // BR-2 in the browser: unknown symbols never reach the order form
-  $("stock").hidden = true;
-  $("notFound").hidden = false;
-  $("missingSymbol").textContent = symbol || "that stock";
-} else {
-  // Draw at once from the last known price; the fresh quote redraws it (the server always prices the order)
-  wireTicket();
-  renderQuote();
-  updateTicket();
-  loadAccount();
-  loadQuotes().then(() => {
-    renderQuote();
-    updateTicket();
-  });
-}
+    const result = await response.json();
+
+    if (!response.ok || result.success !== true || !result.trade) {
+      statusMessage.textContent =
+        result.reason || result.message || "Trade not found.";
+      return;
+    }
+
+    const trade = result.trade;
+
+    const fields = [
+      ["Confirmation Number", trade.transactionId],
+      ["Status", trade.status],
+      ["Stock Symbol", trade.stockSymbol],
+      ["Trade Type", trade.tradeType],
+      ["Shares", trade.shareQuantity],
+      ["Submitted", trade.submittedAt]
+    ];
+
+    const details = document.createElement("dl");
+    details.className = "details";
+
+    for (const [label, value] of fields) {
+      const term = document.createElement("dt");
+      term.textContent = label;
+
+      const description = document.createElement("dd");
+      description.textContent = String(value ?? "Unavailable");
+
+      details.append(term, description);
+    }
+
+    statusResult.append(details);
+    statusResult.hidden = false;
+    statusMessage.textContent = "Trade retrieved successfully!";
+
+  } catch (error) {
+    statusMessage.textContent =
+      "Unable to retrieve trade. Please try again.";
+
+  } finally {
+    viewStatusButton.disabled = false;
+  }
+});

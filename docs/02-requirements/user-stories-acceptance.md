@@ -55,31 +55,3 @@ Given a missing or unrecognized stock symbol, no trade type selected, or a share
 
 **Acceptance Criteria:**
 Given at least one recorded trade, when I open my transaction history, then I see every Accepted and Rejected transaction with its ID, stock symbol, trade type, quantity, status, timestamp, and (for rejected trades) the reason.
-
-## Reset My Account
-
-**As a** user, **I want to** reset my paper account **so that** I can start over.
-
-**Acceptance Criteria:**
-Given I am signed in, when I type RESET and confirm, then my cash returns to $10,000.00, my holdings are cleared, and my transaction history is kept. Given I type anything else, then nothing changes.
-
-## Admin Disables a User
-
-**As an** admin, **I want to** disable a user **so that** they can no longer trade.
-
-**Acceptance Criteria:**
-Given I am an admin, when I disable another user, then an audit entry is written first, the user's requests are refused, and I can enable them again. Given I try to disable myself, then it is refused. Given I am not an admin, then the request returns 403 and the refusal is audited.
-
-## Admin Adjusts Cash
-
-**As an** admin, **I want to** adjust a user's cash **so that** I can correct or fund an account.
-
-**Acceptance Criteria:**
-Given I am an admin, when I add or remove up to $100,000 and the result is not below $0, then the cash changes and the audit entry shows the before and after values. Given the amount is larger or would make cash negative, then it is refused and cash is unchanged.
-
-## Retrying an Order Does Not Trade Twice
-
-**As a** user, **I want** a retried order to be safe **so that** a slow connection never buys twice.
-
-**Acceptance Criteria:**
-Given I submitted an order and the connection dropped, when the same order is sent again with the same request ID, then the original result is returned, only one transaction record exists, and my cash and holdings changed once.
