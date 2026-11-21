@@ -10,11 +10,16 @@ const $ = (id) => document.getElementById(id);
 
 // Each scenario's colour and a line of context shown before it starts
 const THEMES = {
-  "crisis-2008": { hue: "#d08a5a", context: "Mortgage losses are spreading through Wall Street, and banks like BAC, C and GS hold a lot of them." },
-  "dotcom-2000": { hue: "#9b7be0", context: "Tech stocks are priced for years of perfect growth. Investors are starting to ask when the profits arrive." },
-  "covid-2020": { hue: "#3fb0c9", context: "A new virus is spreading. Airlines and cruise lines need people to travel; Zoom needs them to stay home." },
-  "meme-2021": { hue: "#e07bc0", context: "Hedge funds have bet heavily against GameStop, and traders on Reddit have noticed." },
-  "rates-2022": { hue: "#d9b24a", context: "Inflation is the highest in 40 years and the Fed is about to raise rates. Growth stocks are the most exposed." }
+  "crisis-2008": { hue: "#d08a5a", level: "Hard", context: "Mortgage losses are spreading through Wall Street, and banks like BAC, C and GS hold a lot of them.",
+    tagline: "Everyone owns houses. Everyone owns the bonds on houses.", mission: "Keep your $100,000 safe while the banks wobble. Cash is a position too.", meme: ["\"House prices only go up\"", "Narrator: they did not"] },
+  "dotcom-2000": { hue: "#9b7be0", level: "Medium", context: "Tech stocks are priced for years of perfect growth. Investors are starting to ask when the profits arrive.",
+    tagline: "Every company needs a .com. Not every company needs a profit.", mission: "Ride the boom without being the last one holding the bubble.", meme: ["\"We'll make it up in volume\"", "Loses money on every order"] },
+  "covid-2020": { hue: "#3fb0c9", level: "Hard", context: "A new virus is spreading. Airlines and cruise lines need people to travel; Zoom needs them to stay home.",
+    tagline: "The world is about to stay home. Who wins, who waits?", mission: "Sort the stocks that need crowds from the ones that thrive without them.", meme: ["Zoom: \"we need more servers\"", "Airlines: \"we need a plan\""] },
+  "meme-2021": { hue: "#e07bc0", level: "Wild", context: "Hedge funds have bet heavily against GameStop, and traders on Reddit have noticed.",
+    tagline: "A video game store, a Reddit forum and one very large bet.", mission: "Only 38 trading days. Decide when to hold, and when to take the money.", meme: ["Diamond hands", "Not financial advice"] },
+  "rates-2022": { hue: "#d9b24a", level: "Medium", context: "Inflation is the highest in 40 years and the Fed is about to raise rates. Growth stocks are the most exposed.",
+    tagline: "Money was almost free for a decade. That is about to change.", mission: "Figure out which stocks a higher interest rate hurts, and which it doesn't.", meme: ["\"Inflation is transitory\"", "Interest rates: \"hold my beer\""] }
 };
 
 // game = the server's saved game plus page-only fields: s (the scenario), speed, paused, timer, symbol,
@@ -50,8 +55,8 @@ function liveBar(bar, progress) {
 
 // ---------- Talking to the server ----------
 
-async function api(method, url, body) {
-  const response = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body && JSON.stringify(body) });
+async function gameApi(method, url, body) {
+  const response = await authFetch(url, { method, headers: { "Content-Type": "application/json" }, body: body && JSON.stringify(body) });
   return { ok: response.ok, status: response.status, data: await response.json().catch(() => ({})) };
 }
 
@@ -73,7 +78,7 @@ async function act(action, body) {
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const res = await api("POST", GAMES_URL + "/" + game.gameId + "/" + action, request);
+        const res = await gameApi("POST", GAMES_URL + "/" + game.gameId + "/" + action, request);
         if (res.ok) {
           applyServer(res.data.game);
           return res.data;
@@ -91,7 +96,7 @@ async function act(action, body) {
 }
 
 async function reloadGame() {
-  const res = await api("GET", GAMES_URL + "/" + game.gameId);
+  const res = await gameApi("GET", GAMES_URL + "/" + game.gameId);
   if (res.ok) applyServer(res.data.game);
 }
 
@@ -225,10 +230,18 @@ function renderPicker() {
   $("speedNote").textContent = "One trading day every " + plural(speed, "second");
   $("scenarioList").replaceChildren(...SCENARIOS.map((s) => {
     const days = s.dates.length - s.start;
-    return el("button", { type: "button", class: "scenario", "data-id": s.id, style: "--hue: " + THEMES[s.id].hue },
-      el("span", { class: "period mono" }, periodText(s)),
+    const t = THEMES[s.id];
+    const art = el("span", { class: "art", "aria-hidden": "true" });
+    art.innerHTML = CHALLENGE_ART[s.id];
+    art.append(el("span", { class: "meme top" }, t.meme[0]), el("span", { class: "meme bottom" }, t.meme[1]));
+    return el("button", { type: "button", class: "scenario", "data-id": s.id, style: "--hue: " + t.hue },
+      art,
+      el("span", { class: "meta" }, el("span", { class: "period mono" }, periodText(s)), el("span", { class: "level" }, t.level)),
       el("strong", null, s.name),
-      el("span", null, THEMES[s.id].context),
+      el("span", { class: "tagline" }, t.tagline),
+      el("span", { class: "context" }, t.context),
+      el("span", { class: "mission" }, el("b", null, "Your mission "), t.mission),
+      el("span", { class: "chips" }, Object.keys(s.stocks).filter((k) => k !== s.benchmark).slice(0, 5).map((k) => el("span", { class: "mono" }, k))),
       el("span", { class: "spark" }),
       el("span", { class: "spark-label" }, "How " + s.benchmark + " looked going in"),
       el("span", { class: "play" }, el("span", null, days + " trading days · about " + Math.max(1, Math.round((days * speed) / 60)) + " min"), el("b", null, "Play →")));
@@ -268,7 +281,7 @@ $("briefBack").addEventListener("click", () => $("briefDialog").close());
 async function startGame(s) {
   $("pickerMessage").textContent = "Starting…";
   try {
-    const res = await api("POST", GAMES_URL, { scenarioId: s.id });
+    const res = await gameApi("POST", GAMES_URL, { scenarioId: s.id });
     if (!res.ok) throw new Error(res.data.reason);
     $("pickerMessage").textContent = "";
     try {
@@ -279,7 +292,9 @@ async function startGame(s) {
     enterGame(res.data.game);
     return true;
   } catch (e) {
-    $("pickerMessage").textContent = "The game could not be started. Please try again.";
+    $("pickerMessage").textContent = isGuest()
+      ? "Scenario Mode saves games to an account, so it isn't available in guest mode. Create a free account to play it."
+      : "The game could not be started. Please try again.";
     $("picker").hidden = false;
     return false;
   }
@@ -662,6 +677,7 @@ $("againButton").addEventListener("click", () => {
 
 $("pickButton").addEventListener("click", () => {
   $("endDialog").close();
+  showBoard(game.s.id);
   document.body.style.removeProperty("--accent");
   $("game").hidden = true;
   $("clock").hidden = true;
@@ -683,7 +699,7 @@ async function offerResume() {
   }
   if (!gameId) return;
   try {
-    const res = await api("GET", GAMES_URL + "/" + encodeURIComponent(gameId));
+    const res = await gameApi("GET", GAMES_URL + "/" + encodeURIComponent(gameId));
     if (!res.ok || res.data.game.status !== "active") throw new Error("not resumable");
     const s = SCENARIOS.find((x) => x.id === res.data.game.scenarioId);
     $("resumeName").textContent = s.name + ", day " + (res.data.game.day - s.start + 1) + " of " + (s.dates.length - s.start);

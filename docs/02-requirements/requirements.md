@@ -26,6 +26,18 @@ The system shall require the user to be signed in to a simulated trading account
 **FR-8 — View Account Summary**  
 The system shall show the signed-in user's current simulated cash balance, their holdings (shares owned per stock), and the current simulated price of the selected stock before they submit a trade.
 
+**FR-9 — Profile and Display Name**
+The system shall let a signed-in user set a display name of 3 to 20 letters, numbers, and spaces. The application validates the name. The user can also sign out of every device.
+
+**FR-10 — Reset Paper Account**
+The system shall let a signed-in user reset their paper account to the starting state (D-10) after typing `RESET` to confirm. Transaction history is kept (NFR-4) and the reset time is recorded as `resetAt`.
+
+**FR-11 — Admin Console and Roles**
+The system shall provide an admin console, for users in the `admins` role only, showing overview metrics, users, user detail, trades, games, and the audit log. Admins can adjust cash (up to ±$100,000 per action, cash never below $0), reset an account, disable or enable a user, make or remove an admin, and force a user to sign out. The application checks the role on every admin request (IC-1).
+
+**FR-12 — Audit Log**
+The system shall write an audit entry for every admin action and every refused admin request. Entries are append-only and cannot be edited or deleted (IC-4).
+
 ---
 
 ## Nonfunctional Requirements
@@ -55,4 +67,4 @@ Under normal demonstration load, the trade result shall be displayed within **2 
 
 ## Scope Note
 
-These requirements apply to MarketStreet's Milestone 1 scope: **submitting and processing a simulated stock trade**. Limit orders, real-money trading, margin, short selling, options, cryptocurrency, and brokerage integration are outside the current scope.
+These requirements apply to MarketStreet's scope: **submitting and processing a simulated stock trade** (FR-1 to FR-8), plus the player profile, account reset, admin console, and audit log (FR-9 to FR-12). Limit orders, real-money trading, margin, short selling, options, cryptocurrency, and brokerage integration are outside the current scope.
