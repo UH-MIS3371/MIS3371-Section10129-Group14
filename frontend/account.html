@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Account settings – MarketStreet</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="auth.js" defer blocking="render"></script>
+    <script src="data.js" defer blocking="render"></script>
+    <script src="app.js" defer blocking="render"></script>
+    <script src="layout.js" defer blocking="render"></script>
+    <script src="account.js" defer blocking="render"></script>
+  </head>
+
+  <body data-shell="app" data-nav="">
+    <main class="page narrow">
+      <div class="profile-head">
+        <span class="avatar lg" id="avatar">?</span>
+        <div>
+          <h1 id="profileName"><span class="skeleton tall" style="width: 200px"></span></h1>
+          <p id="profileMeta"></p>
+        </div>
+      </div>
+      <div id="loadError"></div>
+
+      <section class="panel" aria-labelledby="profileTitle">
+        <h2 id="profileTitle" style="margin-bottom: 18px">Profile</h2>
+        <div class="settings-row">
+          <div>
+            <h3>Display name</h3>
+            <p>Shown on leaderboards instead of your email.</p>
+          </div>
+          <form class="inline-form" id="nameForm" novalidate>
+            <label for="displayName" class="visually-hidden">Display name</label>
+            <input id="displayName" type="text" maxlength="20" autocomplete="nickname" aria-describedby="nameError" />
+            <button type="submit" class="btn primary">Save</button>
+          </form>
+          <p id="nameError" class="error help" hidden style="width: 100%"></p>
+        </div>
+        <div class="settings-row">
+          <div>
+            <h3>Email</h3>
+            <p id="emailText"></p>
+          </div>
+          <span class="pill" id="roleText"></span>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="securityTitle">
+        <h2 id="securityTitle" style="margin-bottom: 18px">Sign-in and security</h2>
+        <form id="passwordForm" class="settings-row" novalidate>
+          <div style="width: 100%">
+            <h3>Change password</h3>
+            <p>At least 10 characters, with an upper case letter, a lower case letter and a number.</p>
+          </div>
+          <div class="field" style="flex: 1; min-width: 200px; margin: 0">
+            <label for="currentPassword">Current password</label>
+            <input id="currentPassword" type="password" autocomplete="current-password" />
+          </div>
+          <div class="field" style="flex: 1; min-width: 200px; margin: 0">
+            <label for="newPassword">New password</label>
+            <input id="newPassword" type="password" autocomplete="new-password" />
+          </div>
+          <p id="passwordError" class="error help" hidden style="width: 100%"></p>
+          <button type="submit" class="btn primary">Change password</button>
+        </form>
+        <div class="settings-row">
+          <div>
+            <h3>Sign out everywhere</h3>
+            <p>Ends every session on every device, including this one. Use it if you signed in on a shared computer.</p>
+          </div>
+          <button type="button" class="btn" id="signOutAll">Sign out everywhere</button>
+        </div>
+      </section>
+
+      <section class="panel danger" aria-labelledby="dangerTitle">
+        <h2 id="dangerTitle" style="margin-bottom: 18px">Paper account</h2>
+        <div class="settings-row">
+          <div>
+            <h3>Reset paper account</h3>
+            <p>Start over with $10,000 in cash and no holdings. Your order history is kept.</p>
+          </div>
+          <button type="button" class="btn danger" id="resetAccount">Reset account</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

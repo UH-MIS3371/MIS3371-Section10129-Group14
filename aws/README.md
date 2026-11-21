@@ -42,7 +42,29 @@ Account balances need these changes in the AWS account that hosts the backend, m
 3. **Lambda permissions:** the role (`LabRole`) must allow `dynamodb:GetItem`, `PutItem`, `UpdateItem` and `TransactWriteItems` (needed for the combined save) on both tables.
 4. **API Gateway → Routes:** add `GET /api/account` with the same Lambda integration. The frontend loads the balance from it.
 
-The account is created automatically with $10,000 and 10 AAPL, 2 MSFT, 1 IBM the first time it is used. To reset it, delete the `demo` item in `MarketStreetAccounts`.
+The account is created automatically with $10,000 and no holdings (D-10) the first time it is used. Users reset it themselves on the Account page; admins can reset any account from the admin console.
+
+## AWS setup for profiles, the admin console and the audit log
+
+These run entirely on DynamoDB, so no extra IAM permissions for Cognito are needed. Once, before uploading this version:
+
+1. **DynamoDB → Create tables** (on-demand): `MarketStreetUsers` (partition key `userId`, String) and `MarketStreetAudit` (partition key `auditId`, String).
+2. **Lambda → Environment variables:** add `USERS_TABLE = MarketStreetUsers` and `AUDIT_TABLE = MarketStreetAudit`.
+3. **Lambda permissions:** `LabRole` must allow `dynamodb:GetItem`, `PutItem` and `Scan` on both new tables, and `Scan` on the trades, accounts and games tables (the admin console reads them). Also allow `dynamodb:Query` on the two indexes from step 6 (`.../table/MarketStreetTrades/index/*` and `.../table/MarketStreetGames/index/*`).
+4. **API Gateway → Routes** (same Lambda integration and JWT authorizer): `GET /api/trades`, `GET /api/quotes`, `GET /api/me`, `PATCH /api/me`, `POST /api/me/sign-out-everywhere`, `POST /api/account/reset`, `GET /api/admin/overview`, `GET /api/admin/users`, `GET /api/admin/users/{userId}`, `POST /api/admin/users/{userId}/actions`, `GET /api/admin/trades`, `GET /api/admin/audit`.
+5. **API Gateway → CORS:** allowed methods `GET, POST, PATCH`, headers `content-type, authorization`.
+6. **DynamoDB → Indexes** (projection ALL): on the trades table add `userId-submittedAt-index` (partition `userId`, sort `submittedAt`, both String); on the games table add `ownerId-updatedAt-index` (partition `ownerId`, sort `updatedAt`, both String). Override the names with the `TRADES_USER_INDEX` and `GAMES_OWNER_INDEX` environment variables if needed.
+7. **DynamoDB → Backups:** turn on point-in-time recovery for all five tables (trades, accounts, games, users, audit).
+
+How it works ([backend/users.js](lambda/backend/users.js), [backend/admin.js](lambda/backend/admin.js)):
+
+- Every request loads the user's profile. A **disabled** user gets 403 on everything; **sign out everywhere** refuses any token issued before it (401), even if the token hasn't expired.
+- A role set by an admin in the console wins over the Cognito `admins` group. The first admin still comes from the Cognito group.
+- Every `/api/admin/*` route checks the role on the server. A refusal is written to the audit log as `authz.denied`.
+- Admins can't disable or demote themselves, and the last admin can't be removed.
+- Rejected trades are now saved with `rejectionReason` and `rejectionCategory` (FR-4, BR-8). Nothing else changes.
+- Every account and admin action writes an audit entry: who, what, target, before → after and an optional reason. Entries are only ever added.
+- `GET /api/trades`, `GET /api/me` and a user's admin page read through the indexes. The admin overview, users list, trades list and audit still use `Scan`, which is fine at class scale.
 
 ## AWS setup for Scenario Mode games
 
@@ -72,6 +94,31 @@ How a game stays trustworthy (see [backend/games.js](lambda/backend/games.js)):
 - If the save fails, the reply says nothing was saved; the details go to CloudWatch only.
 
 Tests: `cd aws/lambda && npm install && npm test` runs the rules and the `/api/games` routes against the in-memory DynamoDB from `local-server.js`.
+
+## Sign-in and roles (Amazon Cognito)
+
+Every route needs a signed-in user. MarketStreet's own sign-in page (`frontend/signin.html`) sends the email and password straight to Cognito over HTTPS, so MarketStreet's servers never receive a password.
+
+| Piece | Setting |
+|---|---|
+| User pool | `MarketStreetUsers` (`us-east-1_Bc2WPM5AD`): sign in with email, self sign-up, email verification, passwords of 10+ characters with upper case, lower case and a number |
+| Group | `admins`: may see every player's games (`GET /api/admin/games`) and read any trade. Everyone else is a trader. |
+| App client | `MarketStreetWeb` (`39ufd4fucor0jpnhklpdqdo8lh`): public (no secret), with `ALLOW_USER_PASSWORD_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH`. Display names use the standard `nickname` attribute. |
+| API Gateway | JWT authorizer `CognitoLogin`: issuer `https://cognito-idp.us-east-1.amazonaws.com/us-east-1_Bc2WPM5AD`, audience = the app client ID, identity source `$request.header.Authorization`. Attached to every route. |
+
+How it works:
+
+1. `frontend/auth.js` sends a user who is not signed in to `signin.html`. There they sign in, create an account (Cognito emails a 6-digit code) or reset a forgotten password; `signin.js` calls Cognito's API directly. The ID token Cognito returns is kept in `sessionStorage`.
+2. Every API request sends `Authorization: Bearer <ID token>`. API Gateway checks the token's signature and expiry before the Lambda runs (401 if it is missing or wrong).
+3. The Lambda reads the user from the checked token ([backend/auth.js](lambda/backend/auth.js)). Each user has their own account (keyed by the token's `sub`). A game belongs to the user who started it: another user gets 403, and an admin may look at it but not play it. The admin check happens in the Lambda, so hiding the Admin link is not the only protection.
+
+To make someone an admin: they sign up first, then **Cognito → User pools → MarketStreetUsers → Groups → admins → Add user** (or `aws cognito-idp admin-add-user-to-group --user-pool-id us-east-1_Bc2WPM5AD --username <email> --group-name admins`). They see the change after signing in again.
+
+**Leaderboard:** `GET /api/leaderboard?scenario=<id>` returns the best finished game of each player in one scenario, ranked by return. It shows display names only, never emails.
+
+On your computer, `local-server.js` reads the token from the `Authorization` header but does **not** check its signature (only API Gateway can). Sign in on `http://localhost:3000` with a real Cognito account. All five tables are kept in memory, so they start empty each time the server starts.
+
+**Testing on the `cognito-login` branch:** the branch preview (`https://cognito-login.d2kb3xv6llewil.amplifyapp.com`) uses a separate test API (`MarketStreet-API-test`, `qedu5ta2jc`) and Lambda (`MarketStreet-ProcessTrade-test`), so the live site is not affected until the branch is merged. When merging, add the JWT authorizer and the `GET /api/leaderboard` route to the live API, deploy the Lambda, and remove the test API line from `frontend/app.js`.
 
 ## Deploy a change
 
