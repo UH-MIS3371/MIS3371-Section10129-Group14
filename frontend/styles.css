@@ -1064,3 +1064,35 @@ td .btn { font-family: var(--sans); }
   .ticket:has(#review:not([hidden])) > .kv, .ticket:has(#review:not([hidden])) > .estimate { display: none; }
 }
 @media (max-width: 760px) { #marketFilter { width: 100%; max-width: none; } }
+
+/* Daily learning streak (app.js streakBadge), used on Learn and League */
+.streak {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--raised);
+}
+.streak-count { font-weight: 700; font-size: 15px; }
+.streak:not(.on) .streak-count { color: var(--muted); }
+.streak-note { grid-column: 1; font-size: 13px; }
+.streak-week { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 4px; }
+.streak-dot {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--ground);
+  color: var(--muted);
+  font: 600 11px var(--mono);
+}
+.streak-dot.done { background: #5a3a12; color: #ffb547; }
+.streak-dot.today { outline: 1px solid var(--accent); }
+@media (max-width: 420px) {
+  .streak { grid-template-columns: 1fr; }
+  .streak-week { grid-column: 1; grid-row: auto; margin-top: 6px; }
+}

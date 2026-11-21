@@ -26,8 +26,8 @@ function installFakeDynamoDB() {
     }
   };
 
-  // Each table has one key attribute: trades use transactionId, audit auditId, games gameId, accounts and users userId
-  const KEY_NAMES = ["transactionId", "auditId", "gameId", "userId"];
+  // Each table has one key attribute: trades use transactionId, audit auditId, games gameId, accounts and users userId, Learn runs runId
+  const KEY_NAMES = ["transactionId", "auditId", "gameId", "userId", "runId"];
   const keyOf = (item) => item[KEY_NAMES.find((name) => item[name] !== undefined)];
 
   function conditionFailed(message) {
@@ -138,6 +138,7 @@ process.env.ACCOUNTS_TABLE = process.env.ACCOUNTS_TABLE || "MarketStreetAccounts
 process.env.GAMES_TABLE = process.env.GAMES_TABLE || "MarketStreetGames-local";
 process.env.USERS_TABLE = process.env.USERS_TABLE || "MarketStreetUsers-local";
 process.env.AUDIT_TABLE = process.env.AUDIT_TABLE || "MarketStreetAudit-local";
+process.env.LEARN_TABLE = process.env.LEARN_TABLE || "MarketStreetLearn-local";
 process.env.AWS_REGION = process.env.AWS_REGION || "us-east-1";
 
 const { handler } = require("./index");
@@ -206,6 +207,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/account") return await callLambda(req, res, "/api/account");
     if (pathname === "/api/quotes") return await callLambda(req, res, "/api/quotes");
     if (pathname === "/api/leaderboard") return await callLambda(req, res, "/api/leaderboard");
+    if (pathname.startsWith("/api/learn/")) return await callLambda(req, res, pathname);
     if (/^\/api\/(me|account\/reset|admin)(\/|$)/.test(pathname)) return await callLambda(req, res, pathname);
     const game = pathname.match(/^\/api\/games(?:\/([^/]+)(\/[a-z]+)?)?\/?$/);
     if (game) {

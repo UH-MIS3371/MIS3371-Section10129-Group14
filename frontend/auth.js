@@ -3,7 +3,7 @@
 // returns tokens. MarketStreet's own servers never receive a password. The tokens are kept in sessionStorage
 // (cleared when the tab closes). The ID token goes with every API request, and API Gateway checks it; the
 // access token is only sent to Cognito itself (change password, sign out everywhere).
-// Every page except the public ones (home, sign-in and help) sends users who are not signed in to sign in.
+// Every page except the public ones (home, sign-in, help and learn) sends users who are not signed in to sign in.
 //
 // Guest mode: "Continue as guest" on the sign-in page sets a flag in sessionStorage. While it is set,
 // authFetch() never calls the network; guest.js answers every request inside the browser and keeps the guest's
@@ -18,7 +18,7 @@ const ACCESS_KEY = "marketstreet-access-token";
 const REFRESH_KEY = "marketstreet-refresh-token";
 const GUEST_KEY = "marketstreet-guest";
 const GUEST_STATE_KEY = "marketstreet-guest-state";
-const PUBLIC_PAGE = /\/(index\.html|signin\.html|help\.html)?$/.test(location.pathname);
+const PUBLIC_PAGE = /\/(index\.html|signin\.html|help\.html|learn\.html)?$/.test(location.pathname);
 
 function storageGet(key) {
   try {
