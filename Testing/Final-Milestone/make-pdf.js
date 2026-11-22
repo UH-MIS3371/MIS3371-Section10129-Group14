@@ -29,7 +29,7 @@ const html = `<!doctype html><meta charset="utf-8"><title>${esc(title)} test mat
 table{border-collapse:collapse;width:100%}th,td{border:1px solid #bbb;padding:4px 6px;vertical-align:top;text-align:left}th{background:#eee}
 tr{break-inside:avoid}.Pass{color:#0a6b3d;font-weight:700}.Fail{color:#b00020;font-weight:700}</style>
 <h1>${esc(title)} test matrix: Milestone 4</h1>
-<p>${body.length} test cases: ${pass} passed, ${fail} failed, ${body.length - pass - fail} explained. Generated ${new Date().toISOString().slice(0, 10)} from run-matrix.js. Every case sends the same JSON the order form sends.</p>
+<p>${body.length} test cases: ${pass} passed, ${fail} failed, ${body.length - pass - fail} not run (each explains why). Generated ${new Date().toISOString().slice(0, 10)} from the live site (Grader check page). Every case sends the same JSON the order form sends.</p>
 <table><thead><tr>${head.map((h) => "<th>" + esc(h) + "</th>").join("")}</tr></thead><tbody>
 ${body.map((r) => "<tr>" + r.map((v, i) => "<td" + (i === 6 ? ' class="' + esc(v) + '"' : "") + ">" + esc(v) + "</td>").join("") + "</tr>").join("\n")}
 </tbody></table>`;
