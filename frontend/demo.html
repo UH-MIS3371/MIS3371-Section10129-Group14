@@ -14,6 +14,7 @@
     <script src="app.js" defer blocking="render"></script>
     <script src="layout.js" defer blocking="render"></script>
     <script src="demo.js" defer blocking="render"></script>
+    <script src="demo-matrix.js" defer></script>
   </head>
 
   <body data-shell="app" data-nav="demo">
@@ -38,6 +39,35 @@
         </div>
         <p class="note">A valid order really changes your paper account's cash and holdings. The other examples are rejected and change nothing. Press Start demo, then Next step or the right arrow key.</p>
       </section>
+
+
+      <section class="panel" id="matrix" aria-labelledby="matrixTitle">
+        <div class="setup-row">
+          <h2 id="matrixTitle">Or run every test case at once</h2>
+          <button type="button" class="btn primary" id="matrixRun">Run the test matrix</button>
+        </div>
+        <p class="say"><span class="tag">Say</span>Each row sends a real request to the deployed API and compares the answer with what the business rules say should happen: valid, invalid, boundary, business-rule, retrieval and error cases.</p>
+        <p class="note">The run first resets your paper account to $10,000.00 so every starting condition is known, then places real orders. Rejected orders are saved as Rejected records. As a guest, the same cases run in your browser and nothing is sent to AWS.</p>
+        <p class="matrix-summary" id="matrixSummary" hidden></p>
+        <div class="button-row" id="matrixTools" hidden>
+          <button type="button" class="btn sm" id="matrixCopy">Copy results as a table</button>
+          <button type="button" class="btn sm" id="matrixCsv">Download CSV</button>
+          <a class="btn sm" href="activity.html">Open Activity (saved records)</a>
+        </div>
+        <ol class="matrix" id="matrixBoard" aria-live="polite"></ol>
+      </section>
+
+      <details class="panel guide" id="guide">
+        <summary>Recording guide: what to show, in order</summary>
+        <ol>
+          <li><b>Open the deployed site</b> and sign in. Say that the page is hosted on AWS Amplify and talks to API Gateway, Lambda and DynamoDB.</li>
+          <li><b>Pick Valid order</b> and press Start demo. Step through the seven stages. Stop on step 7 and read out the <b>confirmation number</b>.</li>
+          <li><b>Retrieve it:</b> on step 6 the demo reads the saved record back with that number. Then open Activity, paste it into Check transaction status, and show the same record.</li>
+          <li><b>Invalid and business-rule cases:</b> run Quantity 0, Not enough cash and Sell shares you don't own. Read the rejection reason aloud each time, and point out that the order is saved as Rejected.</li>
+          <li><b>Boundary cases:</b> run the test matrix and point at T11 (largest affordable Buy accepted) and T12 (one more share rejected).</li>
+          <li><b>Close:</b> scroll the matrix, say how many cases passed, and say the data you saw came from DynamoDB, not from the browser.</li>
+        </ol>
+      </details>
 
       <nav class="journey" id="pipeline" aria-label="Demo steps" hidden></nav>
       <p class="order-line" id="orderLine" hidden></p>

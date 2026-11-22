@@ -2,6 +2,8 @@
 
 Every student submits their own: the live URL, the test matrix, and their own recording.
 
+Teammates: read [RECORDING-GUIDE.md](RECORDING-GUIDE.md) first. The **Demo** page on the site also runs this matrix in the browser ("Run the test matrix") and shows expected next to actual.
+
 ## 1. Make the matrix real (on the deployed site)
 
 `run-matrix.js` sends the same JSON the order form sends and records expected vs actual for 24 cases (valid, invalid, boundary, business rule, retrieval, not-found, errors). It already passes locally (23 pass, 1 explained). Run it against the live API:
