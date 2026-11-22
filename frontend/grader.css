@@ -108,3 +108,11 @@
   .g-rules td:nth-of-type(2)::before { content: "Tests: "; color: var(--muted); }
   .g-rules-sub td { padding-top: 14px; }
 }
+
+/* ---------- Added: signed-in status ---------- */
+.g-who { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 12px 0 0; padding: 12px 14px; border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.g-who.ok { border-left-color: var(--buy); }
+.g-who.warn { border-left-color: var(--warning); }
+.g-who.bad { border-left-color: var(--sell); }
+.g-who-text { flex: 1 1 260px; min-width: 0; font-size: 14.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.g-who .btn { flex: none; }

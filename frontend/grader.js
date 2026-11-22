@@ -225,6 +225,33 @@ function paintRules(results) {
     el("tbody", null, ...RULES.map(row), el("tr", { class: "g-rules-sub" }, el("td", { colspan: "4" }, "Also tested")), ...EXTRA.map(row)));
 }
 
+// ---------- who is checking: signed in, guest or neither ----------
+
+function paintWho() {
+  const u = signedInUser();
+  const local = API_BASE.startsWith("/");
+  const back = "signin.html?back=" + encodeURIComponent(location.pathname);
+  let kind, label, line, action;
+  if (u && u.isGuest) {
+    kind = "warn";
+    label = "Guest";
+    line = ["You are a guest. Orders are simulated in this browser and nothing is sent to AWS, so this does not prove the backend."];
+    action = el("a", { class: "btn", href: back }, "Sign in");
+  } else if (u) {
+    kind = "ok";
+    label = "Signed in";
+    line = [el("strong", null, u.email), u.isAdmin ? " (admin)" : "", ". Every request carries your Cognito sign-in token to " + (local ? "the local server" : "the deployed API") + "."];
+    action = el("button", { type: "button", class: "btn", onclick: signOut }, "Sign out");
+  } else {
+    kind = "bad";
+    label = "Not signed in";
+    line = ["Sign in to run the checks. Requests without a token are refused with 401."];
+    action = el("a", { class: "btn primary", href: back }, "Sign in");
+  }
+  $("gWho").className = "g-who " + kind;
+  $("gWho").replaceChildren(pill((kind === "ok" ? "✓ " : kind === "warn" ? "! " : "✕ ") + label, kind), el("span", { class: "g-who-text" }, ...line), action);
+}
+
 // ---------- where this runs ----------
 
 function facts() {
@@ -263,6 +290,7 @@ document.addEventListener("matrix-finished", (e) => {
   backendCheck();
 });
 facts();
+paintWho();
 syncForm();
 paintRules(null);
 paint();
