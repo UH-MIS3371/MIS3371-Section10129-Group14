@@ -68,6 +68,12 @@
         <div id="gSaved" aria-live="polite"></div>
       </section>
 
+      <section class="g-step" id="rules" aria-labelledby="gr">
+        <h2 id="gr">The business rules we test</h2>
+        <p class="g-lead">These are the rules the tests check, from our requirements (docs/02-requirements/business-rules.md). Each lists the test cases that cover it. The Result column fills in when you run the matrix below.</p>
+        <div class="g-rules-wrap"><table class="g-rules" id="gRules"></table></div>
+      </section>
+
       <section class="g-step" id="matrix" aria-labelledby="g3">
         <h2 id="g3"><span class="g-num" aria-hidden="true">3</span> Run the test matrix</h2>
         <p class="g-lead">24 cases: valid, invalid, boundary and business rules. Each shows expected and actual. The run resets your paper account to $10,000.00 first.</p>
@@ -79,12 +85,6 @@
           <a class="btn" href="activity.html">Open Activity</a>
         </div>
         <div class="matrix" id="matrixBoard" aria-live="polite"></div>
-      </section>
-
-      <section class="g-step" id="rules" aria-labelledby="gr">
-        <h2 id="gr">Business rules and the tests that cover them</h2>
-        <p class="g-lead">The rules come from our requirements (docs/02-requirements/business-rules.md). After step 3, each row shows how its tests came out.</p>
-        <div class="g-rules-wrap"><table class="g-rules" id="gRules"></table></div>
       </section>
 
       <section class="g-step g-where" id="s4" aria-labelledby="g4">
@@ -100,7 +100,7 @@
           <li><b>Step 1:</b> choose Valid order, press Submit order, and read the confirmation number aloud.</li>
           <li><b>Step 2:</b> press Retrieve. The same record comes back from the database. Test the number that doesn't exist, then press "Show everything saved" to show the Accepted and Rejected records the database holds.</li>
           <li><b>Step 1 again:</b> try Quantity 0, Too expensive and Sell more than owned. Read each rejection reason. Each is saved as a Rejected record.</li>
-          <li><b>Step 3:</b> run the matrix. Point at T11 (largest affordable Buy accepted) and T12 (one more share rejected), then read the summary and scroll to the business rules table: each rule shows how its tests came out.</li>
+          <li><b>Step 3:</b> run the matrix. Point at T11 (largest affordable Buy accepted) and T12 (one more share rejected), then read the summary. Scroll back up to the business rules table: each rule now shows how its tests came out.</li>
         </ol>
       </details>
     </main>

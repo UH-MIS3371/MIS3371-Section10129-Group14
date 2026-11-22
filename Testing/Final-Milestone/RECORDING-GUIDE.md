@@ -22,9 +22,10 @@ Live site: https://main.d2kb3xv6llewil.amplifyapp.com
 | 1:45 | Step 2. Press **Retrieve**. Then press **Try one that doesn't exist**. | "Same record, read back from the database using only the number. A made-up number returns Trade not found." |
 | 2:45 | Press **Show everything saved for this account**. Then open **Activity**, paste the number into **Check transaction status**, and go back. | "These are the records DynamoDB holds for my account, Accepted and Rejected. The Activity page finds the same order." |
 | 3:30 | Step 1 again. Press **Quantity 0**, **Too expensive**, **Sell more than owned**. | Read each rejection reason aloud. "The server rejected it and saved it as a Rejected record. My cash did not change." |
+| 4:30 | Scroll to **The business rules we test**. | "These are the rules from our requirements. Every test case checks one of them." |
 | 4:45 | Step 3. Press **Run the test matrix**, confirm the reset, and let it run. | "Each row is a real request. The page compares what the system returned with what the rules say should happen." |
 | 5:45 | Scroll the matrix. Stop at T03, T11, T12, T14, T16, T18. | See the table below. |
-| 7:00 | Scroll to **Business rules and the tests that cover them**. | "Each rule from our requirements, BR-1 to BR-9, has tests, and every one of them passed." |
+| 7:00 | Scroll up to **The business rules we test**. | "Each rule from our requirements, BR-1 to BR-9, has tests, and every one of them passed." |
 | 7:30 | Scroll to the top. All four checklist items are green. | "[N] cases passed and none failed. T21 needs a second user and T24 is covered by automated tests." |
 
 ## Cases to point at in the matrix
