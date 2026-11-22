@@ -324,7 +324,7 @@
       el("p", { class: "ms-where" }, "Run against ", el("span", { class: "mono" }, where), ".")].filter(Boolean));
     summary.hidden = false;
     tools.hidden = false;
-    document.dispatchEvent(new CustomEvent("matrix-finished", { detail: { pass, fail, na, total } }));
+    document.dispatchEvent(new CustomEvent("matrix-finished", { detail: { pass, fail, na, total, results: results.map((x) => ({ id: x.id, ok: x.ok })) } }));
   }
 
   const cell = (v) => String(v).replace(/\|/g, "\\|");

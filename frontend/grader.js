@@ -118,7 +118,7 @@ async function submitOrder(e) {
     backendCheck();
     paint();
   } catch (err) {
-    $("gResult").replaceChildren(errorState("The order could not be sent. " + err.message, null));
+    $("gResult").replaceChildren(errorState("The order could not be sent. " + err.message + hint(err), null));
   }
   button.disabled = false;
 }
@@ -154,8 +154,75 @@ async function retrieve(id, expectMiss) {
     if (t && !expectMiss) mark(1, "ok", "Done", "Read back " + t.status + " " + t.tradeType + " " + t.shareQuantity + " " + t.stockSymbol);
     backendCheck();
   } catch (err) {
-    $("gFound").replaceChildren(errorState("The lookup failed. " + err.message, null));
+    $("gFound").replaceChildren(errorState("The lookup failed. " + err.message + hint(err), null));
   }
+}
+
+// ---------- everything saved for this account (proof the records live in the database) ----------
+
+const hint = (err) => (err && err.status === 0 ? " If this keeps happening, check that the AWS Learner Lab is running." : "");
+
+async function showSaved() {
+  $("gSaved").replaceChildren(el("p", { class: "muted g-wait" }, "Reading every saved order…"));
+  try {
+    const r = await timed("GET", "/trades");
+    const list = r.data.trades || [];
+    const accepted = list.filter((t) => /accept|complete/i.test(t.status)).length;
+    const rejected = list.filter((t) => /reject/i.test(t.status)).length;
+    const guest = signedInUser().isGuest;
+    $("gSaved").replaceChildren(el("div", { class: "g-result " + (r.status === 200 ? "ok" : "bad") },
+      el("p", { class: "g-outcome" }, el("span", { class: "g-sym", "aria-hidden": "true" }, r.status === 200 ? "✓" : "✕"),
+        list.length + " saved " + (list.length === 1 ? "record" : "records") + ": " + accepted + " Accepted, " + rejected + " Rejected"),
+      el("p", { class: "g-note" }, guest ? "Read from the practice copy in this browser (guest mode)." : "Read from DynamoDB, newest first. Rejected orders are kept too, each with its reason.", " ", httpPill(r.status), " ", el("span", { class: "muted mono" }, r.ms + " ms")),
+      list.length ? el("ul", { class: "g-saved" }, list.slice(0, 10).map((t) => el("li", null,
+        statusPill(/reject/i.test(t.status) ? "Rejected" : "Accepted"),
+        el("span", { class: "g-s-order" }, t.tradeType + " " + t.shareQuantity + " " + t.stockSymbol),
+        el("span", { class: "g-s-why muted" }, t.rejectionReason || ("at " + t.executionPrice)),
+        el("span", { class: "g-s-id mono muted" }, t.transactionId)))) : null,
+      list.length > 10 ? el("p", { class: "g-note" }, "Showing the newest 10 of " + list.length + ".") : null));
+    backendCheck();
+  } catch (err) {
+    $("gSaved").replaceChildren(errorState("The list could not be read. " + err.message + hint(err), null));
+  }
+}
+
+// ---------- business rules and their tests ----------
+
+const RULES = [
+  ["BR-1", "Trade type must be Buy or Sell", ["T08"]],
+  ["BR-2", "The stock must be one we support", ["T07"]],
+  ["BR-3", "Shares must be a positive whole number", ["T03", "T04", "T05", "T06"]],
+  ["BR-4", "A Buy needs enough cash", ["T11", "T12"]],
+  ["BR-5", "A Sell needs enough shares", ["T13", "T14"]],
+  ["BR-6", "A valid, recent price is required (15 minutes at most)", [], "Every accepted order uses one; the 15-minute limit is covered by the automated tests"],
+  ["BR-7", "An accepted trade updates cash and holdings", ["T01", "T02", "T11", "T13", "T15"]],
+  ["BR-8", "A rejected trade changes nothing and is still recorded", ["T03", "T04", "T05", "T06", "T07", "T08", "T09", "T12", "T14", "T17"]],
+  ["BR-9", "Only Market orders are supported", ["T09"]]
+];
+const EXTRA = [
+  ["Duplicate", "The same request sent twice is placed once", ["T15"]],
+  ["Retrieval", "A saved order is read back by its number; unknown numbers return 404", ["T16", "T17", "T18", "T19", "T20"]],
+  ["Access", "No token gets 401; a normal user cannot reach admin routes", ["T22", "T23"]]
+];
+
+function ruleResult(tests, results) {
+  if (!results) return [el("span", { class: "muted" }, "Run step 3")];
+  if (!tests.length) return [el("span", { class: "muted" }, "Automated tests")];
+  const ran = tests.map((id) => results.find((x) => x.id === id)).filter((x) => x && x.ok !== null);
+  if (!ran.length) return [el("span", { class: "muted" }, "Not run here")];
+  const bad = ran.filter((x) => x.ok === false).length;
+  return [pill((bad ? "✕ " : "✓ ") + (ran.length - bad) + " of " + ran.length + " passed", bad ? "bad" : "ok")];
+}
+
+function paintRules(results) {
+  const row = ([id, text, tests, note]) => el("tr", null,
+    el("th", { scope: "row", class: "mono" }, id),
+    el("td", null, text, note ? el("small", { class: "muted" }, note) : null),
+    el("td", { class: "mono" }, tests.length ? tests.join(", ") : "–"),
+    el("td", null, ...ruleResult(tests, results)));
+  $("gRules").replaceChildren(
+    el("thead", null, el("tr", null, el("th", { scope: "col" }, "Rule"), el("th", { scope: "col" }, "What it means"), el("th", { scope: "col" }, "Tests"), el("th", { scope: "col" }, "Result"))),
+    el("tbody", null, ...RULES.map(row), el("tr", { class: "g-rules-sub" }, el("td", { colspan: "4" }, "Also tested")), ...EXTRA.map(row)));
 }
 
 // ---------- where this runs ----------
@@ -187,12 +254,15 @@ $("gQty").addEventListener("input", syncForm);
 $("gId").addEventListener("input", paint);
 $("gForm").addEventListener("submit", submitOrder);
 $("gLookup").addEventListener("submit", (e) => { e.preventDefault(); retrieve($("gId").value, false); });
+$("gList").addEventListener("click", showSaved);
 $("gMissing").addEventListener("click", () => retrieve("00000000-0000-4000-8000-000000000000", true));
 document.addEventListener("matrix-finished", (e) => {
-  const { pass, fail, na, total } = e.detail;
+  const { pass, fail, na, total, results } = e.detail;
+  paintRules(results);
   mark(2, fail ? "bad" : "ok", fail ? "Failed" : "Done", pass + " of " + total + " passed" + (fail ? ", " + fail + " failed" : "") + (na ? ", " + na + " not run" : ""));
   backendCheck();
 });
 facts();
 syncForm();
+paintRules(null);
 paint();

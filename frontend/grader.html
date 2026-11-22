@@ -31,6 +31,7 @@
         <div>
           <h1>Grader check</h1>
           <p>Three steps prove the Milestone 4 requirements on the live app. Do them in order.</p>
+          <p class="g-before"><b>Before you start:</b> sign in (a guest only sees a simulation) and make sure the AWS Learner Lab is running.</p>
         </div>
       </div>
 
@@ -61,8 +62,9 @@
           <div class="field"><label for="gId">Confirmation number</label><input id="gId" type="text" autocomplete="off" spellcheck="false" /></div>
           <button type="submit" class="btn g-big" id="gRetrieve">Retrieve</button>
         </form>
-        <p class="g-alt"><button type="button" class="btn g-big" id="gMissing">Test a number that doesn't exist</button></p>
+        <p class="g-alt"><button type="button" class="btn g-big" id="gMissing">Test a number that doesn't exist</button> <button type="button" class="btn g-big" id="gList">Show everything saved for this account</button></p>
         <div id="gFound" aria-live="polite"></div>
+        <div id="gSaved" aria-live="polite"></div>
       </section>
 
       <section class="g-step" id="matrix" aria-labelledby="g3">
@@ -78,6 +80,12 @@
         <div class="matrix" id="matrixBoard" aria-live="polite"></div>
       </section>
 
+      <section class="g-step" id="rules" aria-labelledby="gr">
+        <h2 id="gr">Business rules and the tests that cover them</h2>
+        <p class="g-lead">The rules come from our requirements (docs/02-requirements/business-rules.md). After step 3, each row shows how its tests came out.</p>
+        <div class="g-rules-wrap"><table class="g-rules" id="gRules"></table></div>
+      </section>
+
       <section class="g-step g-where" id="s4" aria-labelledby="g4">
         <h2 id="g4">Where this runs</h2>
         <dl class="g-facts" id="gFacts"></dl>
@@ -89,9 +97,9 @@
         <ol>
           <li>Open the deployed site and sign in.</li>
           <li><b>Step 1:</b> choose Valid order, press Submit order, and read the confirmation number aloud.</li>
-          <li><b>Step 2:</b> press Retrieve. The same record comes back from the database. Then test the number that doesn't exist.</li>
+          <li><b>Step 2:</b> press Retrieve. The same record comes back from the database. Test the number that doesn't exist, then press "Show everything saved" to show the Accepted and Rejected records the database holds.</li>
           <li><b>Step 1 again:</b> try Quantity 0, Too expensive and Sell more than owned. Read each rejection reason. Each is saved as a Rejected record.</li>
-          <li><b>Step 3:</b> run the matrix. Point at T11 (largest affordable Buy accepted) and T12 (one more share rejected), then read the summary.</li>
+          <li><b>Step 3:</b> run the matrix. Point at T11 (largest affordable Buy accepted) and T12 (one more share rejected), then read the summary and scroll to the business rules table: each rule shows how its tests came out.</li>
         </ol>
       </details>
     </main>

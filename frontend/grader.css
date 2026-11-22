@@ -85,3 +85,26 @@
   .g-chip { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) { .grader-page * { animation: none !important; transition: none !important; } }
+
+/* ---------- Added: before-you-start line, saved records, rules table ---------- */
+.g-before { margin: 10px 0 0; padding: 10px 14px; border-left: 3px solid var(--warning); background: var(--warning-bg); border-radius: 0 var(--radius) var(--radius) 0; font-size: 14.5px; line-height: 1.5; color: var(--text); }
+.g-alt { display: flex; flex-wrap: wrap; gap: 10px; }
+.g-saved { list-style: none; margin: 10px 0 0; padding: 0; display: grid; border-top: 1px solid var(--border); }
+.g-saved li { display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1.4fr); gap: 4px 14px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; overflow-wrap: anywhere; }
+.g-s-order { font-weight: 600; }
+.g-s-id { grid-column: 2 / -1; font-size: 12.5px; }
+@media (max-width: 560px) { .g-saved li { grid-template-columns: 96px minmax(0, 1fr); } .g-s-why, .g-s-id { grid-column: 1 / -1; } }
+.g-rules-wrap { overflow-x: auto; }
+.g-rules { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.g-rules th, .g-rules td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); height: auto; white-space: normal; line-height: 1.45; }
+.g-rules thead th { font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.g-rules td small { display: block; margin-top: 2px; font-size: 13px; }
+.g-rules-sub td { padding-top: 16px; font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+@media (max-width: 640px) {
+  .g-rules thead { display: none; }
+  .g-rules, .g-rules tbody, .g-rules tr { display: block; }
+  .g-rules tr { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .g-rules th, .g-rules td { display: block; padding: 2px 0; border: 0; }
+  .g-rules td:nth-of-type(2)::before { content: "Tests: "; color: var(--muted); }
+  .g-rules-sub td { padding-top: 14px; }
+}
