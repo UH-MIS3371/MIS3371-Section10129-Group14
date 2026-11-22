@@ -234,3 +234,63 @@ function buildPositions(holdings, trades, resetAt) {
     };
   }).sort((a, b) => b.value - a.value);
 }
+
+// ======================= DAILY LEARNING STREAK =======================
+// A day counts when the Learn quiz is finished that day. Kept in this browser (localStorage), so it is per device.
+// Shared by the Learn and League pages.
+const STREAK_KEY = "marketstreet-learn-days";
+
+function localDay(date = new Date()) {
+  return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+}
+
+function learnDays() {
+  try {
+    const days = JSON.parse(localStorage.getItem(STREAK_KEY));
+    return Array.isArray(days) ? days : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function markLearnedToday() {
+  const days = new Set(learnDays());
+  days.add(localDay());
+  try {
+    localStorage.setItem(STREAK_KEY, JSON.stringify([...days].sort().slice(-400)));
+  } catch (e) {
+    // storage blocked: the streak isn't kept
+  }
+}
+
+// { count, doneToday }: days in a row up to today, or up to yesterday while today isn't done yet
+function learnStreak() {
+  const days = new Set(learnDays());
+  const day = new Date();
+  const doneToday = days.has(localDay(day));
+  if (!doneToday) day.setDate(day.getDate() - 1);
+  let count = 0;
+  while (days.has(localDay(day))) {
+    count++;
+    day.setDate(day.getDate() - 1);
+  }
+  return { count, doneToday };
+}
+
+// 🔥 3-day streak, with this week's days (Mon–Sun) as dots
+function streakBadge() {
+  const { count, doneToday } = learnStreak();
+  const days = new Set(learnDays());
+  const monday = new Date();
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const dots = "MTWTFSS".split("").map((letter, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const key = localDay(d);
+    return el("span", { class: "streak-dot" + (days.has(key) ? " done" : "") + (key === localDay() ? " today" : ""), title: key }, letter);
+  });
+  return el("div", { class: "streak" + (count ? " on" : "") },
+    el("span", { class: "streak-count" }, count ? "🔥 " + count + "-day streak" : "🔥 No streak yet"),
+    el("span", { class: "streak-note muted" }, doneToday ? "Done for today ✓" : count ? "Do today's lesson to keep it" : "Finish a lesson to start one"),
+    el("span", { class: "streak-week", "aria-hidden": "true" }, dots));
+}

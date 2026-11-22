@@ -140,6 +140,9 @@ document.querySelectorAll("[data-view]").forEach((button) => button.addEventList
 
 if (new URLSearchParams(location.search).has("signedOut")) say("You're signed out.");
 if (new URLSearchParams(location.search).get("view") === "signUp") show("signUp");
+// From the Learn quiz: keep the nickname they already chose
+const suggestedName = new URLSearchParams(location.search).get("name");
+if (suggestedName) $("signUpName").value = suggestedName.slice(0, 20);
 
 // Guest mode: a pretend account that lives only in this tab (see auth.js and guest.js)
 $("guestStart").addEventListener("click", () => {

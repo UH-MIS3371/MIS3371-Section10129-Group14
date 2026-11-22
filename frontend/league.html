@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>League – MarketStreet</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="league.css" />
+    <script src="auth.js" defer blocking="render"></script>
+    <script src="data.js" defer blocking="render"></script>
+    <script src="app.js" defer blocking="render"></script>
+    <script src="layout.js" defer blocking="render"></script>
+    <script src="league-data.js" defer></script>
+    <script src="league.js" defer></script>
+    <script src="chart.js" defer></script>
+  </head>
+
+  <!-- Weekly League, demo season: one hardcoded week that runs in the browser (league-data.js, league.js).
+       Nothing is sent to the server. -->
+  <body data-shell="app" data-nav="league">
+    <main class="page league-page">
+      <div class="league-bar" id="leagueBar"></div>
+      <div class="league-layout">
+        <section class="panel league-watch" aria-labelledby="watchTitle">
+          <h2 class="panel-head" id="watchTitle">Market</h2>
+          <ol id="watchList"></ol>
+        </section>
+
+        <div class="league-main">
+          <section class="panel league-chart" aria-labelledby="chartSymbol">
+            <div class="league-quote">
+              <h2 id="chartSymbol"></h2>
+              <span id="chartName" class="muted"></span>
+              <span id="chartPrice" class="mono"></span>
+              <span id="chartChange" class="mono"></span>
+            </div>
+            <div class="chart" id="leagueChart" data-height="260"></div>
+          </section>
+          <section class="panel league-ticket" id="ticket" aria-labelledby="ticketTitle"></section>
+        </div>
+
+        <aside class="league-side">
+          <section class="panel league-news" id="news" aria-label="News"></section>
+          <section class="panel league-board" id="standings" aria-labelledby="standingsTitle"></section>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>

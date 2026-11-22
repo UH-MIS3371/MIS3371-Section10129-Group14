@@ -10,10 +10,11 @@
 //          /api/admin/...                     admin console (see backend/admin.js; games in backend/games.js)
 //          GET  /api/quotes                   the server price of every stock
 //          GET  /api/leaderboard?scenario=    best finished game of each player in one scenario
-// Every route needs a signed-in user: API Gateway checks the Amazon Cognito token (JWT authorizer).
+//          /api/learn/...                     the Learn quiz (see backend/learn.js); the only routes without sign-in
+// Every other route needs a signed-in user: API Gateway checks the Amazon Cognito token (JWT authorizer).
 // Environment: TABLE_NAME (trades, key transactionId), ACCOUNTS_TABLE (accounts, key userId),
-//              GAMES_TABLE (Scenario Mode games, key gameId), USERS_TABLE (profiles, key userId)
-//              and AUDIT_TABLE (admin and account actions, key auditId).
+//              GAMES_TABLE (Scenario Mode games, key gameId), USERS_TABLE (profiles, key userId),
+//              AUDIT_TABLE (admin and account actions, key auditId) and LEARN_TABLE (Learn quiz runs, key runId).
 const crypto = require("crypto");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
@@ -24,6 +25,7 @@ const { currentUser } = require("./backend/auth");
 const { handleGames } = require("./backend/games");
 const { resolveUser, handleMe } = require("./backend/users");
 const { handleAdmin } = require("./backend/admin");
+const { handleLearn } = require("./backend/learn");
 const { withTrace } = require("./backend/trace");
 const { queryAll, audit } = require("./backend/store");
 
@@ -284,7 +286,10 @@ function isAccountRoute(event) {
 async function route(event, method) {
   try {
     if (method === "OPTIONS") return { statusCode: 204, headers: HEADERS, body: "" };
-    // Every route needs a signed-in user (Amazon Cognito); API Gateway has already checked the token
+    // The Learn quiz is open to visitors without an account (only a nickname); it never touches trades or accounts
+    const learn = await handleLearn(db, event, method);
+    if (learn) return reply(learn.statusCode, learn.body);
+    // Every other route needs a signed-in user (Amazon Cognito); API Gateway has already checked the token
     const signedIn = currentUser(event);
     if (!signedIn) return reply(401, { success: false, reason: "Please sign in." });
     // The profile can disable the user, end their sessions or change their role

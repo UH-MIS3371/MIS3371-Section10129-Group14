@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Learn – MarketStreet</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="learn.css" />
+    <script src="auth.js" defer blocking="render"></script>
+    <script src="data.js" defer blocking="render"></script>
+    <script src="app.js" defer blocking="render"></script>
+    <script src="layout.js" defer blocking="render"></script>
+    <script src="learn.js" defer></script>
+  </head>
+
+  <!-- Open to everyone: no account is needed to play, only a nickname (see auth.js PUBLIC_PAGE) -->
+  <body data-shell="app" data-nav="learn">
+    <main class="page learn-page">
+      <div class="learn-progress" id="progress" hidden><span id="progressBar"></span></div>
+      <section class="learn-card" id="stage" aria-live="polite"></section>
+    </main>
+  </body>
+</html>

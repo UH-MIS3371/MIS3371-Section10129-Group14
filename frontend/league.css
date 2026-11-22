@@ -1,0 +1,174 @@
+/* Weekly League trading screen: market list | chart + ticket | news + standings.
+   Three columns on wide screens, two on laptops, one on phones (news first, then chart, ticket, market, standings). */
+
+.league-page { display: grid; gap: 16px; padding-bottom: 40px; }
+
+/* Top bar: title, day strip, rank/value/streak, next day */
+.league-bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.league-title { display: grid; gap: 2px; }
+.league-title h1 { font-size: 20px; }
+.league-title h1 .pill { vertical-align: middle; font-size: 11px; }
+.league-title .muted { font-size: 13px; }
+
+.league-days { margin: 0; padding: 0; list-style: none; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.league-days li { padding: 5px 10px; border-radius: 999px; background: var(--raised); color: var(--muted); font-size: 12px; font-weight: 600; }
+.league-days li.done { color: var(--text); }
+.league-days li.now { background: var(--info-bg); color: var(--accent); outline: 1px solid var(--accent); }
+.league-days li.locked { opacity: 0.6; }
+
+.league-stats { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.league-stat { white-space: nowrap; color: var(--text); }
+a.league-stat:hover { text-decoration: none; color: var(--accent); }
+.league-next { display: flex; gap: 8px; align-items: center; }
+.league-next .btn { height: 38px; min-width: 150px; font-weight: 600; }
+
+/* Columns */
+.league-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.league-main, .league-side { display: grid; gap: 16px; min-width: 0; }
+.league-layout .panel { margin: 0; }
+
+/* Market list */
+.league-watch ol { margin: 0; padding: 0 8px 8px; list-style: none; display: grid; gap: 2px; }
+.league-watch li button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.league-watch li button:hover { background: var(--raised); }
+.league-watch li button.picked { background: var(--info-bg); box-shadow: inset 2px 0 0 var(--accent); }
+.league-watch .sym, .league-watch .px { display: grid; gap: 1px; }
+.league-watch .px { text-align: right; }
+.league-watch small { font-size: 12px; }
+
+/* Chart */
+.league-chart { padding-bottom: 8px; }
+.league-quote { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 16px 20px 4px; }
+.league-quote h2 { font-size: 22px; }
+.league-quote #chartPrice { font-size: 22px; font-weight: 600; margin-left: auto; }
+.league-chart .chart { margin: 0 12px; }
+
+/* Ticket */
+.league-ticket { display: grid; gap: 12px; padding-bottom: 18px; }
+.league-ticket > *:not(.panel-head) { margin: 0 20px; }
+.league-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 10px; background: var(--ground); }
+.league-sides .side {
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: 600 14px var(--sans);
+  cursor: pointer;
+}
+.league-sides .side.buy[aria-pressed="true"] { background: var(--buy-bg); color: var(--buy); }
+.league-sides .side.sell[aria-pressed="true"] { background: var(--sell-bg); color: var(--sell); }
+.league-order { display: grid; gap: 8px; }
+.league-order label { font-weight: 600; }
+.league-order input { height: 44px; font-size: 16px; }
+.league-order .row { display: flex; justify-content: space-between; font-size: 14px; }
+.league-submit.btn { height: 46px; font-weight: 700; border: 0; }
+.league-submit.buy { background: var(--buy); color: #0b1a14; }
+.league-submit.sell { background: var(--sell); color: #1d0a0d; }
+.league-ticket h3 { font-size: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.league-holdings { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.league-holdings li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; }
+
+/* News */
+.league-news { display: grid; gap: 10px; padding-bottom: 16px; }
+.league-news > *:not(.panel-head) { margin: 0 16px; }
+.league-today { display: grid; gap: 8px; padding: 12px; border-radius: 8px; border-left: 3px solid var(--sell); background: var(--raised); }
+.league-today h3 { font-size: 17px; line-height: 1.3; }
+.league-news-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.league-movers { display: flex; flex-wrap: wrap; gap: 6px; }
+.league-chip { padding: 3px 8px; border: 0; border-radius: 999px; background: var(--ground); color: var(--muted); font: 12px var(--mono); cursor: pointer; }
+.league-chip.up { background: var(--buy-bg); color: var(--buy); }
+.league-chip.down { background: var(--sell-bg); color: var(--sell); }
+.league-chip strong { color: var(--text); }
+.league-sub { font-size: 13px; color: var(--muted); font-weight: 600; }
+.league-feed { padding: 0; list-style: none; display: grid; gap: 8px; font-size: 13px; }
+.league-feed li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; align-items: start; }
+.league-feed.upcoming li { grid-template-columns: 36px minmax(0, 1fr) auto; color: var(--muted); }
+.league-feed .day { padding: 1px 0; border-radius: 4px; background: var(--raised); color: var(--muted); font-size: 11px; text-align: center; }
+.league-final { display: grid; gap: 6px; padding: 12px; border-radius: 8px; background: var(--buy-bg); }
+.league-final .pill { justify-self: start; }
+
+/* Standings */
+.league-board .panel-head { display: flex; justify-content: space-between; align-items: baseline; }
+.league-board .panel-head .muted { font-size: 12px; font-weight: 400; }
+.league-board ol { margin: 0; padding: 0 10px 10px; list-style: none; display: grid; gap: 4px; }
+.league-board li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 30px 56px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--raised);
+  font-size: 13px;
+}
+.league-board li.you { outline: 1px solid var(--accent); }
+.league-board li:first-child .rank { color: var(--warning); font-weight: 600; }
+.league-board .rank { color: var(--muted); }
+.league-board .who { display: grid; min-width: 0; }
+.league-board .who strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.league-board .who small { font-size: 11px; }
+.league-board .move { font-size: 11px; text-align: center; }
+.league-board .num { text-align: right; }
+.league-board .you-tag { margin-left: 6px; padding: 1px 5px; border-radius: 4px; background: var(--info-bg); color: var(--accent); font-size: 10px; }
+
+/* Laptop: market list moves under the chart area */
+@media (max-width: 1180px) {
+  .league-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+  .league-watch { grid-column: 1; grid-row: 2; }
+  .league-main { grid-column: 1; grid-row: 1; }
+  .league-side { grid-column: 2; grid-row: 1 / span 2; }
+  .league-watch ol { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .league-bar { grid-template-columns: auto 1fr auto; }
+  .league-days { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
+}
+
+/* Phone: one column — news, chart, ticket, market, standings */
+@media (max-width: 860px) {
+  .league-page { padding: 12px 12px 24px; gap: 12px; }
+  .league-layout { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+  .league-side, .league-main { display: contents; }
+  .league-news { order: 1; }
+  .league-chart { order: 2; }
+  .league-ticket { order: 3; }
+  .league-watch { order: 4; }
+  .league-board { order: 5; }
+  .league-bar { grid-template-columns: 1fr auto; padding: 12px 14px; gap: 10px; }
+  .league-title h1 { font-size: 18px; }
+  .league-stats { grid-column: 1 / -1; grid-row: 3; justify-content: space-between; }
+  .league-next { grid-column: 2; grid-row: 1; }
+  .league-next .btn { min-width: 0; }
+  .league-days { justify-content: space-between; }
+  .league-days li { padding: 5px 8px; }
+  .league-watch ol { grid-template-columns: 1fr; }
+  .league-quote { padding: 14px 14px 4px; }
+  .league-quote h2, .league-quote #chartPrice { font-size: 19px; }
+  .league-chart .chart { margin: 0 6px; }
+  .league-ticket > *:not(.panel-head) { margin: 0 14px; }
+  .league-news > *:not(.panel-head) { margin: 0 12px; }
+  .league-next small { display: none; }
+  .league-title h1 .pill { display: none; }
+}
+.league-holdings .btn.link { justify-content: flex-start; justify-self: start; font-weight: 600; }

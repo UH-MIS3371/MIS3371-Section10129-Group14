@@ -8,8 +8,9 @@ const APP_NAV = [
   ["dashboard", "Home", "dashboard.html"],
   ["markets", "Markets", "markets.html"],
   ["activity", "Activity", "activity.html"],
+  ["learn", "Learn", "learn.html"],
+  ["league", "League", "league.html"],
   ["challenges", "Challenges", "scenarios.html"],
-  ["leaderboard", "Leaderboard", "leaderboard.html", "Leaders"],
   ["demo", "Demo", "demo.html"]
 ];
 
@@ -17,6 +18,8 @@ const ICONS = {
   dashboard: "M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10",
   markets: "M5 20v-8m7 8V4m7 16v-5",
   activity: "M4 6h16M4 12h16M4 18h10",
+  learn: "M2 9l10-5 10 5-10 5zm4 2v5c3 2 9 2 12 0v-5",
+  league: "M8 21h8m-4-4v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3m10-4h3v1a3 3 0 0 1-3 3",
   challenges: "M5 21V4m0 0h11l-2 4 2 4H5",
   leaderboard: "M3 20h18M4 20v-6h5v6M9 20V8h6v12M15 20v-9h5v9",
   demo: "M7 4l13 8-13 8z",
@@ -240,6 +243,8 @@ function confirmAction({ title, message, confirmLabel, danger, typeToConfirm, re
 const LIVE_URL = "https://main.dpq307ec2nc5x.amplifyapp.com";
 
 function qrTarget() {
+  // A page can offer its own link (the Learn leaderboard points classmates at the quiz)
+  if (document.body.dataset.qr) return document.body.dataset.qr;
   try {
     const saved = localStorage.getItem("marketstreet-qr-url");
     if (saved) return saved;
