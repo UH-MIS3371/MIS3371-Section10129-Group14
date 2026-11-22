@@ -4,6 +4,14 @@ Every student submits their own: the live URL, the test matrix, and their own re
 
 Teammates: read [RECORDING-GUIDE.md](RECORDING-GUIDE.md) first. The site has two demos under **Demo**: **Grader check** (submit, retrieve, and run this matrix in the browser with expected next to actual) and **Audience demo** (the animated walkthrough for presentations).
 
+## Submit this: the combined test matrix
+
+[MarketStreet-Test-Matrix.xlsx](MarketStreet-Test-Matrix.xlsx) and [MarketStreet-Test-Matrix.pdf](MarketStreet-Test-Matrix.pdf) join two sets of cases: 11 manual browser cases a teammate ran on 2026-11-21 (sign-up, email verification, buy, sell, View Status) and the 24 automated cases run from the Grader check page on 2026-11-22. Result: 32 pass, 0 fail, 3 not run (T21, T23, T24; each row says why).
+
+The same matrix is on the live site at `/test-matrix.html`, with filters and downloads. Its data is in `frontend/test-matrix-data.js`. In the manual cases the email and name are masked, and the verification code is removed. Six rejection cases that the tester first marked "Fail" are now "Pass", because the app rejected them as expected.
+
+The older `test-matrix.pdf`, `.csv` and `.md` in this folder hold only the 24 automated cases.
+
 ## 1. Make the matrix real (on the deployed site)
 
 `run-matrix.js` sends the same JSON the order form sends and records expected vs actual for 24 cases (valid, invalid, boundary, business rule, retrieval, not-found, errors). It already passes locally (23 pass, 1 explained). Run it against the live API:

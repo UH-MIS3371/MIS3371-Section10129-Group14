@@ -1,0 +1,56 @@
+/* Test matrix page (test-matrix.html). Static, no animation. */
+.tm-body { margin: 0; background: var(--bg, #0b0b0e); color: var(--text); font-family: "Public Sans", system-ui, sans-serif; }
+.tm { max-width: 1240px; margin: 0 auto; padding: 24px 20px 56px; }
+.tm a { color: var(--accent); }
+.tm h1 { margin: 6px 0 6px; font-size: 32px; letter-spacing: -0.01em; }
+.tm-back { margin: 0; font-size: 14px; color: var(--muted); }
+.tm-lead { margin: 0 0 16px; max-width: 70ch; font-size: 16px; line-height: 1.5; color: var(--muted); }
+.tm-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.tm-card { padding: 14px 16px; border: 1px solid var(--control); border-radius: var(--radius, 10px); background: var(--surface); }
+.tm-card h2 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.tm-big { font-size: 28px; font-weight: 600; font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+.tm-card p { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+.tm-how { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 24px; margin: 18px 0; font-size: 14px; line-height: 1.5; }
+.tm-how div { display: grid; gap: 2px; }
+.tm-how span { color: var(--muted); }
+.tm-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 8px; }
+.tm-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.tm-chip { font: inherit; font-size: 14px; padding: 7px 12px; min-height: 36px; border: 1px solid var(--control); border-radius: 999px; background: transparent; color: var(--text); cursor: pointer; }
+.tm-chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tm-search input { font: inherit; font-size: 14px; min-height: 36px; width: 260px; max-width: 100%; padding: 6px 12px; border: 1px solid var(--control); border-radius: 8px; background: var(--surface); color: var(--text); }
+.tm-dl { margin-left: auto; display: flex; gap: 8px; }
+.tm-btn { display: inline-block; padding: 8px 14px; border: 1px solid var(--control); border-radius: 8px; background: var(--surface); color: var(--text) !important; text-decoration: none; font-size: 14px; }
+.tm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.tm-count { margin: 12px 0 6px; font-size: 14px; color: var(--muted); }
+.tm-wrap { border: 1px solid var(--control); border-radius: var(--radius, 10px); background: var(--surface); overflow: hidden; }
+.tm-table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+.tm-table th, .tm-table td { padding: 11px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--control); overflow-wrap: anywhere; }
+.tm-table thead th { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); background: var(--raised); }
+.tm-table tbody tr:last-child td, .tm-table tbody tr:last-child th { border-bottom: 0; }
+.tm-id { font-family: "IBM Plex Mono", monospace; font-weight: 600; white-space: nowrap; }
+.tm-name { font-weight: 600; }
+.tm-meta { display: block; margin-top: 3px; font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.tm-in { white-space: pre-line; color: var(--muted); font-size: 13px; }
+.tm-note { display: block; margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+.tm-res { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid; white-space: nowrap; }
+.tm-res.Pass { color: var(--buy); border-color: var(--buy); }
+.tm-res.Fail { color: var(--sell); border-color: var(--sell); }
+.tm-res.Not { color: var(--warning); border-color: var(--warning); }
+.tm-empty { padding: 24px; text-align: center; color: var(--muted); }
+.tm-foot { margin: 16px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.tm code { font-family: "IBM Plex Mono", monospace; font-size: 0.92em; }
+@media (max-width: 860px) {
+  .tm-dl { margin-left: 0; }
+  .tm-table thead { display: none; }
+  .tm-table, .tm-table tbody, .tm-table tr, .tm-table td, .tm-table th { display: block; }
+  .tm-table tr { padding: 12px 14px; border-bottom: 1px solid var(--control); }
+  .tm-table td, .tm-table th { padding: 4px 0; border: 0; }
+  .tm-table td[data-l]::before { content: attr(data-l) ": "; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+}
+@media print {
+  @page { size: landscape; margin: 10mm; }
+  .tm-body { background: #fff; color: #111; --text: #111; --muted: #444; --control: #bbb; --surface: #fff; --raised: #eee; --buy: #0a6b3d; --sell: #b00020; --warning: #8a6100; --accent: #1a4fa0; }
+  .tm-tools, .tm-back, .tm-dl { display: none !important; }
+  .tm-wrap { overflow: visible; }
+  .tm-table tr { break-inside: avoid; }
+}
