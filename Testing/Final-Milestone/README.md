@@ -8,9 +8,9 @@ Teammates: read [RECORDING-GUIDE.md](RECORDING-GUIDE.md) first. The site has two
 
 [MarketStreet-Test-Matrix.xlsx](MarketStreet-Test-Matrix.xlsx) and [MarketStreet-Test-Matrix.pdf](MarketStreet-Test-Matrix.pdf) join two sets of cases: 11 manual browser cases a teammate ran on 2026-11-21 (sign-up, email verification, buy, sell, View Status) and the 24 automated cases run from the Grader check page on 2026-11-22. Result: 32 pass, 0 fail, 3 not run (T21, T23, T24; each row says why).
 
-The same matrix is on the live site at `/test-matrix.html`, with filters and downloads. Its data is in `frontend/test-matrix-data.js`. In the manual cases the email and name are masked, and the verification code is removed. Six rejection cases that the tester first marked "Fail" are now "Pass", because the app rejected them as expected.
+The same 35 cases are on the live **Grader check** page (`/grader.html`, step 3): the 24 automated cases run live there, and the 11 manual cases are listed under them with their recorded results. The page also has a download button for the Excel file. The manual cases' data is in `frontend/test-matrix-data.js`. In the manual cases the email and name are masked, and the verification code is removed. Six rejection cases that the tester first marked "Fail" are now "Pass", because the app rejected them as expected.
 
-The older `test-matrix.pdf`, `.csv` and `.md` in this folder hold only the 24 automated cases.
+`run-matrix.js` is the command-line version of the 24 automated cases. It writes `test-matrix.csv` and `.md` here when you run it.
 
 ## 1. Make the matrix real (on the deployed site)
 
@@ -24,7 +24,7 @@ node Testing/Final-Milestone/make-pdf.js "MarketStreet"
 - Get a token by signing in on the site and copying `marketstreet-id-token` from the browser (DevTools → Application → Session storage), or with `aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH --client-id 39ufd4fucor0jpnhklpdqdo8lh --auth-parameters USERNAME=<email>,PASSWORD=<password>` (use the `IdToken`).
 - Add `OTHER_TOKEN=<second user's token>` to include the "another user cannot read it" case.
 - The run resets the tester's paper account first, so use a dedicated tester or grader account.
-- Submit `test-matrix.pdf` (or the `.csv`). Both list inputs, expected, actual and pass/fail.
+- For the submission, use the combined `MarketStreet-Test-Matrix.xlsx` or `.pdf` described at the top of this file.
 
 ## 2. Grader access
 

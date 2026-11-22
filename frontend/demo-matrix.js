@@ -211,6 +211,40 @@
   }
   const kindOf = (row) => (row.ok === null ? "na" : row.ok ? "pass" : "fail");
 
+  // Manual cases: a teammate ran these by hand in the browser (data in test-matrix-data.js). They are listed with their recorded results.
+  const MANUAL = typeof MATRIX_CASES !== "undefined" ? MATRIX_CASES.filter((c) => c.source.startsWith("Manual")) : [];
+  const manualKind = (c) => (c.result === "Pass" ? "pass" : c.result === "Fail" ? "fail" : "na");
+  function manualBody() {
+    const tb = el("tbody", { class: "m-group" });
+    tb.append(el("tr", { class: "m-grouprow" }, el("th", { scope: "rowgroup", colspan: "5" }, "Manual: sign-up, email verification, buy, sell, View Status",
+      el("span", { class: "m-count" }, MANUAL.length + " cases, run by a teammate in the browser on 2026-11-21"))));
+    for (const c of MANUAL) {
+      const dId = "m-d-" + c.id;
+      const kind = manualKind(c);
+      const toggle = el("button", { type: "button", class: "m-toggle", "aria-expanded": "false", "aria-controls": dId },
+        el("span", { class: "m-name" }, c.name), el("span", { class: "m-chev", "aria-hidden": "true" }, "▸"));
+      const part = (h, content) => el("div", { class: "m-part" }, el("div", { class: "m-h" }, h), el("p", { class: "m-text" }, content));
+      const tr = el("tr", { class: "m-row " + kind, "data-id": c.id }, el("td", { class: "m-id mono" }, c.id), el("td", { class: "m-case" }, toggle),
+        el("td", { class: "m-exp" }, clip(c.expected, 90)),
+        el("td", { class: "m-act" }, el("span", { class: "m-short" }, clip(c.actual, 90)), kind === "pass" ? el("span", { class: "m-match ok" }, el("span", { "aria-hidden": "true" }, "✓ "), "Match") : null),
+        el("td", { class: "m-res" }, badge(kind)));
+      const detail = el("tr", { class: "m-detail", id: dId, hidden: true }, el("td", { colspan: "5" }, el("div", { class: "m-full" },
+        el("div", { class: "m-fullname" }, c.id + " · " + c.name),
+        part("Steps and inputs", [c.steps, c.input].filter(Boolean).join("  ")),
+        el("div", { class: "m-pair" }, part("Expected (full)", c.expected), part("Actual (full)", c.actual)),
+        c.note ? part("Note", c.note) : null)));
+      tr.addEventListener("click", () => {
+        const open = toggle.getAttribute("aria-expanded") !== "true";
+        toggle.setAttribute("aria-expanded", String(open));
+        detail.hidden = !open;
+        tr.classList.toggle("open", open);
+      });
+      tb.append(tr, detail);
+    }
+    return tb;
+  }
+  const manualRow = (c) => [c.id, c.type, c.name, [c.steps, c.input].filter(Boolean).join(" "), c.expected, c.actual, c.result];
+
   function buildTable(list) {
     view = {};
     const table = el("table", { class: "m-table" });
@@ -244,6 +278,7 @@
       }
       table.append(tb);
     }
+    if (MANUAL.length) table.append(manualBody());
     board.replaceChildren(el("div", { class: "m-wrap" }, table));
   }
 
@@ -321,6 +356,7 @@
       skipped.length ? el("section", { class: "ms-block notrun", "aria-label": "Not run" },
         el("h3", null, "Not run (" + skipped.length + ")"),
         el("ul", null, skipped.map((x) => el("li", null, el("span", { class: "mono" }, x.id), el("span", null, reasonOf(x)))))) : null,
+      MANUAL.length ? el("p", { class: "ms-where" }, MANUAL.length + " manual cases are listed below the live cases (run by a teammate on 2026-11-21): " + MANUAL.filter((c) => c.result === "Pass").length + " passed.") : null,
       el("p", { class: "ms-where" }, "Run against ", el("span", { class: "mono" }, where), ".")].filter(Boolean));
     summary.hidden = false;
     tools.hidden = false;
@@ -330,11 +366,12 @@
   const cell = (v) => String(v).replace(/\|/g, "\\|");
   function markdown() {
     return ["| Test | Type | Name | Inputs | Expected | Actual | Result |", "|---|---|---|---|---|---|---|",
-      ...results.map((x) => "| " + [x.id, x.type, x.name, x.inputs, x.expected, x.actual, label(x)[0]].map(cell).join(" | ") + " |")].join("\n");
+      ...results.map((x) => "| " + [x.id, x.type, x.name, x.inputs, x.expected, x.actual, label(x)[0]].map(cell).join(" | ") + " |"),
+      ...MANUAL.map((c) => "| " + manualRow(c).map(cell).join(" | ") + " |")].join("\n");
   }
   function csv() {
     const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
-    return "﻿" + [["Test", "Type", "Name", "Inputs", "Expected", "Actual", "Result"], ...results.map((x) => [x.id, x.type, x.name, x.inputs, x.expected, x.actual, label(x)[0]])].map((l) => l.map(q).join(",")).join("\r\n");
+    return "﻿" + [["Test", "Type", "Name", "Inputs", "Expected", "Actual", "Result"], ...results.map((x) => [x.id, x.type, x.name, x.inputs, x.expected, x.actual, label(x)[0]]), ...MANUAL.map(manualRow)].map((l) => l.map(q).join(",")).join("\r\n");
   }
 
   async function run() {
