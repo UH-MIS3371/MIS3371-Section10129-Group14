@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grader check – MarketStreet</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="auth.js" defer blocking="render"></script>
+    <script src="data.js" defer blocking="render"></script>
+    <script src="app.js" defer blocking="render"></script>
+    <script src="layout.js" defer blocking="render"></script>
+    <script src="grader.js" defer blocking="render"></script>
+    <script src="demo-matrix.js" defer></script>
+  </head>
+
+  <!-- For graders: the Milestone 4 requirements, each checked live against the API. The audience walkthrough is demo.html. -->
+  <body data-shell="app" data-nav="demo">
+    <main class="page narrow demo-page grader-page">
+      <nav class="demo-switch" aria-label="Choose a demo">
+        <a href="demo.html"><b>Audience demo</b><span>Watch one order travel through every layer</span></a>
+        <a href="grader.html" aria-current="page"><b>Grader check</b><span>Verify the Milestone 4 requirements</span></a>
+      </nav>
+
+      <div class="page-head">
+        <div>
+          <h1>Grader check</h1>
+          <p>Each requirement below is checked live against the deployed application, with real requests to the API and real reads from the database. Work down the page, or run the whole test matrix in step 3.</p>
+        </div>
+      </div>
+
+      <ol class="g-check" id="gCheck" aria-label="Requirements checklist"></ol>
+
+      <section class="panel g-step" aria-labelledby="g1">
+        <h2 id="g1"><span class="g-num">1</span> Submit a transaction</h2>
+        <p class="muted">The page sends the order to the API. If the backend accepts it, the response carries a confirmation number.</p>
+        <div class="g-quick" role="group" aria-label="Fill in an example order" id="gQuick"></div>
+        <form class="demo-fields" id="gForm" novalidate>
+          <div class="field"><label for="gSymbol">Stock</label><select id="gSymbol"></select></div>
+          <div class="field"><label for="gSide">Buy or sell</label><select id="gSide"><option>Buy</option><option>Sell</option></select></div>
+          <div class="field"><label for="gQty">Shares</label><input id="gQty" type="text" inputmode="decimal" autocomplete="off" value="1" /></div>
+          <div class="field g-submit"><button type="submit" class="btn primary" id="gSubmit">Submit order</button></div>
+        </form>
+        <div id="gResult" aria-live="polite"></div>
+      </section>
+
+      <section class="panel g-step" aria-labelledby="g2">
+        <h2 id="g2"><span class="g-num">2</span> Retrieve it with the confirmation number</h2>
+        <p class="muted">A second request reads the saved record back from the database using only the number.</p>
+        <form class="inline-form" id="gLookup" novalidate>
+          <input id="gId" type="text" autocomplete="off" spellcheck="false" placeholder="Confirmation number (filled in after step 1)" aria-label="Confirmation number" />
+          <button type="submit" class="btn primary">Retrieve</button>
+          <button type="button" class="btn" id="gMissing">Try one that doesn't exist</button>
+        </form>
+        <div id="gFound" aria-live="polite"></div>
+      </section>
+
+      <section class="panel g-step" id="matrix" aria-labelledby="g3">
+        <div class="setup-row">
+          <h2 id="g3"><span class="g-num">3</span> Test matrix: valid, invalid, boundary and business rules</h2>
+          <button type="button" class="btn primary" id="matrixRun">Run the test matrix</button>
+        </div>
+        <p class="muted">24 cases, each a real request with its expected result written down first. The run starts by resetting your paper account to $10,000.00, then places real orders. Rejected orders are saved as Rejected records. As a guest, the same cases run in your browser and nothing is sent to AWS.</p>
+        <p class="matrix-summary" id="matrixSummary" hidden></p>
+        <div class="button-row" id="matrixTools" hidden>
+          <button type="button" class="btn sm" id="matrixCopy">Copy results as a table</button>
+          <button type="button" class="btn sm" id="matrixCsv">Download CSV</button>
+          <a class="btn sm" href="activity.html">Open Activity (saved records)</a>
+        </div>
+        <ol class="matrix" id="matrixBoard" aria-live="polite"></ol>
+      </section>
+
+      <section class="panel g-step" aria-labelledby="g4">
+        <h2 id="g4"><span class="g-num">4</span> Where this runs</h2>
+        <dl class="g-facts" id="gFacts"></dl>
+      </section>
+
+      <details class="panel guide" id="guide">
+        <summary>Recording this? What to show, in order</summary>
+        <ol>
+          <li><b>Open the deployed site</b> and sign in. Say that the page is hosted on AWS Amplify and talks to API Gateway, Lambda and DynamoDB.</li>
+          <li><b>Step 1:</b> press the Valid order example, then Submit order. Read the <b>confirmation number</b> aloud.</li>
+          <li><b>Step 2:</b> press Retrieve. Say the same record came back from DynamoDB. Then try the number that doesn't exist.</li>
+          <li><b>Step 1 again:</b> press Quantity 0, Too expensive and Sell more than owned. Read each rejection reason aloud and point out that the order is saved as Rejected.</li>
+          <li><b>Step 3:</b> run the test matrix. Stop at T11 (largest affordable Buy accepted) and T12 (one more share rejected). Read the summary line.</li>
+          <li><b>Close:</b> say the data you saw came from DynamoDB, not from the browser.</li>
+        </ol>
+      </details>
+    </main>
+  </body>
+</html>

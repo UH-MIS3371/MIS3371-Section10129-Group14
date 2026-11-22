@@ -2,7 +2,7 @@
 
 Every student submits their own: the live URL, the test matrix, and their own recording.
 
-Teammates: read [RECORDING-GUIDE.md](RECORDING-GUIDE.md) first. The **Demo** page on the site also runs this matrix in the browser ("Run the test matrix") and shows expected next to actual.
+Teammates: read [RECORDING-GUIDE.md](RECORDING-GUIDE.md) first. The site has two demos under **Demo**: **Grader check** (submit, retrieve, and run this matrix in the browser with expected next to actual) and **Audience demo** (the animated walkthrough for presentations).
 
 ## 1. Make the matrix real (on the deployed site)
 

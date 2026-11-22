@@ -175,6 +175,7 @@
     summary.replaceChildren(el("strong", null, pass + " passed, " + fail + " failed, " + na + " not run"), " out of " + results.length + " cases against ", el("span", { class: "mono" }, API_BASE.startsWith("/") ? location.origin + API_BASE : API_BASE), ".");
     summary.hidden = false;
     tools.hidden = false;
+    document.dispatchEvent(new CustomEvent("matrix-finished", { detail: { pass, fail, na, total: results.length } }));
   }
 
   const cell = (v) => String(v).replace(/\|/g, "\\|");

@@ -1123,3 +1123,41 @@ td .btn { font-family: var(--sans); }
 .guide { margin-top: var(--gap); }
 .guide summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
 .guide ol { margin: 8px 0 0; padding-left: 22px; display: grid; gap: 8px; line-height: 1.5; }
+
+/* ---------- Two demos: audience and grader ---------- */
+.demo-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 18px; }
+.demo-switch a { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--muted); text-decoration: none; min-height: 44px; }
+.demo-switch a b { color: var(--text); font-size: 15px; }
+.demo-switch a span { font-size: 13px; line-height: 1.35; }
+.demo-switch a[aria-current="page"] { border-color: var(--accent); background: var(--info-bg); }
+.demo-switch a:not([aria-current]):hover { border-color: var(--control); }
+@media (max-width: 520px) { .demo-switch a span { display: none; } }
+
+.g-check { list-style: none; margin: 0 0 var(--gap); padding: 0; display: grid; gap: 6px; }
+.g-item { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 14px; border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.g-item.ok { border-left-color: var(--buy); }
+.g-item.bad { border-left-color: var(--sell); }
+.g-item.warn { border-left-color: var(--warning); }
+.g-mark { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--raised); color: var(--muted); font: 600 13px var(--mono); }
+.g-item.ok .g-mark { background: var(--buy-bg); color: var(--buy); }
+.g-item.bad .g-mark { background: var(--sell-bg); color: var(--sell); }
+.g-item.warn .g-mark { background: var(--warning-bg); color: var(--warning); }
+.g-text { display: grid; gap: 2px; line-height: 1.4; overflow-wrap: anywhere; }
+.g-text small { font-size: 12.5px; }
+
+.g-step h2 { display: flex; align-items: center; gap: 10px; font-size: 18px; margin: 0 0 6px; }
+.g-num { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--info-bg); color: var(--accent); font: 600 14px var(--mono); }
+.g-step > .muted { margin: 0 0 12px; }
+.g-quick { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.g-submit { align-self: end; }
+.g-submit .btn { width: 100%; }
+.g-result { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: var(--radius); background: var(--raised); display: grid; gap: 8px; animation: demo-pop 0.25s ease both; }
+.g-result.ok { border-left-color: var(--buy); }
+.g-result.bad { border-left-color: var(--sell); }
+.g-result p { margin: 0; }
+.g-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.g-id { font-size: 18px; font-weight: 600; overflow-wrap: anywhere; user-select: all; }
+.g-facts { display: grid; grid-template-columns: minmax(110px, 170px) minmax(0, 1fr); gap: 6px 16px; margin: 0; }
+.g-facts dt { color: var(--muted); font-size: 13px; }
+.g-facts dd { margin: 0; overflow-wrap: anywhere; line-height: 1.45; }
+@media (max-width: 560px) { .g-facts { grid-template-columns: 1fr; gap: 0; } .g-facts dd { margin-bottom: 8px; } }
