@@ -91,60 +91,64 @@
 
       <section class="g-step" id="arch" aria-labelledby="ga">
         <h2 id="ga">How the whole system works</h2>
-        <p class="g-lead">An order travels from the browser to API Gateway, then Lambda, then DynamoDB. The numbers on the arrows match the steps in the list.</p>
+        <p class="g-lead">MarketStreet is a static website that talks to a small AWS backend. Four short flows show everything: how the site gets to you, how you sign in, what happens when you submit an order, and how you read it back.</p>
 
-        <div class="arch" role="group" aria-label="Architecture diagram. The numbered list below describes it in words.">
-          <div class="arch-node n-gh">
-            <img src="img/arch/github.svg" alt="" width="40" height="40" />
-            <b>GitHub</b><span>Source code. Pushing to <code>main</code> starts a deploy.</span>
-          </div>
-          <div class="arch-conn c-gh"><span class="arch-lbl"><i class="arch-n">1</i> push</span><span class="arch-arrow v" aria-hidden="true">→</span></div>
-          <div class="arch-node n-am">
-            <img src="img/arch/amplify.svg" alt="" width="48" height="48" />
-            <b>AWS Amplify</b><span>Hosts the website. No build step.</span>
-          </div>
-          <div class="arch-conn c-am"><span class="arch-lbl"><i class="arch-n">2</i> serves the site</span><span class="arch-arrow v" aria-hidden="true">→</span></div>
-          <div class="arch-node n-br">
-            <span class="arch-logos"><img src="img/arch/html5.svg" alt="HTML5" width="32" height="32" /><img src="img/arch/css3.svg" alt="CSS3" width="32" height="32" /><img src="img/arch/javascript.svg" alt="JavaScript" width="32" height="32" /></span>
-            <b>Browser</b><span>HTML, CSS and plain JavaScript. No framework.</span>
-          </div>
-          <div class="arch-conn c-br"><span class="arch-lbl"><i class="arch-n">4</i> order + token</span><span class="arch-arrow h" aria-hidden="true">→</span></div>
-          <div class="arch-node n-ag">
-            <img src="img/arch/apigateway.svg" alt="" width="48" height="48" />
-            <b>Amazon API Gateway</b><span>HTTP API. Checks the sign-in token, then calls the Lambda.</span>
-          </div>
-          <div class="arch-conn c-ag"><span class="arch-lbl"><i class="arch-n">5</i> request</span><span class="arch-arrow h" aria-hidden="true">→</span></div>
-          <div class="arch-node n-la">
-            <img src="img/arch/lambda.svg" alt="" width="48" height="48" />
-            <b>AWS Lambda</b><span>Node.js 24. Checks business rules BR-1 to BR-9 and prices the order.</span>
-          </div>
-          <div class="arch-conn c-la"><span class="arch-lbl"><i class="arch-n">6</i> save</span><span class="arch-arrow h" aria-hidden="true">→</span></div>
-          <div class="arch-node n-db">
-            <img src="img/arch/dynamodb.svg" alt="" width="48" height="48" />
-            <b>Amazon DynamoDB</b><span>One record per order, Accepted or Rejected, plus the account.</span>
-            <ul class="arch-tables" aria-label="Tables"><li>Trades</li><li>Accounts</li><li>Games</li><li>Users</li><li>Audit</li><li>Learn</li></ul>
-          </div>
-          <div class="arch-node n-cw">
-            <img src="img/arch/cloudwatch.svg" alt="" width="48" height="48" />
-            <b>Amazon CloudWatch</b><span>Lambda writes one JSON log line per request.</span>
-          </div>
-          <div class="arch-conn c-cw" aria-hidden="true"><span class="arch-lbl"><i class="arch-n">7</i> logs</span><span class="arch-arrow v" aria-hidden="true">→</span></div>
-          <div class="arch-node n-co">
-            <img src="img/arch/cognito.svg" alt="" width="48" height="48" />
-            <b><i class="arch-n">3</i> Amazon Cognito</b><span>Sign-in. The browser sends the email and password here and gets a token back. API Gateway checks that token.</span>
-          </div>
-          <div class="arch-conn c-co" aria-hidden="true"><span class="arch-lbl"><i class="arch-n">5</i> verifies token</span><span class="arch-arrow u" aria-hidden="true">→</span></div>
+        <div class="arch2">
 
-          <ol class="arch-steps">
-            <li><b>Deploy.</b> A push to GitHub <code>main</code> makes Amplify publish the site.</li>
-            <li><b>Load.</b> The browser downloads the HTML, CSS and JavaScript from Amplify.</li>
-            <li><b>Sign in.</b> The browser sends the email and password straight to Cognito and receives a token.</li>
-            <li><b>Submit.</b> The browser sends the order as JSON with the token to API Gateway.</li>
-            <li><b>Check.</b> API Gateway verifies the token. Lambda checks the business rules.</li>
-            <li><b>Save.</b> Lambda saves the order and the cash and holdings change together in DynamoDB. A rejected order is saved too, with its reason.</li>
-            <li><b>Log.</b> Lambda writes one log line to CloudWatch.</li>
-            <li><b>Retrieve</b> (not drawn). A lookup by confirmation number reads the record back from DynamoDB.</li>
-          </ol>
+          <!-- 1. DEPLOY -->
+          <div class="fx-panel">
+            <header class="fx-head"><i class="fx-n">1</i><div><h3>How the site gets to you</h3><p>Pushing code to GitHub is the only deploy step.</p></div></header>
+            <div class="fx-row">
+              <div class="fx-card" style="--c:#8b949e"><img src="img/arch/github.svg" alt="" width="44" height="44" /><b>GitHub</b><span>Source code. The <code>main</code> branch is the live version.</span><em>Git</em></div>
+              <div class="fx-arrow"><span class="fx-lbl">push</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#dd344c"><img src="img/arch/amplify.svg" alt="" width="44" height="44" /><b>AWS Amplify</b><span>Publishes the files as a website. There is no build step.</span><em>Hosting</em></div>
+              <div class="fx-arrow"><span class="fx-lbl">HTTPS</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#5b93db"><span class="fx-logos"><img src="img/arch/html5.svg" alt="HTML5" width="30" height="30" /><img src="img/arch/css3.svg" alt="CSS3" width="30" height="30" /><img src="img/arch/javascript.svg" alt="JavaScript" width="30" height="30" /></span><b>Your browser</b><span>Runs the pages. Plain HTML, CSS and JavaScript, no framework.</span><em>Frontend</em></div>
+            </div>
+          </div>
+
+          <!-- 2. SIGN IN -->
+          <div class="fx-panel">
+            <header class="fx-head"><i class="fx-n">2</i><div><h3>How you sign in</h3><p>The password goes straight to Cognito. Our own code never sees it.</p></div></header>
+            <div class="fx-row">
+              <div class="fx-card" style="--c:#5b93db"><span class="fx-logos"><img src="img/arch/javascript.svg" alt="JavaScript" width="30" height="30" /></span><b>Your browser</b><span>Sends the email and password over HTTPS.</span><em>Frontend</em></div>
+              <div class="fx-arrow"><span class="fx-lbl">email + password</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#dd344c"><img src="img/arch/cognito.svg" alt="" width="44" height="44" /><b>Amazon Cognito</b><span>Checks the password. Replies with a signed token (a JWT).</span><em>Sign-in</em></div>
+              <div class="fx-arrow back"><span class="fx-lbl">token</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#5b93db"><span class="fx-logos"><img src="img/arch/javascript.svg" alt="JavaScript" width="30" height="30" /></span><b>Your browser</b><span>Keeps the token for this tab and sends it with every request.</span><em>Frontend</em></div>
+            </div>
+          </div>
+
+          <!-- 3. SUBMIT -->
+          <div class="fx-panel fx-main">
+            <header class="fx-head"><i class="fx-n">3</i><div><h3>What happens when you submit an order</h3><p>This is the main transaction. Each step is checked by the next one.</p></div></header>
+            <div class="fx-row">
+              <div class="fx-card" style="--c:#5b93db"><span class="fx-logos"><img src="img/arch/javascript.svg" alt="JavaScript" width="30" height="30" /></span><b>Your browser</b><span>Sends the order as JSON, plus the token.</span><em>Frontend</em></div>
+              <div class="fx-arrow"><span class="fx-lbl">POST /api/trades</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#e7157b"><img src="img/arch/apigateway.svg" alt="" width="44" height="44" /><b>API Gateway</b><span>Verifies the token. No token or a bad one gets a 401 and stops here.</span><em>HTTP API</em></div>
+              <div class="fx-arrow"><span class="fx-lbl">valid request</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#ed7100"><img src="img/arch/lambda.svg" alt="" width="44" height="44" /><b>AWS Lambda</b><span>Checks the business rules BR-1 to BR-9 and sets the price. Rejects or accepts.</span><em>Node.js 24</em>
+                <div class="fx-side"><img src="img/arch/cloudwatch.svg" alt="" width="22" height="22" />Writes one log line to CloudWatch</div></div>
+              <div class="fx-arrow"><span class="fx-lbl">save</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#3b48cc"><img src="img/arch/dynamodb.svg" alt="" width="44" height="44" /><b>DynamoDB</b><span>Saves the order and the new cash and holdings together. A rejected order is saved too.</span><em>Database</em>
+                <ul class="fx-tables" aria-label="Tables"><li>Trades</li><li>Accounts</li><li>Games</li><li>Users</li><li>Audit</li><li>Learn</li></ul></div>
+            </div>
+            <p class="fx-reply">The reply comes back the same way: DynamoDB, Lambda, API Gateway, browser. It carries the confirmation number.</p>
+          </div>
+
+          <!-- 4. RETRIEVE -->
+          <div class="fx-panel">
+            <header class="fx-head"><i class="fx-n">4</i><div><h3>How you read an order back</h3><p>The confirmation number is the record's key in the database.</p></div></header>
+            <div class="fx-row fx-small">
+              <div class="fx-card" style="--c:#5b93db"><span class="fx-logos"><img src="img/arch/javascript.svg" alt="JavaScript" width="26" height="26" /></span><b>Browser</b><span>Asks for the number.</span></div>
+              <div class="fx-arrow"><span class="fx-lbl">GET /api/trades/{number}</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#e7157b"><img src="img/arch/apigateway.svg" alt="" width="36" height="36" /><b>API Gateway</b><span>Checks the token.</span></div>
+              <div class="fx-arrow"><span class="fx-lbl">&nbsp;</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#ed7100"><img src="img/arch/lambda.svg" alt="" width="36" height="36" /><b>Lambda</b><span>Only the owner may read it.</span></div>
+              <div class="fx-arrow"><span class="fx-lbl">read</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#3b48cc"><img src="img/arch/dynamodb.svg" alt="" width="36" height="36" /><b>DynamoDB</b><span>Returns the saved record, or 404.</span></div>
+            </div>
+          </div>
         </div>
         <p class="arch-credit">Logos: AWS Architecture Icons (Amazon Web Services), and the GitHub, HTML5, CSS3 and JavaScript logos from Simple Icons. All belong to their owners. On a computer without AWS, <code>local-server.js</code> stands in for API Gateway, Lambda and DynamoDB.</p>
       </section>
