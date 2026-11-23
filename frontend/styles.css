@@ -1096,3 +1096,12 @@ td .btn { font-family: var(--sans); }
   .streak { grid-template-columns: 1fr; }
   .streak-week { grid-column: 1; grid-row: auto; margin-top: 6px; }
 }
+
+/* ---------- Two demos: audience and grader ---------- */
+.demo-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 18px; }
+.demo-switch a { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--muted); text-decoration: none; min-height: 44px; }
+.demo-switch a b { color: var(--text); font-size: 15px; }
+.demo-switch a span { font-size: 13px; line-height: 1.35; }
+.demo-switch a[aria-current="page"] { border-color: var(--accent); background: var(--info-bg); }
+.demo-switch a:not([aria-current]):hover { border-color: var(--control); }
+@media (max-width: 520px) { .demo-switch a span { display: none; } }

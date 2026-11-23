@@ -5,10 +5,12 @@ This folder holds the live MarketStreet backend. The website in [`frontend/`](..
 | AWS service | Name | Job |
 |---|---|---|
 | Amplify | MarketStreet site | Hosts `frontend/` (see [`amplify.yml`](../amplify.yml)) |
-| API Gateway (HTTP API) | `MarketStreet-API` | Public address: `https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades` |
+| API Gateway (HTTP API) | `MarketStreet-API` | Public address: `https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api` (for example `/api/trades`) |
 | Lambda | `MarketStreet-ProcessTrade` | Runs the code in [`lambda/`](lambda/) |
 | DynamoDB | `MarketStreetTrades` | Stores accepted trades, keyed by `transactionId` |
 | DynamoDB | `MarketStreetAccounts` | Stores the account's cash and holdings, keyed by `userId` (BR-7) |
+| DynamoDB | `MarketStreetGames`, `MarketStreetUsers`, `MarketStreetAudit` | Scenario games, user profiles and roles, and the admin audit log |
+| DynamoDB | `MarketStreetLearn` | Learn quiz runs, keyed by `runId` |
 | CloudWatch Logs | `/aws/lambda/MarketStreet-ProcessTrade` | One JSON log line per request |
 
 All resources are in `us-east-1`.
@@ -17,7 +19,7 @@ All resources are in `us-east-1`.
 
 | File | Purpose |
 |---|---|
-| [`index.js`](lambda/index.js) | Entry point (`index.handler`). Routes `POST /api/trades`, `GET /api/trades/{transactionId}` and `GET /api/account`, and writes logs. |
+| [`index.js`](lambda/index.js) | Entry point (`index.handler`). Routes every `/api/*` request (trades, account, games, admin, learn) and writes logs. |
 | [`backend/trades.js`](lambda/backend/trades.js) | Business rules: `validateOrder()` (BR-1–3, BR-6, BR-9) and `checkAccount()` (BR-4, BR-5). |
 | [`backend/accounts.js`](lambda/backend/accounts.js) | Reads the account and saves an accepted trade together with the cash and holdings change in one DynamoDB transaction (BR-7), re-checking cash or shares inside it. |
 | [`backend/market-data.js`](lambda/backend/market-data.js) | Simulated prices (`getQuote()`, with the BR-6 15-minute limit) and the starting account. Prices must match `frontend/data.js`. |
@@ -119,6 +121,25 @@ To make someone an admin: they sign up first, then **Cognito → User pools → 
 On your computer, `local-server.js` reads the token from the `Authorization` header but does **not** check its signature (only API Gateway can). Sign in on `http://localhost:3000` with a real Cognito account. All five tables are kept in memory, so they start empty each time the server starts.
 
 **Testing on the `cognito-login` branch:** the branch preview (`https://cognito-login.d2kb3xv6llewil.amplifyapp.com`) uses a separate test API (`MarketStreet-API-test`, `qedu5ta2jc`) and Lambda (`MarketStreet-ProcessTrade-test`), so the live site is not affected until the branch is merged. When merging, add the JWT authorizer and the `GET /api/leaderboard` route to the live API, deploy the Lambda, and remove the test API line from `frontend/app.js`.
+
+## Production setup (live site, Nov 2026)
+
+The live site (`https://main.d2kb3xv6llewil.amplifyapp.com`) uses API `59w9sz4rrl` and Lambda `MarketStreet-ProcessTrade`. The `cognito-login` and `platform-redesign` branch previews use the test API `qedu5ta2jc` instead (chosen by hostname in `frontend/app.js`).
+
+| Piece | Production setting |
+|---|---|
+| Routes | `GET /api/{proxy+}`, `POST`, `PUT`, `PATCH` and `DELETE /api/{proxy+}`, plus the named trade, account, games and admin routes. All use the JWT authorizer `CognitoLogin` (`34uch9`). |
+| Public routes | `GET /api/learn/{proxy+}` and `POST /api/learn/{proxy+}` have no authorizer. The Learn quiz needs no sign-in, and the server scores it. |
+| CORS | Methods `GET, POST, PUT, PATCH, DELETE, OPTIONS`; headers `content-type, authorization`. |
+| Lambda permission | A resource policy statement `apigw-all-api` lets API Gateway call the Lambda for `/*/*/api/*`. Without it, any route not listed by name returns 500. |
+| Environment variables | `TABLE_NAME`, `ACCOUNTS_TABLE`, `GAMES_TABLE`, `USERS_TABLE`, `AUDIT_TABLE`, `LEARN_TABLE` |
+| Indexes | `MarketStreetTrades`: `userId-submittedAt-index`. `MarketStreetGames`: `ownerId-updatedAt-index`. |
+
+**The AWS Learner Lab must be running.** When the lab stops, the Lambda role stops working and every request fails with "Something went wrong". Starting the lab again fixes it. Nothing needs to be redeployed.
+
+**Learn quiz** ([backend/learn.js](lambda/backend/learn.js)): `GET /api/learn/questions` (no answers), `POST /api/learn/start`, `POST /api/learn/answer`, `POST /api/learn/finish`. The server notes the start time, re-checks every answer and saves the run once.
+
+**Weekly League** (`frontend/league.html`) is a single-player demo that runs in the browser. It stores its state in `localStorage` and does not call the API.
 
 ## Deploy a change
 

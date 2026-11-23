@@ -296,6 +296,7 @@ function paint() {
   const current = awaiting ? shown.length : view;
   const nav = $("pipeline");
   $("setup").hidden = started;
+  document.querySelector(".demo-switch").hidden = started;
   $("demoHead").hidden = started;
   nav.hidden = !started;
   $("orderLine").hidden = !started;

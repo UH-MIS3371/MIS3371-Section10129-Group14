@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grader check – MarketStreet</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="grader.css" />
+    <link rel="stylesheet" href="matrix.css" />
+    <script src="auth.js" defer blocking="render"></script>
+    <script src="data.js" defer blocking="render"></script>
+    <script src="app.js" defer blocking="render"></script>
+    <script src="layout.js" defer blocking="render"></script>
+    <script src="grader.js" defer blocking="render"></script>
+    <script src="test-matrix-data.js" defer></script>
+    <script src="demo-matrix.js" defer></script>
+  </head>
+
+  <!-- For graders: the Milestone 4 requirements, each checked live against the API. The audience walkthrough is demo.html. -->
+  <body data-shell="app" data-nav="demo">
+    <main class="page narrow demo-page grader-page">
+      <nav class="demo-switch" aria-label="Choose a demo">
+        <a href="demo.html"><b>Audience demo</b><span>Watch one order travel through every layer</span></a>
+        <a href="grader.html" aria-current="page"><b>Grader check</b><span>Verify the Milestone 4 requirements</span></a>
+      </nav>
+
+      <div class="page-head">
+        <div>
+          <h1>Grader check</h1>
+          <p>Three steps prove the Milestone 4 requirements on the live app. Do them in order.</p>
+          <div class="g-who" id="gWho" role="status" aria-live="polite"></div>
+          <p class="g-before"><b>Before you start:</b> make sure the AWS Learner Lab is running.</p>
+        </div>
+      </div>
+
+      <ol class="g-check" id="gCheck" aria-label="Progress"></ol>
+
+      <section class="g-step" id="s1" aria-labelledby="g1">
+        <h2 id="g1"><span class="g-num" aria-hidden="true">1</span> Submit an order</h2>
+        <p class="g-lead">Pick an example to fill the form, then submit it.</p>
+        <div class="g-quick" role="group" aria-label="Fill the form with an example" id="gQuick"></div>
+        <form class="g-form" id="gForm" novalidate>
+          <div class="g-fields">
+            <div class="field"><label for="gSymbol">Stock</label><select id="gSymbol"></select></div>
+            <div class="field"><label for="gSide">Buy or sell</label><select id="gSide"><option>Buy</option><option>Sell</option></select></div>
+            <div class="field"><label for="gQty">Shares</label><input id="gQty" type="text" inputmode="decimal" autocomplete="off" value="1" /></div>
+          </div>
+          <div class="g-send">
+            <p class="g-will" id="gWill" aria-live="polite"></p>
+            <button type="submit" class="btn primary g-big" id="gSubmit">Submit order</button>
+          </div>
+        </form>
+        <div id="gResult" aria-live="polite"></div>
+      </section>
+
+      <section class="g-step is-waiting" id="s2" aria-labelledby="g2">
+        <h2 id="g2"><span class="g-num" aria-hidden="true">2</span> Retrieve it by confirmation number</h2>
+        <p class="g-lead" id="gLead2">Submit an order first. Its number fills in here.</p>
+        <form class="g-lookup" id="gLookup" novalidate>
+          <div class="field"><label for="gId">Confirmation number</label><input id="gId" type="text" autocomplete="off" spellcheck="false" /></div>
+          <button type="submit" class="btn g-big" id="gRetrieve">Retrieve</button>
+        </form>
+        <p class="g-alt"><button type="button" class="btn g-big" id="gMissing">Test a number that doesn't exist</button> <button type="button" class="btn g-big" id="gList">Show everything saved for this account</button></p>
+        <div id="gFound" aria-live="polite"></div>
+        <div id="gSaved" aria-live="polite"></div>
+      </section>
+
+      <section class="g-step" id="rules" aria-labelledby="gr">
+        <h2 id="gr">The business rules we test</h2>
+        <p class="g-lead">These are the rules the tests check, from our requirements (docs/02-requirements/business-rules.md). Each lists the test cases that cover it. The Result column fills in when you run the matrix below.</p>
+        <div class="g-rules-wrap"><table class="g-rules" id="gRules"></table></div>
+      </section>
+
+      <section class="g-step" id="matrix" aria-labelledby="g3">
+        <h2 id="g3"><span class="g-num" aria-hidden="true">3</span> Run the test matrix</h2>
+        <p class="g-lead">35 cases: valid, invalid, boundary and business rules. 24 run live when you press the button, each showing expected and actual. The run resets your paper account to $10,000.00 first. The 11 manual cases at the bottom were run by a teammate in the browser, and their results are recorded.</p>
+        <p class="g-run"><button type="button" class="btn primary g-big" id="matrixRun">Run the test matrix</button></p>
+        <div class="matrix-summary" id="matrixSummary" hidden></div>
+        <div class="button-row g-tools" id="matrixTools" hidden>
+          <button type="button" class="btn" id="matrixCopy">Copy results as a table</button>
+          <button type="button" class="btn" id="matrixCsv">Download CSV</button>
+          <a class="btn" href="activity.html">Open Activity</a>
+          <a class="btn" href="MarketStreet-Test-Matrix.xlsx" download>Download all 35 cases (Excel)</a>
+        </div>
+        <div class="matrix" id="matrixBoard" aria-live="polite"></div>
+      </section>
+
+      <section class="g-step" id="arch" aria-labelledby="ga">
+        <h2 id="ga">How the whole system works</h2>
+        <p class="g-lead">MarketStreet is a static website that talks to a small AWS backend. Four short flows show everything: how the site gets to you, how you sign in, what happens when you submit an order, and how you read it back.</p>
+
+        <div class="arch2">
+
+          <!-- 1. DEPLOY -->
+          <div class="fx-panel">
+            <header class="fx-head"><i class="fx-n">1</i><div><h3>How the site gets to you</h3><p>Pushing code to GitHub is the only deploy step.</p></div></header>
+            <div class="fx-row">
+              <div class="fx-card" style="--c:#8b949e"><img src="img/arch/github.svg" alt="" width="44" height="44" /><b>GitHub</b><span>Source code. The <code>main</code> branch is the live version.</span><em>Git</em></div>
+              <div class="fx-arrow"><span class="fx-lbl">push</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#dd344c"><img src="img/arch/amplify.svg" alt="" width="44" height="44" /><b>AWS Amplify</b><span>Publishes the files as a website. There is no build step.</span><em>Hosting</em></div>
+              <div class="fx-arrow"><span class="fx-lbl">HTTPS</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#5b93db"><span class="fx-logos"><img src="img/arch/html5.svg" alt="HTML5" width="30" height="30" /><img src="img/arch/css3.svg" alt="CSS3" width="30" height="30" /><img src="img/arch/javascript.svg" alt="JavaScript" width="30" height="30" /></span><b>Your browser</b><span>Runs the pages. Plain HTML, CSS and JavaScript, no framework.</span><em>Frontend</em></div>
+            </div>
+          </div>
+
+          <!-- 2. SIGN IN -->
+          <div class="fx-panel">
+            <header class="fx-head"><i class="fx-n">2</i><div><h3>How you sign in</h3><p>The password goes straight to Cognito. Our own code never sees it.</p></div></header>
+            <div class="fx-row">
+              <div class="fx-card" style="--c:#5b93db"><span class="fx-logos"><img src="img/arch/javascript.svg" alt="JavaScript" width="30" height="30" /></span><b>Your browser</b><span>Sends the email and password over HTTPS.</span><em>Frontend</em></div>
+              <div class="fx-arrow"><span class="fx-lbl">email + password</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#dd344c"><img src="img/arch/cognito.svg" alt="" width="44" height="44" /><b>Amazon Cognito</b><span>Checks the password. Replies with a signed token (a JWT).</span><em>Sign-in</em></div>
+              <div class="fx-arrow back"><span class="fx-lbl">token</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#5b93db"><span class="fx-logos"><img src="img/arch/javascript.svg" alt="JavaScript" width="30" height="30" /></span><b>Your browser</b><span>Keeps the token for this tab and sends it with every request.</span><em>Frontend</em></div>
+            </div>
+          </div>
+
+          <!-- 3. SUBMIT -->
+          <div class="fx-panel fx-main">
+            <header class="fx-head"><i class="fx-n">3</i><div><h3>What happens when you submit an order</h3><p>This is the main transaction. Each step is checked by the next one.</p></div></header>
+            <div class="fx-row">
+              <div class="fx-card" style="--c:#5b93db"><span class="fx-logos"><img src="img/arch/javascript.svg" alt="JavaScript" width="30" height="30" /></span><b>Your browser</b><span>Sends the order as JSON, plus the token.</span><em>Frontend</em></div>
+              <div class="fx-arrow"><span class="fx-lbl">POST /api/trades</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#e7157b"><img src="img/arch/apigateway.svg" alt="" width="44" height="44" /><b>API Gateway</b><span>Verifies the token. No token or a bad one gets a 401 and stops here.</span><em>HTTP API</em></div>
+              <div class="fx-arrow"><span class="fx-lbl">valid request</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#ed7100"><img src="img/arch/lambda.svg" alt="" width="44" height="44" /><b>AWS Lambda</b><span>Checks the business rules BR-1 to BR-9 and sets the price. Rejects or accepts.</span><em>Node.js 24</em>
+                <div class="fx-side"><img src="img/arch/cloudwatch.svg" alt="" width="22" height="22" />Writes one log line to CloudWatch</div></div>
+              <div class="fx-arrow"><span class="fx-lbl">save</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#3b48cc"><img src="img/arch/dynamodb.svg" alt="" width="44" height="44" /><b>DynamoDB</b><span>Saves the order and the new cash and holdings together. A rejected order is saved too.</span><em>Database</em>
+                <ul class="fx-tables" aria-label="Tables"><li>Trades</li><li>Accounts</li><li>Games</li><li>Users</li><li>Audit</li><li>Learn</li></ul></div>
+            </div>
+            <p class="fx-reply">The reply comes back the same way: DynamoDB, Lambda, API Gateway, browser. It carries the confirmation number.</p>
+          </div>
+
+          <!-- 4. RETRIEVE -->
+          <div class="fx-panel">
+            <header class="fx-head"><i class="fx-n">4</i><div><h3>How you read an order back</h3><p>The confirmation number is the record's key in the database.</p></div></header>
+            <div class="fx-row fx-small">
+              <div class="fx-card" style="--c:#5b93db"><span class="fx-logos"><img src="img/arch/javascript.svg" alt="JavaScript" width="26" height="26" /></span><b>Browser</b><span>Asks for the number.</span></div>
+              <div class="fx-arrow"><span class="fx-lbl">GET /api/trades/{number}</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#e7157b"><img src="img/arch/apigateway.svg" alt="" width="36" height="36" /><b>API Gateway</b><span>Checks the token.</span></div>
+              <div class="fx-arrow"><span class="fx-lbl">&nbsp;</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#ed7100"><img src="img/arch/lambda.svg" alt="" width="36" height="36" /><b>Lambda</b><span>Only the owner may read it.</span></div>
+              <div class="fx-arrow"><span class="fx-lbl">read</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
+              <div class="fx-card" style="--c:#3b48cc"><img src="img/arch/dynamodb.svg" alt="" width="36" height="36" /><b>DynamoDB</b><span>Returns the saved record, or 404.</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="arch-credit">Logos: AWS Architecture Icons (Amazon Web Services), and the GitHub, HTML5, CSS3 and JavaScript logos from Simple Icons. All belong to their owners. On a computer without AWS, <code>local-server.js</code> stands in for API Gateway, Lambda and DynamoDB.</p>
+      </section>
+
+      <section class="g-step g-where" id="s4" aria-labelledby="g4">
+        <h2 id="g4">Where this runs</h2>
+        <dl class="g-facts" id="gFacts"></dl>
+        <p class="g-tip">Tip: open the browser's developer tools, Network tab, to watch each request go to the API.</p>
+      </section>
+
+      <details class="g-guide" id="guide">
+        <summary>Recording this? What to show, in order</summary>
+        <ol>
+          <li>Open the deployed site and sign in.</li>
+          <li><b>Step 1:</b> choose Valid order, press Submit order, and read the confirmation number aloud.</li>
+          <li><b>Step 2:</b> press Retrieve. The same record comes back from the database. Test the number that doesn't exist, then press "Show everything saved" to show the Accepted and Rejected records the database holds.</li>
+          <li><b>Step 1 again:</b> try Quantity 0, Too expensive and Sell more than owned. Read each rejection reason. Each is saved as a Rejected record.</li>
+          <li><b>Step 3:</b> run the matrix. Point at T11 (largest affordable Buy accepted) and T12 (one more share rejected), then read the summary. Scroll back up to the business rules table: each rule now shows how its tests came out.</li>
+        </ol>
+      </details>
+    </main>
+  </body>
+</html>

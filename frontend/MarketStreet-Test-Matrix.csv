@@ -1,0 +1,85 @@
+﻿"Test ID","Source","Type","Feature","Test","Steps","Input","Expected result","Actual result","Result","Business rule","Date tested","Notes"
+"M-01","Manual (browser)","Business Rule","Create Account","Create an account with a password that has no uppercase letter","1. Click the create account tab
+2. Insert Name
+3. Insert email
+4. Create a password without uppercase letters
+5. Click create account","Name: Test user
+Email: a***@gmail.com
+Password: (hidden)","Creating account will be invalid due to password requirements","Rejected with following message: Password did not conform with policy: Password must have uppercase characters","Pass","Sign-in policy","2026-11-21","The app rejected it as expected, so the result is Pass. The tester first marked it Fail."
+"M-02","Manual (browser)","Invalid Input","Create Account","Create an account with an email address that has no @ sign","1. Click the create account tab
+2. Insert Name
+3. Insert email without @ sign
+4. Create a password
+5. Click create account","Name: Test user
+Email: a*** (no @) gmail.com
+Password: (hidden)","Creating account will be invalid due to email being invalid","Rejected with following message: Invalid email address format.","Pass","Sign-in policy","2026-11-21","The app rejected it as expected, so the result is Pass. The tester first marked it Fail."
+"M-03","Manual (browser)","Valid Transaction","Create Account","Creating an account and meeting all the requirements","1. Click the create account tab
+2. Insert Name
+3. Insert email
+4. Create a password
+5. Click create account","Name: Test user
+Email: a***@gmail.com
+Password: (hidden)","Creating account will be valid and account will be created. Will prompt email verification.","Created account and takes me to email verification page. Displays the following message: Account created. Check your email for the code.","Pass","Sign-in policy","2026-11-21",""
+"M-04","Manual (browser)","Invalid Input","Email Verification","Inputing a random verification code instead of the one received","1. Enter in the verification code
+2. Click” Confirm and Sign In”","Code: 123456 (a made-up code)","Verification will not be accepted and account will not be created.","Rejected with following message: That code is not right. Check the email and try again.","Pass","Sign-in policy","2026-11-21","The app rejected it as expected, so the result is Pass. The tester first marked it Fail."
+"M-05","Manual (browser)","Valid Transaction","Email Verification","Inputing the correct verification code from email","1. Enter in the verification code
+2. Click” Confirm and Sign In”","Code: (the 6-digit code from the email)","Account will be verified and succesfully created","Account was created and taken to home page","Pass","Sign-in policy","2026-11-21",""
+"M-06","Manual (browser)","Valid Transaction","Markets","Buying shares of a stock","1. Click on the ""Markets"" tab
+2. Choose a stock
+2. Enter in amount of shares 
+3. Click “Review buy Order”
+4. Review your order
+5. Submit buy order","Stock: NVDA
+Shares: 3","Shares will be bought successfully and your account will be updated to reflect how much has been bought. Message will give the order confirmation and information","3 shares of NVDA were bought, buying power went from $10,000 to $9,635. Confirmation number is given and cost of buying the shares is displayed. Following message pops up: Order Accepted. Cash and holdings have been updated.","Pass","BR-7","2026-11-21","Same rule as automated case T01."
+"M-07","Manual (browser)","Invalid Input","Activity","Checking status of a stock but entering in the wrong confirmation number","1. After submitting transaction to buy stock, stay on order page
+2. Click “check status”
+3. Enter in a random confirmation code
+4. Click ”View Status”","Confirmation number: test321","Staus will not be shown due to incorrect confirmation number entered","Rejected with the following message: No transaction was found with that confirmation number. Check the number on your receipt and try again.","Pass","Retrieval","2026-11-21","The app rejected it as expected, so the result is Pass. The tester first marked it Fail. Same rule as automated case T18."
+"M-08","Manual (browser)","Valid Transaction","Activity","Checking status of a stock and entering in the correct number","1. After submitting transaction to buy stock, stay on order page
+2. Click “check status”
+3. Enter in correct confirmation code from receipt
+4. Click ”View Status”","Confirmation number: 7beabd87-7019-934c-8adf-7d06634f7668","Status will be shown on stock that was bought","Status is shown as accepted. Outcome, execution price, Total, Time Submitted, and Time Completed is shown.","Pass","Retrieval","2026-11-21","Same rule as automated case T16."
+"M-09","Manual (browser)","Boundary Case","Markets","Buying stock when you don't have enough buying power","1. Click on the ""Markets"" tab
+2. Enter in amount of shares 
+3. Click “Review buy Order”
+4. Review your order
+5. Submit buy order","Stock: AAPL
+Shares: 500","Will not allow for shares to be bought since it is over the maximum limit of buying power.","Order is rejected. The reason is shown as insufficient cash. Option of ""fix and try again"" is shown. Order type, execution price, Total, Time Submitted, and Time Completed is shown.","Pass","BR-4, BR-8","2026-11-21","The app rejected it as expected, so the result is Pass. The tester first marked it Fail. Same rule as automated case T12."
+"M-10","Manual (browser)","Boundary Case","Markets","Selling an amount of stock greater than what you own","1. Click on the ""Markets"" tab
+2. Select “sell”
+3. Enter in amount of shares 
+4. Click “Review sell Order”
+5. Review your order
+6. Submit sell order","Stock: NVDA
+Shares: 5","Will not allow for shares to be sold since it is more than what is currently owned.","Order is rejected. The reason is shown as insufficient shares. Option of ""fix and try again"" is shown. Order type, execution price, Total, Time Submitted, and Time Completed is shown.","Pass","BR-5, BR-8","2026-11-21","The app rejected it as expected, so the result is Pass. The tester first marked it Fail. Same rule as automated case T14."
+"M-11","Manual (browser)","Valid Transaction","Markets","Selling the correct amount of stock","1. Click on the ""Markets"" tab
+2. Select “sell”
+3. Enter in amount of shares 
+4. Click “Review sell Order”
+5. Review your order
+6. Submit sell order","Stock: NVDA
+Shares: 2","Will allow for stock to be sold since 3 is already owned.","Status is shown as accepted. Outcome, execution price, Total, Time Submitted, and Time Completed is shown. 2 shares of NVDA were sold, buying power went from $9,635 to $9,878.60.","Pass","BR-5, BR-7","2026-11-21","Same rule as automated case T13."
+"T01","Automated (live API)","Valid","Order API","Buy 1 share of AAPL","","Precondition: new account, $10,000.00. Stock AAPL · Buy · Shares 1 · Order type Market","200 ACCEPTED; confirmation number returned; cash becomes $9,814.50; record saved","200 ACCEPTED; confirmation 711862a4-376f-454e-b9cb-972910921365; cash $9,814.50; persisted true","Pass","BR-7","2026-11-22","Same rule as manual case M-06."
+"T02","Automated (live API)","Valid","Order API","Sell the share just bought","","Precondition: T01 done. Stock AAPL · Sell · Shares 1 · Order type Market","200 ACCEPTED; cash returns to $10,000.00","200 ACCEPTED; cash $10,000.00","Pass","BR-7","2026-11-22",""
+"T03","Automated (live API)","Invalid","Order API","Quantity 0","","Stock AAPL · Buy · Shares 0 · Order type Market","400 REJECTED, ""Quantity must be a positive whole number.""; a Rejected record is saved; cash unchanged","400 REJECTED, ""Quantity must be a positive whole number.""; record saved; cash $10,000.00","Pass","BR-3, BR-8","2026-11-22",""
+"T04","Automated (live API)","Invalid","Order API","Quantity 1.5 (fraction)","","Stock AAPL · Buy · Shares 1.5 · Order type Market","400 REJECTED, ""Quantity must be a positive whole number.""; a Rejected record is saved; cash unchanged","400 REJECTED, ""Quantity must be a positive whole number.""; record saved; cash $10,000.00","Pass","BR-3, BR-8","2026-11-22",""
+"T05","Automated (live API)","Invalid","Order API","Quantity -3 (negative)","","Stock AAPL · Buy · Shares -3 · Order type Market","400 REJECTED, ""Quantity must be a positive whole number.""; a Rejected record is saved; cash unchanged","400 REJECTED, ""Quantity must be a positive whole number.""; record saved; cash $10,000.00","Pass","BR-3, BR-8","2026-11-22",""
+"T06","Automated (live API)","Invalid","Order API","Quantity sent as text (bypassing the browser)","","API only: quantity ""2"" as a string","400 REJECTED, ""Quantity must be a positive whole number.""; a Rejected record is saved; cash unchanged","400 REJECTED, ""Quantity must be a positive whole number.""; record saved; cash $10,000.00","Pass","BR-3, BR-8","2026-11-22",""
+"T07","Automated (live API)","Invalid","Order API","Unknown stock symbol","","Stock XYZ · Buy · Shares 1 · Order type Market","400 REJECTED, ""Stock not found.""; a Rejected record is saved; cash unchanged","400 REJECTED, ""Stock not found.""; record saved; cash $10,000.00","Pass","BR-2, BR-8","2026-11-22",""
+"T08","Automated (live API)","Invalid","Order API","Invalid trade type","","API only: trade type Hold","400 REJECTED, ""Trade type must be Buy or Sell.""; a Rejected record is saved; cash unchanged","400 REJECTED, ""Trade type must be Buy or Sell.""; record saved; cash $10,000.00","Pass","BR-1, BR-8","2026-11-22",""
+"T09","Automated (live API)","Invalid","Order API","Limit order (not supported, BR-9)","","API only: order type Limit","400 REJECTED, ""Limit orders are not supported.""; a Rejected record is saved; cash unchanged","400 REJECTED, ""Limit orders are not supported.""; record saved; cash $10,000.00","Pass","BR-9, BR-8","2026-11-22",""
+"T10","Automated (live API)","Invalid","Order API","Empty request body","","API only: POST with no body","400 REJECTED, ""A JSON request body is required.""","400 REJECTED, ""A JSON request body is required.""","Pass","BR-3, BR-8","2026-11-22",""
+"T11","Automated (live API)","Boundary","Order API","Largest affordable Buy is accepted (82 × $121.40 = $9,954.80)","","Precondition: $10,000.00, no holdings. Stock NVDA · Buy · Shares 82 · Order type Market","200 ACCEPTED; cash becomes $45.20","200 ACCEPTED; cash $45.20","Pass","BR-4, BR-7","2026-11-22",""
+"T12","Automated (live API)","Boundary","Order API","One more share than the cash covers is rejected","","Precondition: T11 done (cash $45.20). Stock NVDA · Buy · Shares 1 · Order type Market","400 REJECTED, ""Insufficient cash.""; cash unchanged","400 REJECTED, ""Insufficient cash.""; cash $45.20","Pass","BR-4, BR-8","2026-11-22","Same rule as manual case M-09."
+"T13","Automated (live API)","Boundary","Order API","Sell exactly the shares owned is accepted","","Precondition: T11 done (owns 82 NVDA). Stock NVDA · Sell · Shares 82 · Order type Market","200 ACCEPTED; holdings become 0; cash returns to $10,000.00","200 ACCEPTED; cash $10,000.00","Pass","BR-5, BR-7","2026-11-22","Same rule as manual case M-11."
+"T14","Automated (live API)","Boundary","Order API","Sell one more share than owned is rejected (no short selling)","","Precondition: owns 0 NVDA. Stock NVDA · Sell · Shares 1 · Order type Market","400 REJECTED, ""Insufficient shares.""; cash unchanged","400 REJECTED, ""Insufficient shares.""","Pass","BR-5, BR-8","2026-11-22","Same rule as manual case M-10."
+"T15","Automated (live API)","Business rule","Order API","Retried order is not placed twice (duplicate control)","","Same order sent twice with the same requestId: Stock MSFT · Buy · Shares 1 · Order type Market","First 200 ACCEPTED; second returns the first result with duplicate: true; cash debited once ($412.30)","200 ACCEPTED then 200 ACCEPTED duplicate=true, same confirmation: true; cash $9,587.70","Pass","Duplicate control","2026-11-22",""
+"T16","Automated (live API)","Retrieval","Order API","Retrieve an Accepted transaction by confirmation number","","Confirmation number from T01 (filled in when it runs)","200; status Accepted with the stored order, price, total and times","200 status Accepted, Buy 1 AAPL at 185.5, confirmation 711862a4-376f-454e-b9cb-972910921365","Pass","Retrieval","2026-11-22","Same rule as manual case M-08."
+"T17","Automated (live API)","Retrieval","Order API","Retrieve a Rejected transaction (rejections are stored)","","Confirmation number from T03 (filled in when it runs)","200; status Rejected with rejectionReason and category Rule","200 status Rejected, ""Quantity must be a positive whole number."", category Rule","Pass","Retrieval, BR-8","2026-11-22",""
+"T18","Automated (live API)","Retrieval","Order API","Confirmation number that does not exist","","00000000-0000-4000-8000-000000000000","404 ""Trade not found.""","404 ""Trade not found.""","Pass","Retrieval","2026-11-22","Same rule as manual case M-07."
+"T19","Automated (live API)","Retrieval","Order API","Malformed confirmation number","","abc123","404 ""Trade not found.""","404 ""Trade not found.""","Pass","Retrieval","2026-11-22",""
+"T20","Automated (live API)","Retrieval","Order API","Persistence: the order list comes from the database","","GET /api/trades after T01 to T15","200; list holds Accepted and Rejected records, newest first","200, 85 records (30 Accepted, 55 Rejected)","Pass","Retrieval","2026-11-22",""
+"T21","Automated (live API)","Retrieval","Order API","Another user cannot read this transaction","","Confirmation number from T01, requested by a different signed-in user","404 ""Trade not found."" (nothing about the record is revealed)","Not run here: needs a second signed-in user. Run Testing/Final-Milestone/run-matrix.js with OTHER_TOKEN to include it.","Not run","Access","2026-11-22",""
+"T22","Automated (live API)","Error handling","Order API","Request without a sign-in token","","POST /api/trades with no Authorization header","401 (rejected before any processing)","401 ""Unauthorized""","Pass","Access","2026-11-22",""
+"T23","Automated (live API)","Error handling","Order API","A normal user cannot call an admin route","","GET /api/admin/users as a non-admin","403 ""Admins only.""","Not run: this account is an admin, so the route is allowed. Run it as a normal user.","Not run","Access","2026-11-22",""
+"T24","Automated (live API)","Error handling","Order API","Database failure while saving","","Cannot be reproduced safely on the live system","Nothing is saved; cash and holdings unchanged; the user is told the trade was not saved","Not run live. Covered by the automated tests in aws/lambda/tests (a simulated DynamoDB failure leaves the account unchanged).","Not run","BR-7","2026-11-22",""

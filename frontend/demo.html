@@ -18,10 +18,15 @@
 
   <body data-shell="app" data-nav="demo">
     <main class="page narrow demo-page">
+      <nav class="demo-switch" aria-label="Choose a demo">
+        <a href="demo.html" aria-current="page"><b>Audience demo</b><span>Watch one order travel through every layer</span></a>
+        <a href="grader.html"><b>Grader check</b><span>Verify the Milestone 4 requirements</span></a>
+      </nav>
+
       <div class="page-head" id="demoHead">
         <div>
           <h1>Transaction demo</h1>
-          <p>Watch one order travel through every layer: browser, API Gateway, Lambda, business rules, DynamoDB and back. Every step makes the real call.</p>
+          <p>A guided walkthrough for a live audience. One order travels through every layer: browser, API Gateway, Lambda, business rules, DynamoDB and back. Every step makes the real call.</p>
         </div>
       </div>
 
@@ -38,6 +43,7 @@
         </div>
         <p class="note">A valid order really changes your paper account's cash and holdings. The other examples are rejected and change nothing. Press Start demo, then Next step or the right arrow key.</p>
       </section>
+
 
       <nav class="journey" id="pipeline" aria-label="Demo steps" hidden></nav>
       <p class="order-line" id="orderLine" hidden></p>
