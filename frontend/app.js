@@ -4,9 +4,7 @@
 // On localhost (npm start in aws/lambda) the local server answers /api/...; everywhere else, AWS does.
 const API_BASE = location.hostname === "localhost" || location.hostname === "127.0.0.1"
   ? "/api"
-  : /^(cognito-login|platform-redesign)\./.test(location.hostname)
-    ? "https://qedu5ta2jc.execute-api.us-east-1.amazonaws.com/api"
-    : "https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api";
+  : "https://ixkiwxjqxl.execute-api.us-east-1.amazonaws.com/api";
 const API_URL = API_BASE + "/trades"; // used by Scenario Mode and the leaderboard
 const START_CASH_CENTS = 1000000;
 

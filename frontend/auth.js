@@ -11,7 +11,7 @@
 
 const COGNITO = {
   url: "https://cognito-idp.us-east-1.amazonaws.com/",
-  clientId: "39ufd4fucor0jpnhklpdqdo8lh"
+  clientId: "2glo9ri386b2vjbtiv79jm8j32"
 };
 const TOKEN_KEY = "marketstreet-id-token";
 const ACCESS_KEY = "marketstreet-access-token";
