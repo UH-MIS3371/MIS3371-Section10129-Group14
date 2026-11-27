@@ -6,4 +6,4 @@ One sheet: team members down the left, the supplied class activities, group exer
 
 Click any score to change it. Scroll right to see later activities; names and headers stay visible. Add future activities in the next column to the right, then save the file.
 
-The **Evidence** sheet lists each member's commits on `main` by month, taken from the repository history, so the scores can be checked against real work.
+The **Evidence** sheet lists each member's commits on `main` by week, taken from the repository history, so the scores can be checked against real work.
