@@ -1,12 +1,3 @@
-const processExpenses = (expense) => {
-    // Validate the expense object
-    if (!expense.employeeId || !expense.expenseType || !expense.amount || !expense.date) {
-        throw new Error("Invalid expense object");
-    }
-    
-    console.log(`Processing expense for employee ${expense.employeeId}: ${expense.expenseType} - $${expense.amount} on ${expense.date}`);
-}
-
 // Prices and the demo account live on the backend, in whole cents, so a request
 // can never choose its own price, cash, or shares (BR-9). Prices must match frontend/data.js.
 const STOCKS = {
@@ -76,4 +67,4 @@ const processTrade = (order, { stocks = STOCKS, account = DEMO_ACCOUNT, now = Da
     return { status: "ACCEPTED", message: "Sell order accepted." };
 };
 
-module.exports = { processExpenses, processTrade };
+module.exports = { processTrade };

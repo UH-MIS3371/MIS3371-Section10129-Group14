@@ -2,6 +2,8 @@
 
 Important project decisions, with the reason for each. Add new decisions at the bottom. If a decision changes, add a new entry that replaces the old one instead of editing it.
 
+> **D-10 is settled for the live system:** a new account starts with $10,000.00 and no holdings (`START_SHARES` is empty in `aws/lambda/backend/market-data.js`). The 10 AAPL / 2 MSFT / 1 IBM account belonged to the retired Week 8 backend in `archive/`.
+
 > **Status:** D-1 to D-10 are **proposed**. They were drafted during a documentation review and need the team's approval. Once the team agrees, record who approved them and the date here.
 
 | # | Date | Decision | Why | Affects |

@@ -1,7 +1,7 @@
 /*
   MarketStreet — Week 9 API Integration Tests
   Tests the Express API independently of the browser.
-  Uses the existing Week 8 processTrade() business rules.
+  Sends only symbol, tradeType, quantity and orderType. The server owns price, cash and holdings.
 */
 
 const API_URL = "http://localhost:3000/api/trades";
@@ -11,10 +11,7 @@ const baseTrade = {
   symbol: "AAPL",
   tradeType: "Buy",
   quantity: 1,
-  orderType: "Market",
-  price: 185.50,
-  cash: 10000,
-  sharesOwned: 10
+  orderType: "Market"
 };
 
 // Six test cases: valid, invalid, and boundary conditions

@@ -4,9 +4,15 @@
 
 MarketStreet is a simulated stock trading application that allows users to place and track paper-trading transactions without using real money.
 
+## Live Site
+
+**[Open MarketStreet: https://main.d2kb3xv6llewil.amplifyapp.com](https://main.d2kb3xv6llewil.amplifyapp.com)**
+
+Sign in (or try guest mode), submit a trade, and copy the confirmation number from the receipt. To retrieve it later, open **History**. For graders, the [Grader check page](https://main.d2kb3xv6llewil.amplifyapp.com/grader.html) runs the 35-case test matrix live against the real AWS backend. The site runs on AWS Amplify, API Gateway, Lambda, DynamoDB and Cognito.
+
 ## Team Performance Tracker
 
-**[Open the team participation tracker](docs/05-team-management/team-tracker.xlsx)** for all six members' participation in class activities, group exercises, and milestones. Everyone starts at **100**; edit the scores directly in Excel. See the [update guide](docs/05-team-management/README.md).
+**[Open the team participation tracker](docs/05-team-management/team-tracker.xlsx)** for all six members' participation in class activities, group exercises, and milestones. The tracker now has per-member scores through November 22 and an **Evidence** sheet with each member's commit counts from the repository history. See the [update guide](docs/05-team-management/README.md).
 
 ## Project Scenario
 
@@ -26,7 +32,7 @@ The system validates the transaction, applies applicable business rules, records
 
 ## Application Interface
 
-[`frontend/`](frontend/index.html) is the canonical MarketStreet interface. It supports Market orders only (BR-9) and sends trades to the AWS backend. Open `frontend/index.html` in a browser, or use the deployed Amplify site. Earlier class exercises and prototypes are preserved in [archive/](archive/README.md).
+[`frontend/`](frontend/index.html) is the canonical MarketStreet interface. It supports Market orders only (BR-9) and sends trades to the AWS backend. The business rules live in **one module**, [`aws/lambda/backend/trades.js`](aws/lambda/backend/trades.js), which the Lambda calls for every order. The retired Express server in `archive/` is not part of the live path. Use the [live site](https://main.d2kb3xv6llewil.amplifyapp.com), or open `frontend/index.html` in a browser. Earlier class exercises and prototypes are preserved in [archive/](archive/README.md).
 
 ## Project Layout
 
@@ -38,11 +44,11 @@ The system validates the transaction, applies applicable business rules, records
 | [`docs/`](docs/) | Requirements, business rules, and system design |
 | [`Testing/`](Testing/) | Test plans, results, and evidence for each week |
 
-Each interactive page loads its own script (`trade.js`, `history.js`, or `result.js`). Shared state and helpers remain in `app.js`. Trade form identifiers follow the [data dictionary](docs/03-system-design/data-dictionary.md); `trade.js` maps `stockSymbol` and `shareQuantity` to the existing API's `symbol` and `quantity` fields.
+Each interactive page loads its own script (`trade.js`, `history.js`, or `result.js`). Every accepted or rejected order is saved as a record, so the History and Result pages show it. Shared state and helpers remain in `app.js`. Trade form identifiers follow the [data dictionary](docs/03-system-design/data-dictionary.md); `trade.js` maps `stockSymbol` and `shareQuantity` to the existing API's `symbol` and `quantity` fields.
 
 ## Testing
 
-Week 9 API and integration tests are documented in [Testing/Week-9-Integration-Tests.md](Testing/Week-9-Integration-Tests.md). The [Week 8 backend test results](Testing/Week-8-Backend/test-results%20week%208%20backend) are in `Testing/`, and the business rules are in [docs/02-requirements/business-rules.md](docs/02-requirements/business-rules.md). Testing evidence lives in `Testing/`; the former `docs/04-testing/` location is obsolete.
+Week 9 API and integration tests are documented in [Testing/Week-9-Integration-Tests.md](Testing/Week-9-Integration-Tests.md). The [Week 8 backend test results](Testing/Week-8-Backend/test-results.md) are in `Testing/`, and the business rules are in [docs/02-requirements/business-rules.md](docs/02-requirements/business-rules.md). All testing evidence lives in `Testing/`. The final 35-case test matrix is in [Testing/Final-Milestone/](Testing/Final-Milestone/README.md).
 
 ## Git Workflow
 

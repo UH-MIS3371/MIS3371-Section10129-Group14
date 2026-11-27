@@ -79,6 +79,21 @@ and response messages matched the actual backend results.
 The automated tests verify BR-3, BR-4, and BR-5 through
 POST /api/trades using JSON requests.
 
+## Trade page (client) tests
+
+These checks run in the browser on `frontend/trade.html`. The live site repeats them against the AWS backend.
+
+| # | Input | Expected result on the page |
+|---|---|---|
+| C1 | Buy 1 AAPL with enough cash | Order accepted. A confirmation number appears. |
+| C2 | Quantity `0` | Live message "Quantity must be a positive whole number." and Submit is blocked |
+| C3 | Quantity `1.5` | Same message, blocked |
+| C4 | Quantity empty | Required-field message, blocked |
+| C5 | Buy more shares than cash allows | Live cash warning, then Rejected "Insufficient cash." |
+| C6 | Sell a stock you do not own | Live holdings warning, then Rejected "Insufficient shares." |
+| C7 | Sell exactly the shares you own | Accepted (boundary) |
+| C8 | Backend unreachable | Connection-error message, no result page |
+
 ## Conclusion
 All six integration tests passed. MarketStreet successfully sends trade requests from the browser to the local backend and displays validation results.
 
