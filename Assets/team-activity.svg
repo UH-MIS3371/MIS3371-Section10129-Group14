@@ -21,7 +21,7 @@
 </style>
 <rect class="card" x="0.5" y="0.5" width="847" height="431" rx="12"/>
 <text x="24" y="38" font-size="22" font-weight="700">MarketStreet team activity</text>
-<text class="muted" x="24" y="60" font-size="13">6 contributors · 217 commits · Sep 10 – Nov 27, 2026 · 12 weeks, nothing hidden</text>
+<text class="muted" x="24" y="60" font-size="13">6 contributors · 218 commits · Sep 10 – Nov 27, 2026 · 12 weeks, nothing hidden</text>
 <text class="muted" x="664" y="40" font-size="11">Fewer</text>
 <rect x="702" y="29" width="14" height="14" rx="3" class="empty"/>
 <rect x="720" y="29" width="14" height="14" rx="3" fill="#9be9a8"/>
@@ -67,11 +67,11 @@
 <text class="num" x="511.0" y="144" font-size="12" text-anchor="middle">5</text>
 <rect x="530" y="128" width="30" height="24" rx="4" fill="#216e39"><title>Austin Nguyen, week of Nov 16: 35 commits</title></rect>
 <text class="num" x="545.0" y="144" font-size="12" text-anchor="middle">35</text>
-<rect x="564" y="128" width="30" height="24" rx="4" fill="#30a14e"><title>Austin Nguyen, week of Nov 23: 6 commits</title></rect>
-<text class="num" x="579.0" y="144" font-size="12" text-anchor="middle">6</text>
+<rect x="564" y="128" width="30" height="24" rx="4" fill="#30a14e"><title>Austin Nguyen, week of Nov 23: 7 commits</title></rect>
+<text class="num" x="579.0" y="144" font-size="12" text-anchor="middle">7</text>
 <rect class="track" x="614" y="134" width="120" height="12" rx="6"/>
-<rect class="bar" x="614" y="134" width="73.5" height="12" rx="6"/>
-<text x="744" y="145" font-size="13" font-weight="600">133</text>
+<rect class="bar" x="614" y="134" width="73.8" height="12" rx="6"/>
+<text x="744" y="145" font-size="13" font-weight="600">134</text>
 <text class="muted" x="778" y="145" font-size="11">61%</text>
 <text x="24" y="178" font-size="14" font-weight="600">Sophia Musetti</text>
 <rect x="190" y="162" width="30" height="24" rx="4" fill="#40c463"><title>Sophia Musetti, week of Sep 07: 3 commits</title></rect>
@@ -120,7 +120,7 @@
 <text class="num" x="545.0" y="212" font-size="12" text-anchor="middle">4</text>
 <rect class="empty" x="564" y="196" width="30" height="24" rx="4"><title>Agah Duzenli, week of Nov 23: 0 commits</title></rect>
 <rect class="track" x="614" y="202" width="120" height="12" rx="6"/>
-<rect class="bar" x="614" y="202" width="12.2" height="12" rx="6"/>
+<rect class="bar" x="614" y="202" width="12.1" height="12" rx="6"/>
 <text x="744" y="213" font-size="13" font-weight="600">22</text>
 <text class="muted" x="778" y="213" font-size="11">10%</text>
 <text x="24" y="246" font-size="14" font-weight="600">Benjamin Nguyen</text>
@@ -207,6 +207,6 @@
 <text class="muted" x="511.0" y="386.5" font-size="10" text-anchor="middle">5</text>
 <rect class="bar" x="530" y="353.1" width="30" height="42.9" rx="3"><title>Week of Nov 16: 39 commits</title></rect>
 <text class="muted" x="545.0" y="349.1" font-size="10" text-anchor="middle">39</text>
-<rect class="bar" x="564" y="389.4" width="30" height="6.6" rx="3"><title>Week of Nov 23: 6 commits</title></rect>
-<text class="muted" x="579.0" y="385.4" font-size="10" text-anchor="middle">6</text>
+<rect class="bar" x="564" y="388.3" width="30" height="7.7" rx="3"><title>Week of Nov 23: 7 commits</title></rect>
+<text class="muted" x="579.0" y="384.3" font-size="10" text-anchor="middle">7</text>
 </svg>
