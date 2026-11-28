@@ -39,7 +39,7 @@ MarketStreet will not include:
 - Deposits or withdrawals of real money.
 - Limit orders and other order types besides Market.
 - Margin trading.
-- Short selling.
+- Short selling in the main trade. (The separate Challenges game lets players short a stock with game money only.)
 - Options trading.
 - Cryptocurrency trading.
 - Financial advice or stock recommendations.

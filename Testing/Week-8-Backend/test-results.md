@@ -1,5 +1,6 @@
-
 # Week 8 - Backend Test Results
+
+> **Historical (Week 8).** These tests ran against the retired Week 8 backend, which used a fixed demo account. The live backend is the AWS Lambda; its tests are described in [Testing/README.md](../README.md).
 
 ## Project: MarketStreet TPS
 Main Transaction: Submit a simulated stock trade order
@@ -16,10 +17,10 @@ The purpose of these tests is to verify that the backend correctly accepts or re
 ## Test Results
 
 | Test | Category | Expected | Actual | Result |
-|------|----------|------|---|--------|--------|
+|------|----------|----------|--------|--------|
 | Buy 5 shares with sufficient cash | Valid | ACCEPTED | ACCEPTED | PASS |
 | Buy 0.5 shares | Invalid | REJECTED | REJECTED | PASS |
-| Sell 15 shares when owning 10 | Invalid | REJECTED | REJECTED | PASS |
+| Sell 15 shares when owning 10 | Business rule | REJECTED | REJECTED | PASS |
 | Sell 5 shares when owning 10 | Valid | ACCEPTED | ACCEPTED | PASS |
 | Buy shares with exactly enough cash | Boundary | ACCEPTED | ACCEPTED | PASS |
 | Sell exactly 10 shares when owning 10 | Boundary | ACCEPTED | ACCEPTED | PASS |
@@ -28,13 +29,16 @@ The purpose of these tests is to verify that the backend correctly accepts or re
 All six backend trade tests passed successfully.
 
 - Valid tests: 2/2 passed
-- Invalid tests: 2/2 passed
+- Invalid input tests: 1/1 passed
+- Business-rule tests: 1/1 passed (BR-5, not enough shares)
 - Boundary tests: 2/2 passed
 - Overall: 6/6 passed
 
 The tests confirm that the implemented backend rules correctly handle the six scenarios tested. Frontend-backend integration is not required for this activity.
 
 ## How to Run the Tests
-From the repository root, run:
+The Week 8 backend is now archived. From the repository root, run:
 
-    node backend/test-backend.js
+    node archive/local-backend/backend/test-backend.js
+
+The archived script was extended after Week 8. It now runs 22 checks (22/22 passed on 2026-11-27); the six tests above are the original Week 8 set.

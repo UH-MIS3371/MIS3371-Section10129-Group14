@@ -58,9 +58,17 @@ async function signInWith(email, password) {
   location.replace(safeBack());
 }
 
-// Only a path on this site, never another address
+// Only a page on this site, never another address. The browser resolves the value the same way it would for a
+// redirect, so tricks like "//evil.example" or "/\evil.example" resolve to another origin and are refused.
 function safeBack() {
-  return back && back.startsWith("/") && !back.startsWith("//") && !/signin\.html/.test(back) ? back : "dashboard.html";
+  if (!back) return "dashboard.html";
+  try {
+    const u = new URL(back, location.origin);
+    if (u.origin !== location.origin || /signin\.html/.test(u.pathname)) return "dashboard.html";
+    return u.pathname + u.search + u.hash;
+  } catch (e) {
+    return "dashboard.html";
+  }
 }
 
 $("signIn").addEventListener("submit", (e) => {

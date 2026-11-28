@@ -21,7 +21,8 @@ async function learnApi(path, body) {
     throw Object.assign(new Error("Couldn't reach MarketStreet. Check your connection and try again."), { status: 0 });
   }
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || data.success === false) throw Object.assign(new Error(data.reason || "Something went wrong. Please try again."), { status: response.status });
+  // failMessage() is in app.js: a 5xx with no reason means the server itself is not answering
+  if (!response.ok || data.success === false) throw Object.assign(new Error(data.reason || failMessage(response.status)), { status: response.status });
   return data;
 }
 

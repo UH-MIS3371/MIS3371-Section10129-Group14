@@ -67,7 +67,8 @@ async function saveRejected(trade, user, reason, submittedAt, quote, id) {
   const t = trade && typeof trade === "object" && !Array.isArray(trade) ? trade : {};
   const text = (v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 12) : null);
   const now = new Date().toISOString();
-  const category = reason === "Price unavailable." || reason === SAVE_FAILED ? "System" : "Rule";
+  // BR-8: every business-rule failure (BR-1 to BR-6, BR-9, a bad request) is a Rule rejection; only a failed save is System
+  const category = reason === SAVE_FAILED ? "System" : "Rule";
   const record = {
     transactionId: id && category === "Rule" ? id : crypto.randomUUID(),
     userId: user.userId,
@@ -101,7 +102,8 @@ async function saveRejected(trade, user, reason, submittedAt, quote, id) {
 
 // The trade a retried order already created: returned as it was saved, nothing is changed
 async function existingReply(id, user) {
-  const { Item: t } = await db.send(new GetCommand({ TableName: process.env.TABLE_NAME, Key: { transactionId: id } }));
+  // ConsistentRead: the record was usually written a moment ago, so an eventually consistent read could miss it
+  const { Item: t } = await db.send(new GetCommand({ TableName: process.env.TABLE_NAME, Key: { transactionId: id }, ConsistentRead: true }));
   if (!t) return reply(500, serverError(SAVE_FAILED));
   const same = { persisted: true, transactionId: id, submittedAt: t.submittedAt, trade: t, duplicate: true };
   if (t.status !== "Accepted") return reply(400, { ...rejected(t.rejectionReason), ...same });
@@ -239,10 +241,14 @@ async function getAccount(user) {
 // GET /api/trades/{transactionId}: read one saved trade. Only its owner (or an admin) may read it;
 // anyone else is told it was not found, so another user's trade IDs reveal nothing.
 async function getTrade(event, user) {
-  const id = event.pathParameters && event.pathParameters.transactionId;
+  // The named route passes it as a path parameter; a catch-all /api/{proxy+} route only has it in the path
+  const fromPath = (event.rawPath || "").match(ONE_TRADE_PATH);
+  let id = (event.pathParameters && event.pathParameters.transactionId) || (fromPath ? fromPath[1] : undefined);
   if (typeof id !== "string" || !id.trim()) {
     return reply(400, { success: false, reason: "A transactionId is required." });
   }
+  // Every official ID is a lower-case UUID; a number typed in capitals is the same number
+  id = id.trim().toLowerCase();
   // Every official ID is a UUID, so anything else cannot be a saved trade
   if (!UUID.test(id)) return reply(404, { success: false, reason: "Trade not found." });
 
@@ -253,7 +259,8 @@ async function getTrade(event, user) {
 
   try {
     // GetCommand reads one record by its partition key
-    const found = await db.send(new GetCommand({ TableName: process.env.TABLE_NAME, Key: { transactionId: id } }));
+    // ConsistentRead: View Status opens right after the trade is saved, so read the latest copy
+    const found = await db.send(new GetCommand({ TableName: process.env.TABLE_NAME, Key: { transactionId: id }, ConsistentRead: true }));
     const mine = found.Item && (found.Item.userId === user.userId || user.isAdmin);
     if (!mine) return reply(404, { success: false, reason: "Trade not found." });
     return reply(200, { success: true, trade: found.Item });
@@ -275,12 +282,27 @@ async function listTrades(user) {
   }
 }
 
-function isTradeListRoute(event) {
-  return event.routeKey === "GET /api/trades" || /\/api\/trades\/?$/.test(event.rawPath || "");
+// The trade and account routes this file answers. Only these exact paths (a trailing slash is allowed) reach
+// postTrade, listTrades, getTrade or getAccount; any other path gets 404, so a mistyped POST is never a trade.
+const TRADES_PATH = /^\/api\/trades\/?$/;
+const ONE_TRADE_PATH = /^\/api\/trades\/([^/]+)\/?$/;
+const ACCOUNT_PATH = /^\/api\/account\/?$/;
+const QUOTES_PATH = /^\/api\/quotes\/?$/;
+
+function isTradesRoute(event) {
+  return /^[A-Z]+ \/api\/trades$/.test(event.routeKey || "") || TRADES_PATH.test(event.rawPath || "");
+}
+
+function isOneTradeRoute(event) {
+  return /^[A-Z]+ \/api\/trades\/\{transactionId\}$/.test(event.routeKey || "") || ONE_TRADE_PATH.test(event.rawPath || "");
 }
 
 function isAccountRoute(event) {
-  return event.routeKey === "GET /api/account" || /\/api\/account\/?$/.test(event.rawPath || "");
+  return /^[A-Z]+ \/api\/account$/.test(event.routeKey || "") || ACCOUNT_PATH.test(event.rawPath || "");
+}
+
+function isQuotesRoute(event) {
+  return /^[A-Z]+ \/api\/quotes$/.test(event.routeKey || "") || QUOTES_PATH.test(event.rawPath || "");
 }
 
 async function route(event, method) {
@@ -300,20 +322,24 @@ async function route(event, method) {
       await audit(db, user, "authz.denied", { result: "failure", path: String(event.rawPath).slice(0, 100) });
       return reply(403, { success: false, reason: "Admins only." });
     }
-    // Profile, admin and game routes first: every other POST is a trade and every other GET a trade or account lookup
+    // Profile, admin and game routes first, then the trade, account and quote routes by their exact paths
     const handled = (await handleMe(db, event, method, user)) || (await handleAdmin(db, event, method, user)) || (await handleGames(db, event, method, user));
     if (handled) return reply(handled.statusCode, handled.body);
-    if (method === "GET" && /\/api\/quotes\/?$/.test(event.rawPath || "")) {
+    if (method === "GET" && isQuotesRoute(event)) {
       return reply(200, { success: true, quotes: Object.fromEntries(Object.keys(PRICE_CENTS).map((s) => [s, getQuote(s)])) });
     }
-    if (method === "POST") {
+    if (method === "POST" && isTradesRoute(event)) {
       const startedAt = Date.now();
       return withTrace(event, await postTrade(event, user), startedAt);
     }
     if (method === "GET" && isAccountRoute(event)) return await getAccount(user);
-    if (method === "GET" && isTradeListRoute(event)) return await listTrades(user);
-    if (method === "GET") return await getTrade(event, user);
-    return reply(405, rejected("Use POST /api/trades, GET /api/trades/{transactionId} or GET /api/account."));
+    if (method === "GET" && isTradesRoute(event)) return await listTrades(user);
+    if (method === "GET" && isOneTradeRoute(event)) return await getTrade(event, user);
+    // A known path with the wrong method: an error, not a trade rejection (nothing was checked or saved)
+    if (isTradesRoute(event) || isOneTradeRoute(event) || isAccountRoute(event) || isQuotesRoute(event)) {
+      return reply(405, serverError("Method not allowed. Use POST /api/trades, GET /api/trades, GET /api/trades/{transactionId}, GET /api/account or GET /api/quotes."));
+    }
+    return reply(404, { success: false, reason: "Not found." });
   } catch (e) {
     console.log("Unexpected error:", e);
     return reply(500, serverError("Unexpected server error."));

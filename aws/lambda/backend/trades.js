@@ -4,6 +4,11 @@
 // account update happen in accounts.js, which re-checks cash and shares in the same commit.
 const { PRICE_CENTS, MAX_PRICE_AGE_MS, getQuote, START_CASH_CENTS, START_SHARES } = require("./market-data");
 
+// The most shares one order may ask for: far more than a $10,000 paper account can buy, so in practice it
+// only gives huge numbers (for example 1e20) a clear message instead of "not a whole number".
+const MAX_QUANTITY = 1000000;
+const TOO_LARGE = "Quantity is too large. The maximum is 1,000,000 shares.";
+
 function reject(reason) {
   return { status: "REJECTED", reason, success: false, persisted: false };
 }
@@ -34,7 +39,11 @@ function validateOrder(order, options = {}) {
   }
 
   // BR-3: quantity must be a real number that is a whole number of 1 or more
-  // (a string like "2", null, 0.5, 0 and negatives are all rejected)
+  // (a string like "2", null, 0.5, 0 and negatives are all rejected). A whole number above
+  // MAX_QUANTITY (for example 1e20) gets its own message instead of "not a whole number".
+  if (Number.isInteger(order.quantity) && order.quantity > MAX_QUANTITY) {
+    return reject(TOO_LARGE);
+  }
   if (typeof order.quantity !== "number" || !Number.isSafeInteger(order.quantity) || order.quantity < 1) {
     return reject("Quantity must be a positive whole number.");
   }
@@ -80,4 +89,4 @@ function validateTrade(order, options = {}) {
   return checkAccount(order, result.quote, account) || result;
 }
 
-module.exports = { validateOrder, checkAccount, validateTrade, reject };
+module.exports = { validateOrder, checkAccount, validateTrade, reject, MAX_QUANTITY, TOO_LARGE };

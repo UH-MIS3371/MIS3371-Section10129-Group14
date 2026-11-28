@@ -49,17 +49,28 @@ function mark(i, kind, text, detail) {
   paint();
 }
 
+// A 5xx (or no answer at all) means the server is not working right now; it must never count as a pass
+const SERVER_TROUBLE = "The server did not answer correctly. Is the class AWS lab running?";
+const serverTrouble = (status) => !status || status >= 500;
+
 async function timed(method, path, body) {
   const t0 = performance.now();
-  const res = await authFetch(API_BASE + path, { method, headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+  let res;
+  try {
+    res = await authFetch(API_BASE + path, { method, headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+  } catch (e) {
+    throw Object.assign(new Error("No answer from the server."), { status: 0 });
+  }
   const data = await res.json().catch(() => ({}));
   return { status: res.status, ms: Math.round(performance.now() - t0), data };
 }
 
 const httpPill = (n) => pill("HTTP " + n, n >= 200 && n < 300 ? "ok" : "bad");
 
-function backendCheck() {
-  if (signedInUser().isGuest) return mark(3, "warn", "Guest", "Guest mode sends nothing to AWS. Sign in to prove this.");
+// status: the HTTP status of the answer that was just shown (0 when nothing came back)
+function backendCheck(status) {
+  if ((signedInUser() || {}).isGuest) return mark(3, "warn", "Guest", "Guest mode sends nothing to AWS. Sign in to prove this.");
+  if (serverTrouble(status)) return mark(3, "bad", "Failed", SERVER_TROUBLE);
   const where = API_BASE.startsWith("/") ? "a local server on this computer" : API_BASE.replace(/^https:\/\//, "").replace(/\/api$/, "");
   mark(3, "ok", "Done", "Real responses from " + where);
 }
@@ -98,11 +109,14 @@ async function submitOrder(e) {
     clearCache();
     const d = r.data;
     const ok = d.status === "ACCEPTED";
-    const outcome = ok ? "Accepted" : "Rejected: " + (d.reason || "the server refused this order.");
-    const guest = signedInUser().isGuest;
+    const trouble = serverTrouble(r.status);
+    // Only a 400 REJECTED is a business-rule rejection; a 5xx is a server problem, shown in a neutral box
+    const outcome = ok ? "Accepted" : trouble ? "Server error: " + SERVER_TROUBLE + (d.reason ? " (" + d.reason + ")" : "")
+      : d.status === "REJECTED" ? "Rejected: " + (d.reason || "the server refused this order.") : "Not processed: " + (d.reason || "HTTP " + r.status + ".");
+    const guest = (signedInUser() || {}).isGuest;
     const saved = d.persisted ? (guest ? "Saved in a practice copy in this browser (guest mode, nothing sent to AWS)" : "Saved in the database") + " as " + (ok ? "an Accepted" : "a Rejected") + " record." : "Not saved. No record was written.";
-    $("gResult").replaceChildren(el("div", { class: "g-result " + (ok ? "ok" : "bad") },
-      el("p", { class: "g-outcome" }, el("span", { class: "g-sym", "aria-hidden": "true" }, ok ? "✓" : "✕"), outcome),
+    $("gResult").replaceChildren(el("div", { class: "g-result" + (ok ? " ok" : trouble ? "" : " bad") },
+      el("p", { class: "g-outcome" }, el("span", { class: "g-sym", "aria-hidden": "true" }, ok ? "✓" : trouble ? "!" : "✕"), outcome),
       el("dl", { class: "g-facts" },
         el("dt", null, "Order sent"), el("dd", null, sent),
         el("dt", null, "HTTP status"), el("dd", null, httpPill(r.status), " ", el("span", { class: "muted mono" }, r.ms + " ms")),
@@ -112,13 +126,16 @@ async function submitOrder(e) {
       $("gId").value = d.transactionId;
       lastOrder = { id: d.transactionId, symbol: body.symbol, qty: body.quantity, ok };
       if (ok) mark(0, "ok", "Done", "Confirmation number " + d.transactionId);
+    } else if (trouble && state[0].kind !== "ok") {
+      mark(0, "bad", "Failed", SERVER_TROUBLE);
     } else if (!ok && state[0].kind !== "ok") {
       mark(0, "", "To do", "That order was rejected. Try the Valid order example.");
     }
-    backendCheck();
+    backendCheck(r.status);
     paint();
   } catch (err) {
     $("gResult").replaceChildren(errorState("The order could not be sent. " + err.message + hint(err), null));
+    backendCheck(0);
   }
   button.disabled = false;
 }
@@ -141,35 +158,47 @@ async function retrieve(id, expectMiss) {
     const r = await timed("GET", "/trades/" + encodeURIComponent(clean));
     const t = r.data.trade;
     const same = t ? matches(t) : null;
-    const good = t || expectMiss;
-    const head = t ? "Found. This is the saved record." : "Not found: " + (r.data.reason || "no record has this number.");
-    $("gFound").replaceChildren(el("div", { class: "g-result " + (good ? "ok" : "bad") },
-      el("p", { class: "g-outcome" }, el("span", { class: "g-sym", "aria-hidden": "true" }, good ? "✓" : "✕"), head),
-      expectMiss && !t ? el("p", { class: "g-note" }, "That is the correct answer for a number that was never issued.") : null,
+    const trouble = serverTrouble(r.status);
+    // A number that was never issued is only answered correctly by a 404, never by a server error
+    const good = t ? true : expectMiss && r.status === 404;
+    const head = t ? "Found. This is the saved record." : trouble ? "Server error: " + SERVER_TROUBLE : "Not found: " + (r.data.reason || "no record has this number.");
+    $("gFound").replaceChildren(el("div", { class: "g-result" + (good ? " ok" : trouble ? "" : " bad") },
+      el("p", { class: "g-outcome" }, el("span", { class: "g-sym", "aria-hidden": "true" }, good ? "✓" : trouble ? "!" : "✕"), head),
+      good && expectMiss && !t ? el("p", { class: "g-note" }, "That is the correct answer for a number that was never issued.") : null,
       same === true ? el("p", { class: "g-match" }, el("strong", null, "Matches what you submitted:"), " stock, quantity and status are the same.") : null,
       same === false ? el("p", { class: "g-match bad" }, el("strong", null, "Does not match what you submitted."), " Check the stock, shares and status below.") : null,
       el("dl", { class: "g-facts" },
         el("dt", null, "HTTP status"), el("dd", null, httpPill(r.status), " ", el("span", { class: "muted mono" }, r.ms + " ms")),
         ...(t ? FIELDS.filter(([k]) => t[k] !== undefined && t[k] !== null).flatMap(([k, label]) => [el("dt", null, label), el("dd", { class: "mono" }, String(t[k]))]) : []))));
     if (t && !expectMiss) mark(1, "ok", "Done", "Read back " + t.status + " " + t.tradeType + " " + t.shareQuantity + " " + t.stockSymbol);
-    backendCheck();
+    else if (trouble && !expectMiss && state[1].kind !== "ok") mark(1, "bad", "Failed", SERVER_TROUBLE);
+    backendCheck(r.status);
   } catch (err) {
     $("gFound").replaceChildren(errorState("The lookup failed. " + err.message + hint(err), null));
+    backendCheck(0);
   }
 }
 
 // ---------- everything saved for this account (proof the records live in the database) ----------
 
-const hint = (err) => (err && err.status === 0 ? " If this keeps happening, check that the AWS Learner Lab is running." : "");
+const hint = (err) => (err && (!err.status || err.status >= 500) ?" If this keeps happening, check that the AWS Learner Lab is running." : "");
 
 async function showSaved() {
   $("gSaved").replaceChildren(el("p", { class: "muted g-wait" }, "Reading every saved order…"));
   try {
     const r = await timed("GET", "/trades");
+    if (r.status !== 200) {
+      const trouble = serverTrouble(r.status);
+      $("gSaved").replaceChildren(el("div", { class: "g-result" + (trouble ? "" : " bad") },
+        el("p", { class: "g-outcome" }, el("span", { class: "g-sym", "aria-hidden": "true" }, trouble ? "!" : "✕"),
+          trouble ? "Server error: " + SERVER_TROUBLE : "The list could not be read: " + (r.data.reason || "HTTP " + r.status + ".")),
+        el("p", { class: "g-note" }, httpPill(r.status), " ", el("span", { class: "muted mono" }, r.ms + " ms"))));
+      return backendCheck(r.status);
+    }
     const list = r.data.trades || [];
     const accepted = list.filter((t) => /accept|complete/i.test(t.status)).length;
     const rejected = list.filter((t) => /reject/i.test(t.status)).length;
-    const guest = signedInUser().isGuest;
+    const guest = (signedInUser() || {}).isGuest;
     $("gSaved").replaceChildren(el("div", { class: "g-result " + (r.status === 200 ? "ok" : "bad") },
       el("p", { class: "g-outcome" }, el("span", { class: "g-sym", "aria-hidden": "true" }, r.status === 200 ? "✓" : "✕"),
         list.length + " saved " + (list.length === 1 ? "record" : "records") + ": " + accepted + " Accepted, " + rejected + " Rejected"),
@@ -180,9 +209,10 @@ async function showSaved() {
         el("span", { class: "g-s-why muted" }, t.rejectionReason || ("at " + t.executionPrice)),
         el("span", { class: "g-s-id mono muted" }, t.transactionId)))) : null,
       list.length > 10 ? el("p", { class: "g-note" }, "Showing the newest 10 of " + list.length + ".") : null));
-    backendCheck();
+    backendCheck(r.status);
   } catch (err) {
     $("gSaved").replaceChildren(errorState("The list could not be read. " + err.message + hint(err), null));
+    backendCheck(0);
   }
 }
 
@@ -255,7 +285,7 @@ function paintWho() {
 // ---------- where this runs ----------
 
 function facts() {
-  const guest = signedInUser().isGuest;
+  const guest = (signedInUser() || {}).isGuest; // signedInUser() is null while an expired sign-in is being refreshed
   const local = API_BASE.startsWith("/");
   const rows = [
     ["Website", location.host + (local ? " (local copy)" : " (AWS Amplify)")],
@@ -286,8 +316,10 @@ $("gMissing").addEventListener("click", () => retrieve("00000000-0000-4000-8000-
 document.addEventListener("matrix-finished", (e) => {
   const { pass, fail, na, total, results } = e.detail;
   paintRules(results);
-  mark(2, fail ? "bad" : "ok", fail ? "Failed" : "Done", pass + " of " + total + " passed" + (fail ? ", " + fail + " failed" : "") + (na ? ", " + na + " not run" : ""));
-  backendCheck();
+  const kind = fail ? "bad" : pass ? "ok" : "warn";
+  mark(2, kind, kind === "ok" ? "Done" : kind === "bad" ? "Failed" : "Not run",pass + " of " + total + " passed" + (fail ? ", " + fail + " failed" : "") + (na ? ", " + na + " not run" : ""));
+  // At least one live case passed, so the backend answered; with none passing it did not answer correctly
+  backendCheck(pass > 0 ? 200 : 0);
 });
 facts();
 paintWho();

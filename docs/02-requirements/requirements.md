@@ -58,7 +58,7 @@ Transaction records shall never be deleted. Once a trade reaches Accepted or Rej
 MarketStreet shall use fictional or non-sensitive demonstration data only and shall not require real brokerage, bank, or payment information.
 
 **NFR-6 — Consistent Interface**  
-The application shall use the same terms everywhere: **Buy/Sell** for trade type, **Market** for order type, and **Submitted, Validated, Accepted, Rejected** for status.
+The application shall use the same terms everywhere: **Buy/Sell** for trade type, **Market** for order type, and **Submitted, Validated, Accepted, Rejected** for the processing states. Only **Accepted** and **Rejected** are saved and shown as a trade's status (D-19).
 
 **NFR-7 — Responsiveness**  
 Under normal demonstration load, the trade result shall be displayed within **2 seconds** of the user submitting the order.
@@ -67,4 +67,4 @@ Under normal demonstration load, the trade result shall be displayed within **2 
 
 ## Scope Note
 
-These requirements apply to MarketStreet's scope: **submitting and processing a simulated stock trade** (FR-1 to FR-8), plus the player profile, account reset, admin console, and audit log (FR-9 to FR-12). Limit orders, real-money trading, margin, short selling, options, cryptocurrency, and brokerage integration are outside the current scope.
+These requirements apply to MarketStreet's scope: **submitting and processing a simulated stock trade** (FR-1 to FR-8), plus the player profile, account reset, admin console, and audit log (FR-9 to FR-12). Limit orders, real-money trading, margin, short selling, options, cryptocurrency, and brokerage integration are outside the current scope. Short selling is excluded from the main trade (BR-5). The separate Challenges game (Scenario Mode) does let players short a stock, but it uses its own game money, not the paper-trading account.

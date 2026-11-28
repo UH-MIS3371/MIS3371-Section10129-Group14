@@ -38,7 +38,7 @@ test("guest prices match the server's price list", () => {
 test("guest and server agree on every order that breaks a rule, or none", async () => {
   const orders = [
     order(), order({ quantity: 53 }), order({ quantity: 54 }), order({ quantity: 0 }), order({ quantity: 0.5 }), order({ quantity: -3 }),
-    order({ quantity: "2" }), order({ quantity: null }), order({ quantity: 1e21 }), order({ symbol: "XYZ" }), order({ symbol: " msft " }),
+    order({ quantity: "2" }), order({ quantity: null }), order({ quantity: 1e21 }), order({ quantity: 1000001 }), order({ quantity: 1000000.5 }),order({ symbol: "XYZ" }), order({ symbol: " msft " }),
     order({ symbol: 5 }), order({ tradeType: "Hold" }), order({ tradeType: "buy" }), order({ orderType: "Limit" }), order({ orderType: "Stop" }),
     order({ orderType: undefined }), order({ tradeType: "Sell" }), order({ tradeType: "Sell", symbol: "TSLA", quantity: 5 })
   ];

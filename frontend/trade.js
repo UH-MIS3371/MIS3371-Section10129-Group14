@@ -16,10 +16,12 @@ function tradeType() {
   return form.querySelector("input[name=tradeType]:checked").value;
 }
 
-// BR-3 in the browser: a positive whole number
+// BR-3 in the browser: a positive whole number, at most MAX_QUANTITY (the server's limit in backend/trades.js)
+const MAX_QUANTITY = 1000000;
 function quantityError() {
   const raw = quantityInput.value.trim();
   if (!/^\d+$/.test(raw) || Number(raw) < 1) return "Enter a whole number of shares, 1 or more.";
+  if (Number(raw) > MAX_QUANTITY) return "Quantity is too large. The maximum is 1,000,000 shares.";
   return "";
 }
 
@@ -166,7 +168,7 @@ function wireTicket() {
     const button = e.target.closest("button");
     if (!button || reviewing) return;
     const max = !account ? 1 : tradeType() === "Buy" ? Math.floor(account.cashCents / priceCents(symbol)) : account.holdings[symbol] || 0;
-    quantityInput.value = String(button.dataset.qty === "max" ? Math.max(max, 1) : button.dataset.qty);
+    quantityInput.value = String(button.dataset.qty === "max" ? Math.min(Math.max(max, 1), MAX_QUANTITY) : button.dataset.qty);
     quantityInput.dispatchEvent(new Event("input"));
   });
   form.addEventListener("submit", (e) => {

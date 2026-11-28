@@ -15,6 +15,7 @@ test("a rejection fails at its rule, passes the ones before it and skips the one
   assert.deepStrictEqual(statuses({ success: false, reason: "Stock not found." }),
     ["Passed", "Passed", "Failed", "Not checked", "Not checked", "Not checked", "Not checked", "Not checked"]);
   assert.strictEqual(ruleTrace({ success: false, reason: "Quantity must be a positive whole number." }).find((r) => r.status === "Failed").rule, "BR-3");
+  assert.strictEqual(ruleTrace({ success: false, reason: "Quantity is too large. The maximum is 1,000,000 shares." }).find((r) => r.status === "Failed").rule, "BR-3");
 });
 
 test("the trace is added only when the request asks for it", () => {

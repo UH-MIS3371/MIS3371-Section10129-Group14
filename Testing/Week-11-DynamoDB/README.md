@@ -1,5 +1,13 @@
 # Week 11 — Saving Trades to DynamoDB
 
+> **Nov 2 snapshot (historical).** This page describes the system on 2026-11-02. Several things have changed since then:
+> - Rejected orders are now saved too, as Rejected records (D-18). Each order is saved once, with its final status (D-19).
+> - Accepted trades now update a saved account (`MarketStreetAccounts`). A new account starts with $10,000 and no holdings (D-10), so the "Sell 11 AAPL (only 10 owned)" test below relied on the old fixed account.
+> - The site moved to `https://main.d2kb3xv6llewil.amplifyapp.com`, and every trade route now needs a Cognito sign-in (D-15).
+> - `tests/test-lambda.js` was removed. `npm test` in `aws/lambda` now runs the test files in `aws/lambda/tests/` (see [Automated tests](#automated-tests)).
+>
+> For the current setup, see [aws/README.md](../../aws/README.md).
+
 Accepted trades are now saved to Amazon DynamoDB, and a saved trade can be read back by its `transactionId`.
 
 ## What changed
@@ -8,7 +16,7 @@ Accepted trades are now saved to Amazon DynamoDB, and a saved trade can be read 
 |---|---|
 | [aws/lambda/index.js](../../aws/lambda/index.js) | POST validates with the unchanged `validateTrade()`, then saves accepted trades with `PutCommand`. New GET route reads one trade with `GetCommand`. |
 | [aws/lambda/backend/](../../aws/lambda/backend/) | Unchanged. All business rules still live in `trades.js`. |
-| `lambda/tests/test-lambda.js` (since removed; see git history) | Checks that accepted trades are saved, rejected trades are not, and GET returns the saved record. |
+| `aws/lambda/tests/test-lambda.js` (since removed; see git history) | Checks that accepted trades are saved, rejected trades are not, and GET returns the saved record. |
 | [frontend/](../../frontend/) | After a trade is saved, the trade page opens the Result page, which loads the trade with GET. History lists trades saved in this browser. |
 
 ## How it works
@@ -109,20 +117,16 @@ fields @timestamp, reason
 
 ## Automated tests
 
-> The automated test file was removed from the repository after Week 11. The commands below describe how these results were produced; the file is still available in the git history.
+**Now:** run the current tests from the repository root:
 
 ```
 cd aws/lambda
-npm install
+npm ci
 npm test
 ```
 
-Runs 52 checks locally with an in-memory table instead of DynamoDB. These cover the original 24 business-rule cases, saving and GET, database failures, a missing `TABLE_NAME`, ignored browser fields, and the CloudWatch log lines.
+This runs every file in `aws/lambda/tests/*.test.js` with an in-memory table instead of DynamoDB. GitHub Actions runs the same command on every push.
 
-To run the same cases against the deployed API (it writes a few fictional trades to the table):
+**On 2026-11-02 (historical):** the test file was `aws/lambda/tests/test-lambda.js`. It has since been removed; it is still in the git history. At that time `npm test` ran 52 checks locally: the original 24 business-rule cases, saving and GET, database failures, a missing `TABLE_NAME`, ignored browser fields, and the CloudWatch log lines. The same file could also run against the deployed API with `API_URL=https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades node aws/lambda/tests/test-lambda.js`. That command no longer works, because the file is gone and the API now needs a sign-in token.
 
-```
-API_URL=https://59w9sz4rrl.execute-api.us-east-1.amazonaws.com/api/trades node aws/lambda/tests/test-lambda.js
-```
-
-Results on 2026-11-02: **52/52 local** and **30/30 against the live API**. The live run added 6 records to the table, one for each accepted trade (5 business-rule cases and the GET round trip). None of the 19 rejected cases were saved.
+Results on 2026-11-02: **52/52 local** and **30/30 against the live API**. The live run added 6 records to the table, one for each accepted trade (5 business-rule cases and the GET round trip). None of the 19 rejected cases were saved, because at that time rejected trades were not saved.

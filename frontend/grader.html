@@ -77,14 +77,14 @@
 
       <section class="g-step" id="matrix" aria-labelledby="g3">
         <h2 id="g3"><span class="g-num" aria-hidden="true">3</span> Run the test matrix</h2>
-        <p class="g-lead">35 cases: valid, invalid, boundary and business rules. 24 run live when you press the button, each showing expected and actual. The run resets your paper account to $10,000.00 first. The 11 manual cases at the bottom were run by a teammate in the browser, and their results are recorded.</p>
+        <p class="g-lead">36 cases: valid, invalid, boundary and business rules. 24 run live when you press the button, each showing expected and actual. The run resets your paper account to $10,000.00 first. The 11 manual cases at the bottom were run by a teammate in the browser, and their results are recorded.</p>
         <p class="g-run"><button type="button" class="btn primary g-big" id="matrixRun">Run the test matrix</button></p>
         <div class="matrix-summary" id="matrixSummary" hidden></div>
         <div class="button-row g-tools" id="matrixTools" hidden>
           <button type="button" class="btn" id="matrixCopy">Copy results as a table</button>
           <button type="button" class="btn" id="matrixCsv">Download CSV</button>
           <a class="btn" href="activity.html">Open Activity</a>
-          <a class="btn" href="MarketStreet-Test-Matrix.xlsx" download>Download all 35 cases (Excel)</a>
+          <a class="btn" href="MarketStreet-Test-Matrix.xlsx" download>Download all 36 cases (Excel)</a>
         </div>
         <div class="matrix" id="matrixBoard" aria-live="polite"></div>
       </section>
@@ -144,7 +144,7 @@
               <div class="fx-arrow"><span class="fx-lbl">GET /api/trades/{number}</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
               <div class="fx-card" style="--c:#e7157b"><img src="img/arch/apigateway.svg" alt="" width="36" height="36" /><b>API Gateway</b><span>Checks the token.</span></div>
               <div class="fx-arrow"><span class="fx-lbl">&nbsp;</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
-              <div class="fx-card" style="--c:#ed7100"><img src="img/arch/lambda.svg" alt="" width="36" height="36" /><b>Lambda</b><span>Only the owner may read it.</span></div>
+              <div class="fx-card" style="--c:#ed7100"><img src="img/arch/lambda.svg" alt="" width="36" height="36" /><b>Lambda</b><span>The owner (and admins) may read it.</span></div>
               <div class="fx-arrow"><span class="fx-lbl">read</span><svg viewBox="0 0 80 12" aria-hidden="true"><path d="M0 6h74M67 1l7 5-7 5" /></svg></div>
               <div class="fx-card" style="--c:#3b48cc"><img src="img/arch/dynamodb.svg" alt="" width="36" height="36" /><b>DynamoDB</b><span>Returns the saved record, or 404.</span></div>
             </div>

@@ -11,7 +11,7 @@ Entered by the user: stock symbol, buy/sell action, and number of shares. The or
 Supplied by the application, not the user: user ID (from the signed-in session).
 
 - ### SYSTEM ACTION
-Verify the order, the stock price, and the user's available funds or holdings; execute the order at the simulated market price; and update the user's portfolio in one atomic commit.
+Verify the order, the stock price, and the user's available funds or holdings; execute the order at the simulated market price; and update the user's portfolio in one atomic commit (a DynamoDB conditional write that re-checks the cash or shares).
 
 - ### OUTCOME
 Complete the trade and update the virtual portfolio, or reject the order with a reason.
@@ -22,7 +22,7 @@ Transaction ID, user ID, stock symbol, trade type, order type, shares, execution
 # BREAKDOWN
 
 **User ID:**  
-the system identifier of the signed-in user's simulated account (for example `U10427`); taken from the session, never typed by the user
+the system identifier of the signed-in user's simulated account (the Cognito user ID, a UUID); taken from the sign-in token, never typed by the user
 
 **Number of shares:**  
 the number of shares the user wants to buy or sell; must be a positive whole number
@@ -46,7 +46,7 @@ records the total simulated value of the trade (shares × execution price)
 records when the trade was submitted, validated, and completed
 
 **Status:**  
-records where the trade is in processing: Submitted when the application receives the order, Validated when it passes all validation checks (BR-1 to BR-6, BR-9), and Accepted or Rejected when it finishes (Accepted and Rejected are final). These four values are the only official statuses. "Draft" describes an unsent form in the browser; it is not a status and is never saved.
+describes where the trade is in processing: Submitted when the application receives the order, Validated when it passes all validation checks (BR-1 to BR-6, BR-9), and Accepted or Rejected when it finishes (Accepted and Rejected are final). Submitted and Validated are steps inside one Lambda call. Only the final status, Accepted or Rejected, is saved, in a single write (D-19). "Draft" describes an unsent form in the browser; it is not a status and is never saved.
 
 # NOTES
 
@@ -54,4 +54,4 @@ records where the trade is in processing: Submitted when the application receive
 If the form has a missing field, an unrecognized symbol, or a quantity that is not a positive whole number (BR-1 to BR-3), it blocks submission and the user corrects the form. No transaction is created, so nothing is recorded.
 
 **Input caught by the application:**  
-Once the application receives an order, it assigns a transaction ID. The application re-checks BR-1 to BR-3 and BR-9, then checks BR-4 to BR-6. Any order that fails a rule is saved as Rejected with a reason, and the user's cash and holdings stay unchanged.
+Once the application receives an order, it assigns a transaction ID. The application re-checks BR-1 to BR-3 and BR-9, then checks BR-6 and BR-4 / BR-5. Any order that fails a rule is saved once, as Rejected with a reason and category `Rule`, and the user's cash and holdings stay unchanged. An accepted order is saved once, as Accepted, in the same DynamoDB transaction that changes the cash and holdings.

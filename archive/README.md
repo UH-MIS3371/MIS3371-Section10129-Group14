@@ -13,6 +13,8 @@ These earlier interfaces are retained as coursework evidence. They offer histori
 | `server/` | [Week 9 local Express server](local-backend/server/) (run with `npm install` and `npm start` in that folder) |
 | `backend/` | [Week 8 business logic and tests](local-backend/backend/) |
 
+The Week 9 setup notes, test results and contributions that used to be in the main README are in [local-backend/README.md](local-backend/README.md).
+
 **Week 7 Limit price.** The Week 7 exercise includes a Limit order and a Limit price field. Rule BR-9 replaced that rule: only Market orders run, and the live interface does not offer Limit.
 
 **Starting account (D-10).** The retired Week 8 backend used a demo account with 10 AAPL, 2 MSFT and 1 IBM. The live backend gives every new account $10,000.00 and no holdings, as decision D-10 says.

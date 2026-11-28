@@ -23,9 +23,18 @@ function fail(statusCode, reason) {
   return { statusCode, body: { success: false, reason } };
 }
 
+// The Cognito nickname becomes the first display name. The sign-up page only allows 3-20 letters, numbers or
+// spaces, but Cognito's SignUp API can be called directly, so the same rule is checked here. Anything else
+// (for example a name starting with "=") is replaced by the default "Player xxxx".
+function cleanNickname(user) {
+  const name = typeof user.name === "string" ? user.name.trim().replace(/\s+/g, " ") : "";
+  return NAME.test(name) ? name : "Player " + String(user.userId || "").slice(0, 4);
+}
+
 // Loads (creating if needed) the signed-in user's profile and applies it to the user.
 // Returns { user } or { error: {statusCode, body} }. Without USERS_TABLE the token alone decides.
 async function resolveUser(db, user) {
+  user = { ...user, name: cleanNickname(user) };
   const table = process.env.USERS_TABLE;
   if (!table) return { user };
   const now = new Date().toISOString();

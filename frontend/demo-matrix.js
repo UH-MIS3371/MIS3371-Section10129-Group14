@@ -25,12 +25,19 @@
     return { status: res.status, body: await res.json().catch(() => ({})) };
   }
 
-  const cash = async () => (await call("GET", "/account")).body.account.cashCents;
+  // A 5xx (or no answer) means the server is not working; such a case fails with this text, never passes
+  const SERVER_TROUBLE = "The server did not answer correctly. Is the class AWS lab running?";
+  async function cash() {
+    const r = await call("GET", "/account");
+    if (r.status !== 200 || !r.body.account) throw new Error(r.status >= 500 ? SERVER_TROUBLE + " (HTTP " + r.status + ")" : "The account could not be read (HTTP " + r.status + ").");
+    return r.body.account.cashCents;
+  }
 
   // Each case: id, type, name, inputs, expected, run() -> { actual, ok } (ok null means not run, with the reason in actual)
   function cases(ids) {
-    const guest = signedInUser().isGuest;
-    const admin = signedInUser().isAdmin;
+    const user = signedInUser() || {}; // null while an expired sign-in is being refreshed
+    const guest = user.isGuest;
+    const admin = user.isAdmin;
     let r;
     const list = [];
     const add = (id, type, name, inputs, expected, run) => list.push({ id, type, name, inputs, expected, run });
@@ -386,7 +393,16 @@
     buildTable(list);
     showProgress(0, list.length, null);
     try {
-      await call("POST", "/account/reset", { confirm: "RESET" });
+      // Every precondition depends on this reset, so stop here if it did not work
+      let reset;
+      try {
+        reset = await call("POST", "/account/reset", { confirm: "RESET" });
+      } catch (e) {
+        reset = { status: 0, body: {} };
+      }
+      if (reset.status !== 200 || !reset.body.success) {
+        throw new Error("The backend is not responding; nothing was tested. " + (reset.status === 0 || reset.status >= 500 ? SERVER_TROUBLE : reset.body.reason || "HTTP " + reset.status + "."));
+      }
       for (const c of list) {
         const v = view[c.id];
         v.tr.className = "m-row running";
@@ -417,7 +433,7 @@
 
   go.addEventListener("click", () => {
     if (running) return;
-    if (signedInUser().isGuest || confirming) {
+    if ((signedInUser() || {}).isGuest || confirming) {
       confirming = false;
       return run();
     }

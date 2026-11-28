@@ -7,7 +7,7 @@ const RULES = [
   ["BR-1", "Trade type is Buy or Sell", ["Trade type must be Buy or Sell."]],
   ["BR-2", "The stock symbol is supported", ["Stock not found."]],
   ["BR-9", "The order type is Market", ["Limit orders are not supported.", "Order type must be Market."]],
-  ["BR-3", "Quantity is a positive whole number", ["Quantity must be a positive whole number."]],
+  ["BR-3", "Quantity is a positive whole number", ["Quantity must be a positive whole number.", "Quantity is too large. The maximum is 1,000,000 shares."]],
   ["BR-6", "A valid price exists (no more than 15 minutes old)", ["Price unavailable."]],
   ["BR-4 / BR-5", "Enough cash for a Buy, or enough shares for a Sell", ["Insufficient cash.", "Insufficient shares."]],
   ["BR-7", "Trade record and account saved in one atomic commit", ["The trade could not be saved. Please try again."]]

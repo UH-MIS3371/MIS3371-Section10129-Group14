@@ -240,7 +240,7 @@ function confirmAction({ title, message, confirmLabel, danger, typeToConfirm, re
 // ======================= QR CODE =======================
 
 // The address people scan: this site when it is online, otherwise the link below (editable in the dialog, remembered here)
-const LIVE_URL = "https://main.dpq307ec2nc5x.amplifyapp.com";
+const LIVE_URL = "https://main.d2kb3xv6llewil.amplifyapp.com";
 
 function qrTarget() {
   // A page can offer its own link (the Learn leaderboard points classmates at the quiz)

@@ -11,7 +11,8 @@ const { START_CASH_CENTS, START_SHARES } = require("./market-data");
 // Each signed-in user has their own account, keyed by their Cognito user ID (the token's sub claim).
 // Reads the account, creating it with the starting values the first time.
 async function getOrCreateAccount(db, tableName, userId, nowIso) {
-  const found = await db.send(new GetCommand({ TableName: tableName, Key: { userId } }));
+  // ConsistentRead: the cash and holdings must include a trade saved a moment ago (the returned "cash after" uses them)
+  const found = await db.send(new GetCommand({ TableName: tableName, Key: { userId }, ConsistentRead: true }));
   if (found.Item) return found.Item;
 
   const account = {

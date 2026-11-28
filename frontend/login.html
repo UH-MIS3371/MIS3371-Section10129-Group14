@@ -4,39 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sign In – MarketStreet</title>
-    <link rel="stylesheet" href="styles.css" />
-    <script src="login.js" defer></script>
+    <!-- The old practice login page was retired. Sign-in now uses Amazon Cognito on signin.html. -->
+    <meta http-equiv="refresh" content="0; url=signin.html" />
+    <link rel="canonical" href="signin.html" />
+    <script>location.replace("signin.html");</script>
   </head>
 
-  <body data-page="login">
-    <header class="site-header">
-      <div class="inner">
-        <a class="logo" href="trade.html">MarketStreet</a>
-      </div>
-    </header>
-
-    <main>
-      <h1>Sign in</h1>
-
-      <form class="card" id="login-form">
-        <div class="field">
-          <label for="username">Username</label>
-          <input id="username" name="username" type="text" autocomplete="username" required />
-        </div>
-
-        <div class="field">
-          <label for="password">Password</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" required />
-        </div>
-
-        <button type="submit" class="button">Sign in</button>
-      </form>
-
-      <p class="note">MarketStreet is a practice platform. Every account and price is simulated; no real money is used.</p>
-    </main>
-
-    <footer class="site-footer">
-      <p>MarketStreet · MIS 3371</p>
-    </footer>
+  <body>
+    <p>Sign-in has moved. <a href="signin.html">Go to the MarketStreet sign-in page</a>.</p>
   </body>
 </html>

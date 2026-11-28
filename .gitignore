@@ -1,1 +1,8 @@
 .taste-skill/
+
+# Operating system and editor files
+.DS_Store
+.vscode/
+
+# Dependencies
+node_modules/

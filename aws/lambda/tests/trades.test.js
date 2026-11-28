@@ -3,7 +3,7 @@
 // Run: cd aws/lambda && npm test
 const test = require("node:test");
 const assert = require("node:assert");
-const { validateOrder, checkAccount, validateTrade } = require("../backend/trades");
+const { validateOrder, checkAccount, validateTrade, TOO_LARGE } = require("../backend/trades");
 const { MAX_PRICE_AGE_MS } = require("../backend/market-data");
 
 const NOW = 1700000000000;
@@ -18,6 +18,10 @@ const orderCases = [
   ["quantity 1.5", order({ quantity: 1.5 }), false, QTY],
   ['quantity "2"', order({ quantity: "2" }), false, QTY],
   ["quantity -1", order({ quantity: -1 }), false, QTY],
+  ["quantity 1,000,000 (the maximum)", order({ quantity: 1000000 }), true],
+  ["quantity 1,000,001", order({ quantity: 1000001 }), false, TOO_LARGE],
+  ["quantity 1e20", order({ quantity: 1e20 }), false, TOO_LARGE],
+  ["quantity 1000000.5", order({ quantity: 1000000.5 }), false, QTY],
   ["unknown symbol", order({ symbol: "XYZ" }), false, "Stock not found."],
   ["Limit order", order({ orderType: "Limit" }), false, "Limit orders are not supported."],
   ["trade type Hold", order({ tradeType: "Hold" }), false, "Trade type must be Buy or Sell."],

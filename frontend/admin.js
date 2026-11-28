@@ -43,8 +43,15 @@ function failed(e, retry) {
   content.replaceChildren(errorState("This page could not be loaded. " + e.message, retry));
 }
 
+// A cell that starts with = + - @ (or a tab or carriage return) would run as a formula in Excel or Sheets, so it
+// gets a leading ' to make it plain text. Plain numbers such as -5.00 are left as numbers.
+function csvSafe(v) {
+  const s = String(v ?? "");
+  return /^[=+\-@\t\r]/.test(s) && !/^[-+]?\d+(\.\d+)?$/.test(s) ? "'" + s : s;
+}
+
 function csvDownload(filename, header, rows) {
-  const cell = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const cell = (v) => '"' + csvSafe(v).replace(/"/g, '""') + '"';
   const text = [header, ...rows].map((r) => r.map(cell).join(",")).join("\n");
   const a = el("a", { href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: filename });
   document.body.append(a);

@@ -80,7 +80,7 @@ async function timed(method, path, body) {
 }
 
 function claims() {
-  const user = signedInUser();
+  const user = signedInUser() || { isGuest: true };
   if (user.isGuest) return { user, claims: { email: "guest (no sign-in token)", "cognito:groups": [], note: "Guest mode runs in your browser. Nothing is sent to AWS." } };
   const c = JSON.parse(atob(user.token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
   return { user, claims: { email: c.email, sub: c.sub, "cognito:groups": c["cognito:groups"] || [], "expires in": Math.max(0, Math.round((c.exp * 1000 - Date.now()) / 60000)) + " min" } };
@@ -210,7 +210,7 @@ const STEPS = [
         el("span", null, "Round trip ", el("strong", { class: "mono" }, ctx.res.ms + " ms")),
         el("span", null, "Inside Lambda ", el("strong", { class: "mono" }, serverMs === undefined ? "n/a" : serverMs + " ms"))),
       legend(),
-      signedInUser().isGuest ? el("p", { class: "note", style: "margin-bottom: 10px" }, "Guest mode: the same rules run in your browser instead of Lambda, so nothing is saved on the server.") : null,
+      (signedInUser() || {}).isGuest ? el("p", { class: "note", style: "margin-bottom: 10px" }, "Guest mode: the same rules run in your browser instead of Lambda, so nothing is saved on the server.") : null,
       code(pick(ctx.res.data, ["status", "message", "reason", "persisted", "transactionId", "account"])),
       where("aws/lambda/index.js → handler() → route() → postTrade()"));
   },

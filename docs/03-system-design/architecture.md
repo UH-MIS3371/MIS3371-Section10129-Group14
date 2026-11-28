@@ -40,7 +40,7 @@ Status · Reason · Category · Timestamps`")]
         COG["Amazon Cognito<br/>sign-in, group admins"]
         APIGW["API Gateway HTTP API<br/>JWT authorizer"]
         LAM["Lambda (Node.js)<br/>one function, all routes"]
-        TBL[("DynamoDB tables<br/>Trades, Accounts, Games<br/>Users, Audit")]
+        TBL[("DynamoDB tables<br/>Trades, Accounts, Games<br/>Users, Audit, Learn")]
     end
 
     PRICE["`**Price source**
@@ -71,7 +71,7 @@ Fixture or market data provider`"]
 
 Only the application accesses the database. The price source supplies the application with prices; it is a dependency outside the three tier boxes. Prices from the price source are never taken from the browser, so the user cannot choose their own execution price (BR-9).
 
-**Implementation status:** This is the built architecture. The [static frontend](../../frontend/index.html) is hosted on AWS Amplify. Users sign in with Amazon Cognito (group `admins` grants the admin role). The browser calls an API Gateway HTTP API whose JWT authorizer checks the token, and a single Node.js Lambda validates, executes and saves every trade. Data lives in five DynamoDB tables: `MarketStreetTrades` (transactionId), `MarketStreetAccounts` (userId), `MarketStreetGames` (gameId), `MarketStreetUsers` (userId: profile, role, disabled, tokensValidAfter) and `MarketStreetAudit` (auditId). Planned indexes: trades by `userId` + `submittedAt`, games by `ownerId` + `updatedAt`. Earlier browser-only interfaces that offer Limit orders are preserved as [archived coursework](../../archive/README.md).
+**Implementation status:** This is the built architecture. The [static frontend](../../frontend/index.html) is hosted on AWS Amplify. Users sign in with Amazon Cognito (group `admins` grants the admin role). The browser calls an API Gateway HTTP API whose JWT authorizer checks the token, and a single Node.js Lambda validates, executes and saves every trade. Data lives in six DynamoDB tables: `MarketStreetTrades` (transactionId), `MarketStreetAccounts` (userId: cash in cents and a holdings map), `MarketStreetGames` (gameId), `MarketStreetUsers` (userId: profile, role, disabled, tokensValidAfter), `MarketStreetAudit` (auditId) and `MarketStreetLearn` (runId, for the public Learn quiz). Two indexes are built and used: trades by `userId` + `submittedAt` (`userId-submittedAt-index`, for `GET /api/trades`) and games by `ownerId` + `updatedAt` (`ownerId-updatedAt-index`). Each order is saved once, with its final status: an Accepted order in one conditional DynamoDB transaction together with the account change, or a Rejected order in one write (D-19). Earlier browser-only interfaces that offer Limit orders are preserved as [archived coursework](../../archive/README.md).
 
 ## Why Lambda instead of EC2
 
@@ -79,6 +79,6 @@ Trade processing is short, request-driven work: a request arrives, the code runs
 
 ## Availability vs backup and recovery
 
-These are different problems. **Availability** means the system keeps working: the managed multi-AZ services (Lambda, API Gateway, DynamoDB, Cognito) keep running if one data center fails. **Backup and recovery** means getting data back after a mistake: DynamoDB point-in-time recovery restores deleted or damaged records to an earlier moment. The application never deletes records (NFR-4), so recovery is only needed for operator error or damage outside the application.
+These are different problems. **Availability** means the system keeps working: the managed multi-AZ services (Lambda, API Gateway, DynamoDB, Cognito) keep running if one data center fails. **Backup and recovery** means getting data back after a mistake: DynamoDB point-in-time recovery, when it is turned on for a table, restores deleted or damaged records to an earlier moment. The setup steps in [aws/README.md](../../aws/README.md) turn it on; check each table in the console before you claim it in a demo. The application never deletes records (NFR-4), so recovery is only needed for operator error or damage outside the application.
 
 Details: [Trade workflow](workflow.md) · [Data dictionary](data-dictionary.md) · [Trade states](state-diagram.md) · [Responsibility notes](short-responsibility-notes.md).

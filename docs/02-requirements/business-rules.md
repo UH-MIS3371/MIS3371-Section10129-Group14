@@ -16,7 +16,7 @@ A trade may only be submitted for a stock symbol recognized by the MarketStreet 
 
 ### BR-3 — Valid Share Quantity
 
-The number of shares entered must be a positive whole number greater than zero. Zero, negative, blank, non-numeric, or fractional quantities are not allowed.
+The number of shares entered must be a positive whole number greater than zero. Zero, negative, blank, non-numeric, or fractional quantities are not allowed. The server also caps one order at 1,000,000 shares, far more than the $10,000 starting cash can buy, so a huge number gets the clear message "Quantity is too large."
 
 ### BR-4 — Sufficient Simulated Cash for Buy Orders
 
@@ -24,7 +24,7 @@ A Buy order may only be accepted when the user has enough simulated cash to cove
 
 - If the user has exactly enough simulated cash, the trade is allowed.
 - If the user does not have enough simulated cash, the trade is rejected.
-- The check is repeated against the locked account balance inside the final commit (see BR-7), so two orders submitted at the same time cannot spend the same cash twice.
+- The check is repeated inside the final commit (see BR-7). The commit is a DynamoDB conditional write that only succeeds if the saved cash still covers the cost, so two orders submitted at the same time cannot spend the same cash twice.
 
 ### BR-5 — Sufficient Holdings for Sell Orders
 
@@ -32,8 +32,8 @@ A Sell order may only be accepted when the user owns at least the number of shar
 
 - Selling exactly the number of shares owned is allowed.
 - Selling more shares than the user owns is rejected.
-- Short selling is not allowed.
-- Like BR-4, the check is repeated against the locked holdings inside the final commit.
+- Short selling is not allowed in the main trade. (The separate Challenges game has its own Short option; it does not use this account.)
+- Like BR-4, the check is repeated inside the final commit, as a condition on the saved share count.
 
 ### BR-6 — Valid Stock Price Required
 
@@ -58,8 +58,10 @@ The cash update, the holdings update, and the Accepted transaction record are sa
 
 If a transaction is rejected, the user's simulated cash balance and stock holdings must remain unchanged. The system must record a clear rejection reason and a rejection category:
 
-- **Rule** — the order broke a business rule (BR-1 to BR-6, or BR-9).
-- **System** — the order was valid, but the commit in BR-7 failed. The commit is rolled back so cash and holdings keep their previous values.
+- **Rule** — the order broke a business rule (BR-1 to BR-6, or BR-9), or the request was malformed (for example, an empty body). A BR-6 price failure ("Price unavailable.") is a Rule rejection.
+- **System** — the order was valid, but the commit in BR-7 failed. The DynamoDB transaction saves nothing, so cash and holdings keep their previous values.
+
+A rejected order is saved once, as a Rejected record. Submitted and Validated are processing steps and are never saved (D-19).
 
 ### BR-9 — Supported Order Type
 

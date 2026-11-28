@@ -6,15 +6,17 @@ Teammates: read [RECORDING-GUIDE.md](RECORDING-GUIDE.md) first. The site has two
 
 ## Submit this: the combined test matrix
 
-[MarketStreet-Test-Matrix.xlsx](MarketStreet-Test-Matrix.xlsx) and [MarketStreet-Test-Matrix.pdf](MarketStreet-Test-Matrix.pdf) join two sets of cases: 11 manual browser cases a teammate ran on 2026-11-21 (sign-up, email verification, buy, sell, View Status) and the 24 automated cases run from the Grader check page on 2026-11-22. Result: 32 pass, 0 fail, 3 not run (T21, T23, T24; each row says why).
+[MarketStreet-Test-Matrix.xlsx](MarketStreet-Test-Matrix.xlsx) and [MarketStreet-Test-Matrix.pdf](MarketStreet-Test-Matrix.pdf) join three sets of cases: 11 manual browser cases a teammate ran on 2026-11-21 (sign-up, email verification, buy, sell, View Status), the 24 automated cases run from the Grader check page on 2026-11-22, and 1 unit-test case (U-01, BR-6: a price quoted more than 15 minutes ago is refused) from `npm test` in `aws/lambda` on 2026-11-27. Result: 36 cases, 33 pass, 0 fail, 3 not run (T21, T23, T24; each row says why). U-01's Result names the unit test it comes from, so it is not mistaken for a live result.
 
-The same 35 cases are on the live **Grader check** page (`/grader.html`, step 3): the 24 automated cases run live there, and the 11 manual cases are listed under them with their recorded results. The page also has a download button for the Excel file. The manual cases' data is in `frontend/test-matrix-data.js`. In the manual cases the email and name are masked, and the verification code is removed. Six rejection cases that the tester first marked "Fail" are now "Pass", because the app rejected them as expected.
+Every case's Input lists the stock, Buy or Sell, the shares, the order type and the cash and shares it assumes, so it can be repeated without guessing. The live cases run in order after the account is reset to $10,000.00 cash and no holdings; each one states the state the previous case left.
 
-`run-matrix.js` is the command-line version of the 24 automated cases. It writes `test-matrix.csv` and `.md` here when you run it.
+The 35 live and manual cases are on the live **Grader check** page (`/grader.html`, step 3): the 24 automated cases run live there, and the 11 manual cases are listed under them with their recorded results. U-01 is not on that page; it runs with `npm test`. The page also has a download button for the Excel file. All the cases' data is in `frontend/test-matrix-data.js`. In the manual cases the email is masked and the password and verification code are not recorded; their Input gives example values that repeat the case. Six rejection cases that the tester first marked "Fail" (M-01, M-02, M-04, M-07, M-09, M-10) are now "Pass", because the app rejected them as expected.
+
+`run-matrix.js` is the command-line version of the 24 automated cases. It writes `test-matrix.csv` and `.md` here when you run it. `node Testing/Final-Milestone/make-pdf.js --combined` rebuilds `MarketStreet-Test-Matrix.pdf` from `frontend/test-matrix-data.js`. The Excel file (both copies) and `frontend/MarketStreet-Test-Matrix.csv` are generated from the same data.
 
 ## 1. Make the matrix real (on the deployed site)
 
-`run-matrix.js` sends the same JSON the order form sends and records expected vs actual for 24 cases (valid, invalid, boundary, business rule, retrieval, not-found, errors). It already passes locally (23 pass, 1 explained). Run it against the live API:
+`run-matrix.js` sends the same JSON the order form sends and records expected vs actual for 24 cases (valid, invalid, boundary, business rule, retrieval, not-found, errors). Against the local server (`cd aws/lambda && npm start`) it gives 23 pass, 1 explained (T24); checked on 2026-11-27. Run it against the live API:
 
 ```
 BASE=https://<api-id>.execute-api.us-east-1.amazonaws.com/api TOKEN=<ID token> node Testing/Final-Milestone/run-matrix.js
@@ -22,7 +24,8 @@ node Testing/Final-Milestone/make-pdf.js "MarketStreet"
 ```
 
 - Get a token by signing in on the site and copying `marketstreet-id-token` from the browser (DevTools → Application → Session storage), or with `aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH --client-id 39ufd4fucor0jpnhklpdqdo8lh --auth-parameters USERNAME=<email>,PASSWORD=<password>` (use the `IdToken`).
-- Add `OTHER_TOKEN=<second user's token>` to include the "another user cannot read it" case.
+- Add `OTHER_TOKEN=<second user's token>` to include T21 ("another user cannot read it").
+- Use a normal (non-admin) account's token as `TOKEN` so T23 checks the 403. With an admin token the admin route is allowed and T23 fails.
 - The run resets the tester's paper account first, so use a dedicated tester or grader account.
 - For the submission, use the combined `MarketStreet-Test-Matrix.xlsx` or `.pdf` described at the top of this file.
 

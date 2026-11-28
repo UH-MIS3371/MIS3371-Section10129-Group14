@@ -21,7 +21,7 @@
     ["BR-1", "Trade type is Buy or Sell", ["Trade type must be Buy or Sell."]],
     ["BR-2", "The stock symbol is supported", ["Stock not found."]],
     ["BR-9", "The order type is Market", ["Limit orders are not supported.", "Order type must be Market."]],
-    ["BR-3", "Quantity is a positive whole number", ["Quantity must be a positive whole number."]],
+    ["BR-3", "Quantity is a positive whole number", ["Quantity must be a positive whole number.", "Quantity is too large. The maximum is 1,000,000 shares."]],
     ["BR-6", "A valid price exists (no more than 15 minutes old)", ["Price unavailable."]],
     ["BR-4 / BR-5", "Enough cash for a Buy, or enough shares for a Sell", ["Insufficient cash.", "Insufficient shares."]],
     ["BR-7", "Trade record and account saved in one atomic commit", ["The trade could not be saved. Please try again."]]
@@ -67,6 +67,7 @@
     const symbol = typeof order.symbol === "string" ? order.symbol.trim().toUpperCase() : "";
     if (!has(PRICE_CENTS, symbol)) return { reason: "Stock not found." };
     if (order.orderType !== "Market") return { reason: order.orderType === "Limit" ? "Limit orders are not supported." : "Order type must be Market." };
+    if (Number.isInteger(order.quantity) && order.quantity > 1000000) return { reason: "Quantity is too large. The maximum is 1,000,000 shares." };
     if (typeof order.quantity !== "number" || !Number.isSafeInteger(order.quantity) || order.quantity < 1) return { reason: "Quantity must be a positive whole number." };
     return { quote: { symbol, priceCents: PRICE_CENTS[symbol], quotedAt: Date.now() } };
   }
@@ -257,11 +258,20 @@
     if (path === "/trades" && method === "POST") return postTrade(raw);
     const one = path.match(/^\/trades\/([^/]+)$/);
     if (one && method === "GET") {
-      const id = decodeURIComponent(one[1]);
+      let id;
+      try {
+        id = decodeURIComponent(one[1]).trim().toLowerCase(); // same as the server: any letter case finds it
+      } catch (e) {
+        id = "";
+      }
       const found = UUID.test(id) && load().trades.find((t) => t.transactionId === id);
       return found ? reply(200, { success: true, trade: found }) : fail(404, "Trade not found.");
     }
-    return fail(405, "Use POST /api/trades, GET /api/trades/{transactionId} or GET /api/account.");
+    // Same as the server: a known path with the wrong method is 405, any other path 404
+    if (one || /^\/(trades|account|quotes|me|me\/sign-out-everywhere|account\/reset)$/.test(path)) {
+      return fail(405, "Method not allowed. Use POST /api/trades, GET /api/trades, GET /api/trades/{transactionId}, GET /api/account or GET /api/quotes.");
+    }
+    return fail(404, "Not found.");
   }
 
   // The stand-in for authFetch(): same arguments, and the reply is a real Response, so callers can't tell the difference

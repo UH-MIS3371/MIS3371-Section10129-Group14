@@ -10,6 +10,13 @@ const API_BASE = location.hostname === "localhost" || location.hostname === "127
 const API_URL = API_BASE + "/trades"; // used by Scenario Mode and the leaderboard
 const START_CASH_CENTS = 1000000;
 
+// A 5xx with no reason of our own comes from API Gateway itself (for example {"message":"Internal Server Error"}):
+// the Lambda did not run, which usually means the class AWS lab is stopped
+const SERVER_DOWN = "MarketStreet's server is not responding right now (the class AWS lab may be stopped). Please try again in a minute.";
+function failMessage(status) {
+  return status >= 500 ? SERVER_DOWN : "Something went wrong. Please try again.";
+}
+
 // Calls the API with the sign-in token. Resolves to the JSON body; throws an Error with the server's
 // reason (and .status) when the request fails, so pages can show what went wrong.
 async function api(path, options = {}) {
@@ -25,7 +32,7 @@ async function api(path, options = {}) {
     throw Object.assign(new Error("Couldn't reach MarketStreet. Check your connection and try again."), { status: 0 });
   }
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw Object.assign(new Error(data.reason || "Something went wrong. Please try again."), { status: response.status, data });
+  if (!response.ok) throw Object.assign(new Error(data.reason || failMessage(response.status)), { status: response.status, data });
   // GET answers are kept for this tab so the next page can draw at once; any change clears them
   if (!init.method || init.method === "GET") {
     try {

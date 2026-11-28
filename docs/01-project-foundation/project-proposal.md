@@ -67,7 +67,7 @@ The order is either:
 
 A user with $1,000 in simulated cash submits an order to buy 2 shares of a stock at a simulated execution price of $100 per share. The system checks the order, the price, and available cash. If the checks pass and the atomic commit succeeds, the system records an accepted $200 trade and updates the user's cash to $800 and holdings by 2 shares.
 
-The team's state model has four official statuses: **Submitted → Validated → Accepted**, with a path to **Rejected** if a rule fails or the portfolio update cannot be completed. Before submission, the order is only an unsaved **Draft** form in the browser; Draft is not a status.
+The team's state model has four official statuses: **Submitted → Validated → Accepted**, with a path to **Rejected** if a rule fails or the portfolio update cannot be completed. Before submission, the order is only an unsaved **Draft** form in the browser; Draft is not a status. (In the built system, Submitted and Validated are steps inside one request, and only the final status, Accepted or Rejected, is saved; see decision D-19.)
 
 ---
 
